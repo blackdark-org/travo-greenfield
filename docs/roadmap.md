@@ -6,7 +6,7 @@ Nothing here may bypass the `Device` port, the transaction module or the DNS lay
 
 See [spec.md](spec.md). Order of work (vertical slices, each shippable in mock mode first):
 
-1. Repo tooling: `mise.toml`, `mise run check`, CI from the agent-presets snippets, release-please, size-limit.
+1. (done) Repo tooling: `mise.toml`, `mise run check`, CI from the agent-presets snippets, release-please, size-limit.
 2. Daemon skeleton: lifecycle, Huma, health/spec, `Device` port + mock, guards, atomic files.
 3. Auth + first-run + LAN-only listener.
 4. Transaction module + watchdog + lockout classifier (spike on device first).

@@ -1,0 +1,24 @@
+[tools]
+go = "1.27.3"
+node = "26.13.0"
+pnpm = "12.18.0"
+
+[tasks.check]
+description = "Everything CI checks"
+depends = ["check:go"]
+
+[tasks."check:go"]
+description = "gofmt, vet, tests"
+run = '''
+test -z "$(gofmt -l .)"
+go vet ./...
+go test ./...
+'''
+
+[tasks.build]
+description = "Static aarch64 binary for the router"
+run = '''
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
+  -ldflags "-s -w -X github.com/BlackDark/travo-greenfield/internal/version.Version=${VERSION:-dev} -X github.com/BlackDark/travo-greenfield/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o dist/travo-greenfield-arm64 ./cmd/travo-greenfield
+'''
