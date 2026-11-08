@@ -25,3 +25,7 @@ Scripts parse; guard paths under `/etc/travo-guards`; every route is in the spec
 ## Mock mode
 
 `--mock` runs the whole daemon against the mock `Device`, scripted from fixtures. Frontend development needs no device.
+
+## Running the container layer
+
+`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci` inside `openwrt/rootfs:aarch64_generic-25.12.6` (needs Docker). Not in `mise run check` yet; CI needs an x86_64 image or QEMU first. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.

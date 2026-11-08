@@ -22,3 +22,11 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
   -ldflags "-s -w -X github.com/BlackDark/travo-greenfield/internal/version.Version=${VERSION:-dev} -X github.com/BlackDark/travo-greenfield/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o dist/travo-greenfield-arm64 ./cmd/travo-greenfield
 '''
+
+[tasks."test:integration"]
+description = "Run adapter tests against real uci in an OpenWrt container (needs Docker)"
+run = '''
+mkdir -p dist
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go test -tags integration -c -o dist/cli.test ./internal/device/cli
+docker run --rm --entrypoint sh -v "$PWD/dist:/t:ro" openwrt/rootfs:aarch64_generic-25.12.6 -c 'mkdir -p /var/lock && /t/cli.test -test.run TestRealUCI -test.v'
+'''
