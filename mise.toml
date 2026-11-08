@@ -5,7 +5,7 @@ pnpm = "12.18.0"
 
 [tasks.check]
 description = "Everything CI checks"
-depends = ["check:go"]
+depends = ["check:go", "check:size"]
 
 [tasks."check:go"]
 description = "gofmt, vet, tests"
@@ -21,4 +21,25 @@ run = '''
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
   -ldflags "-s -w -X github.com/BlackDark/travo-greenfield/internal/version.Version=${VERSION:-dev} -X github.com/BlackDark/travo-greenfield/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o dist/travo-greenfield-arm64 ./cmd/travo-greenfield
+'''
+
+[tasks."test:integration"]
+description = "Run adapter tests against real uci/apk/opkg in OpenWrt containers (needs Docker)"
+run = '''
+mkdir -p dist
+for spec in "linux/aarch64_generic arm64 openwrt/rootfs:aarch64_generic-25.12.6" "linux/amd64 amd64 openwrt/rootfs:x86-64-24.10.8"; do
+  set -- $spec
+  CGO_ENABLED=0 GOOS=linux GOARCH=$2 go test -tags integration -c -o dist/cli-$2.test ./internal/device/cli
+  CGO_ENABLED=0 GOOS=linux GOARCH=$2 go test -tags integration -c -o dist/pkgmgr-$2.test ./internal/pkgmgr
+  docker run --rm --platform $1 --entrypoint sh -v "$PWD/dist:/t:ro" "$3" -c "mkdir -p /var/lock && /t/cli-$2.test -test.run TestRealUCI -test.v && /t/pkgmgr-$2.test -test.run TestRealManager -test.v"
+done
+'''
+
+[tasks."check:size"]
+description = "Stripped arm64 binary stays within the 12.8 MB budget (invariants §15)"
+depends = ["build"]
+run = '''
+size=$(wc -c < dist/travo-greenfield-arm64)
+echo "binary: $size bytes (budget 13421772)"
+test "$size" -le 13421772
 '''

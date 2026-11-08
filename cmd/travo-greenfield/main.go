@@ -13,12 +13,21 @@ import (
 	"time"
 
 	"github.com/BlackDark/travo-greenfield/internal/api"
+	"github.com/BlackDark/travo-greenfield/internal/app"
 	"github.com/BlackDark/travo-greenfield/internal/version"
 )
 
 func main() {
 	addr := flag.String("listen", "127.0.0.1:8081", "listen address")
+	useMock := flag.Bool("mock", false, "run against the mock device (no router needed)")
 	flag.Parse()
+
+	deps, err := app.New(*useMock)
+	if err != nil {
+		slog.Error("startup", "err", err)
+		os.Exit(1)
+	}
+	slog.Info("adapters", "mock", deps.Mock, "packages", deps.Packages.Name())
 
 	h, _ := api.New(version.Version)
 	srv := &http.Server{
