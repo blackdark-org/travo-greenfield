@@ -1,0 +1,99 @@
+# Device facts
+
+Hard-won findings. Do not re-learn. Origin: the previous Travo implementation. Re-capture and re-date them in this repo as fixtures (see [testing.md](testing.md)). `[HW]` = observed on hardware, `[TRIED]` = approach that failed, `[BUG]` = past defect to keep as a regression check.
+
+Reference hardware: GL-AXT1800 (IPQ6018, ath11k, radio0 = 5 GHz usually uplink STA, radio1 = AP), OpenWrt 25.12.3 (also 25.12.6), netifd 2026.02.26. Also targeted: GL-MT3000. dnsmasq config is a NAMED section (e.g. `dhcp.cfg01411c`), not `@dnsmasq[0]`. `rg` is absent on device. BusyBox `sed`/`wget`/`tar` differ from GNU. `jsonfilter` is present. `scp` needs `-O`.
+
+## 1. Routes and netifd
+
+- [HW] After WireGuard disable: `network.interface.wwan` status shows a DHCP default route, `ip -4 route show table main` has none, `wget` exits 4. Netifd state ≠ kernel route. Every "route/internet ok" check reads the KERNEL table.
+- Disable recovery must not assume `wan` is the uplink; internet often arrives via WiFi STA. Recovery needs several bounded waits; some devices need script-level down/up, not only ubus.
+
+## 2. Wireless liveness (ath11k / netifd)
+
+- [HW] netifd emits `up`, `pending`, `retry_setup_failed`, `autostart` PER RADIO only. A per-interface entry is `{section, config, ifname, vlans, stations}`: no per-interface `up`, no config path.
+- [HW] Per-interface truth: `network.device status {"name":"<ifname>"}` → `present`, `up`, `carrier`.
+- [HW] Uplink STA with wrong password or nonexistent SSID: radio reads up, STA `carrier:false`. Only carrier proves association; must be REFUSED. Association + DHCP ≈ 10 s.
+- [HW] Invalid STA channel is silently ignored (AP stays up); cannot simulate failure that way.
+- [HW] AP with zero clients is genuinely up. `stations` is always empty for mode=sta; never use stations/assoclist for liveness.
+- [HW] Bring-up: AP link ~10 s after radio start; STA ~4 s; wwan up ~10 s after DHCP.
+- [HW] If one radio hosts two expected interfaces (guest + main AP), the radio flag proves only one. Check EACH interface; a radio flag alone is a false confirm that cancels rollback.
+- Ubus round trips ~5 ms; budget ~100 ms per call. Unreadable payload (missing keys, unknown shape) ≠ down: report "cannot verify". Transport failure during a probe = unverifiable, retry; never claim "rolled back".
+- [TRIED] Trusting per-interface `up` (absent on this firmware). [TRIED] A 4 s probe budget against a ~10 s bring-up. Derive budgets from measured latency.
+
+## 3. ath11k crash triggers
+
+- [HW] AP + STA on the same radio, committed even transiently → driver crash. The AP channel follows the STA channel; an upstream drop takes the local AP down.
+- `wifi reload` is a crash risk on ath11k/IPQ6018. `wifi down/up` from timers or hotplug has no rollback → forbidden except bounded documented recovery.
+- Required order: stage everything, reconcile layout, single commit, single apply.
+
+## 4. Rollback
+
+- [HW, AXT1800 25.12.3] rpcd `uci apply` with `rollback:true` snapshots at APPLY time. If the change was already committed, rollback restores the CHANGED config (30 s expired → broken profile still enabled, working uplink disabled). `uci revert` after commit is a no-op.
+- Requirement: snapshot BEFORE the commit; restore explicitly; reload via `uci reload_config` + `network reload`. Never `wifi`.
+- rpcd `uci apply/confirm` REQUIRE an rpcd session id that bare ubus CLI cannot supply; login needs the real root password (anonymous login works only with NO root password). Travo does not use them (ADR-0005).
+
+## 5. Caller classification (lockout)
+
+- [HW] `network.interface dump` gives IPv4 as `{"address":"192.168.1.1","mask":24}`, NOT a CIDR string. A parser expecting a CIDR key made every client "unknown" while tests stayed green (the fixture invented the key).
+- [HW] `br-lan` carries wired AND WiFi clients in one /24; subnet match cannot separate them. Use the neighbour table (ARP) → MAC → AP station dumps.
+- Incident: an operator switched to Client mode from a phone on the AP; the AP vanished; recovery needed a wired console. Nothing asserted the rule.
+
+## 6. Band switching
+
+- [HW] STA band switch = change STA radio + apply/confirm = 2–5 s connectivity gap. Guard it. Scanning while STA is up works.
+
+## 7. Captive portal and DNS
+
+- [HW] A status probe with no default route took 3 s (DNS timeout). Skip the probe when there is no route.
+- `noresolv=1` with custom forwarders blocks hotel DNS. Encrypted upstreams (DoH/DoT) cannot resolve hotel names. Rebind protection drops RFC1918 answers → must be off during bypass.
+- The portal's first fetch may need a DHCP renew on wwan (MAC change / stale lease): conditional and guarded.
+- [TRIED] Restore-on-reconnect inside a GET handler: every poll rewrote dnsmasq and restarted it. GET must never mutate.
+
+## 8. Scheduled and button WiFi toggle (post-0.1)
+
+- Cron is `/etc/crontabs/root`; `/etc/cron.d` does NOT exist (write → ENOENT; the UI then shows a schedule that never fires).
+- Buttons: detect from devicetree `/sys/firmware/devicetree/base/keys/*/label`; `/etc/rc.button` is generic stock scripts, not a source of truth. Hotplug button scripts run as root via procd.
+- The old toggle helper needed a stored rpcd login file; missing → every scheduled/button toggle silently no-opped. It also did uci set/commit/apply/confirm OUTSIDE in-process locks and could clobber the API's staged delta. In travo-greenfield helpers call the daemon instead.
+- [BUG] Auto-reconnect cron ran `wifi up` every minute with no uplink → radios flapping. Cap and guard.
+- [BUG] Radio switch via notification broke WiFi. Keep as a regression check.
+- [BUG] After an OpenWrt upgrade Travo did not start (see §10).
+
+## 9. mwan3 (post-0.1)
+
+- [HW] Installing mwan3 with no working WAN → stock catch-all rules route 0/0 into an unhealthy policy → every policy `unreachable`, all outbound "Network unreachable" while lease and WiFi look fine. Recovery: remove the catch-all rules. Verify with a real outbound request, not uplink status.
+- [HW] `uci apply mwan3` via rpcd → `Permission denied` until `luci-app-mwan3` is installed (its rpcd ACL). The package alone is not enough. A stuck failover guard can mean "missing ACL".
+- The router may be unable to download `luci-app-mwan3` over its own uplink → side-load (`scp -O`, `apk add --allow-untrusted`).
+- [TRIED, DATA LOSS] Ownership-by-content deleted stock `config interface 'wan'` (identical bytes to the generated default). Never delete by content match.
+- Failback: evaluating "keep current active" first made failback unreachable. Priority walk first.
+
+## 10. Sysupgrade and upgrades
+
+- [HW] The keep-list must include `/etc/rc.d/S99travo` (boot link) as well as the init script, binary and UCI enable. A missing link after 25.12.3 → 25.12.6 left the service inactive, no API.
+- After an upgrade the old binary may keep running: verify the running exe path; restart, not start.
+- Package manager: 25.x = apk, older = opkg; detect at runtime. Package lists live in `/tmp` and vanish on reboot.
+- Travo's own firmware upload drops installed packages; LuCI attended sysupgrade keeps them. Travo reports updates, LuCI flashes.
+
+## 11. AdGuard Home
+
+- [HW] Reinstall over a config written by a newer AdGuard: v0.107.54 crash-loops on `unknown current schema version 33`. dnsmasq kept forwarding to `127.0.0.1#5353` → ALL LAN DNS dead, uplink fine, Travo reported healthy. Cached answers hide it for minutes; test with a fresh name.
+- [HW] The init script read `/opt/AdGuardHome/AdGuardHome.yaml`; editing the path named in UCI `config_file` did nothing (relevant to the manual-binary install; the package route in ADR-0006 must be re-verified).
+- Open decision: refuse a downgrade on reinstall instead of silent breakage.
+- Old design exposed the first-run wizard LAN-wide and setting a password ADDED an admin instead of replacing one. Never reproduce: loopback bind, no accounts, Travo-gated proxy.
+- Reported by others, unverified here: AGH on :53 leaves the router unable to resolve for itself; Tailscale MagicDNS overwrites `resolv.conf` (tailscale#15174, luci#8641); AGH `/control/profile` 401 with auth disabled on one version (AGH#7985). Each is a spike item in [roadmap.md](roadmap.md).
+
+## 12. USB tethering (0.2)
+
+- Android: RNDIS on `usb0` or CDC-NCM on `usb0` (different kernel drivers); probe both. iOS needs `usbmuxd` + `libimobiledevice`, not plain RNDIS/NCM.
+- Identify the uplink by MEDIUM, not by IP. It joins the `wan` zone → a direct firewall commit exception.
+
+## 13. Clock and sessions
+
+- No RTC: the router boots with a wrong clock. Sessions must not depend on wall clock. A far-future clock breaks TLS, cron, hwclock.
+
+## 14. Logs, cron, flash, shell
+
+- [HW] BusyBox crond logs every job start as `cron.err` at the default level; a per-minute job floods errors. Set level 9.
+- NAND overlayfs: writes = wear + stall. `/tmp` is RAM; staged UCI and package lists are lost on reboot.
+- BusyBox `sed` vs GNU `sed` escapes disagree: never escape JSON in sed; encode in code and write bytes verbatim. `wget -O` is required. Check signatures with `ubus -v list`; do not assume.
+- `iw event` is a long-running listener: stop via signal, not a timeout tier. The uplink medium (ethernet/WiFi/USB) drives caller classification and failover candidates.

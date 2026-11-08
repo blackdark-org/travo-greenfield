@@ -1,0 +1,20 @@
+# Glossary
+
+- **Uplink**: the connection to the internet. One of `wan` (Ethernet), `wwan` (WiFi STA), `usbtether`.
+- **STA**: WiFi client interface (`mode=sta`) bound to `wwan`; joins hotel/home WiFi.
+- **AP**: WiFi access point serving the LAN. **Guest AP**: separate SSID, key, subnet (192.168.2.0/24) and zone.
+- **Caller**: the client making an API request. Classified as ethernet / wifi-ap / wifi-client / unknown.
+- **Lockout**: a change that would leave the caller without a way to reach the router.
+- **Device port**: the interface through which all `uci`/`ubus`/netifd access happens. Adapters: CLI (real), mock.
+- **PackageManager port**: `update`/`install`/`remove`/`list-installed`; adapters apk and opkg.
+- **Transaction**: snapshot → commit/apply → watchdog → probe → user confirm. The only way to change live state.
+- **Watchdog**: out-of-process procd-run script that restores the snapshot unless the confirm file appears in time.
+- **Confirm**: the user's explicit acknowledgement that the router is still reachable. Never issued by the backend.
+- **Guard**: a file in `/etc/travo-guards/` marking an in-progress live-state operation. Present guard = feature skips.
+- **Layer (DNS)**: one entry in the ordered DNS stack (`captive`, `vpn`, `adguard`, reserved `tailscale`).
+- **Base DNS**: dnsmasq's DNS state captured before the first layer; restored when the last layer is popped.
+- **Fail open**: when a filter/service fails, fall back to working connectivity and say so loudly.
+- **AGH**: AdGuard Home.
+- **Fixture**: a verbatim captured device payload with provenance (device, firmware, date).
+- **Mock mode**: the daemon running against the mock `Device`, no router needed.
+- **Release source**: the GitHub repo the updater reads releases from; configurable.

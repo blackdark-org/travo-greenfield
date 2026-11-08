@@ -1,0 +1,170 @@
+# Invariants
+
+MUST rules. Each came from a real incident or device finding (see [device-facts.md](device-facts.md)). A change that breaks one needs an ADR first. `[HW]` = proven on hardware only.
+
+Paths: guards in `/etc/travo-guards/`, state in `/etc/travo/`, settings in UCI `/etc/config/travo`. Guards never live in `/etc/travo/`.
+
+## 1. Live-state safety
+
+- Any automated action that changes LIVE state (connectivity-affecting commit, apply, firewall, routes, radios, package ops, sysupgrade, factory reset, restore) writes a guard file FIRST and removes it ONLY after full success.
+- Guard present → the feature SKIPS. Stale guards are reported at startup (a stuck guard is silent feature death).
+- Manual redeploy/reinstall is the explicit retry path; it clears guards by NAME, never by glob.
+- Guard write fails → abort the operation. Never degrade to unguarded.
+- Firmware-upgrade and factory-reset guards are never removed (interruption must stay visible).
+- Every shell-out has an explicit timeout tier. Exceptions: terminal ops (reboot, poweroff, sysupgrade, firstboot) and long-lived listeners (stopped by lifecycle signal, not timeout).
+- Every background worker is registered in one lifecycle. SIGTERM stops all; no UCI commit after stop.
+- Handler panic → 500; the process survives.
+- Wireless changes: snapshot → commit/apply → rollback watchdog → explicit user confirm, only after proof the device is still reachable. The backend NEVER self-confirms.
+- Apply paths write UCI only. Never `wifi`, `wifi up/down/reload`. Only a bounded, documented `wifi up` exception exists (auto-reconnect, capped).
+
+## 2. Lockout safety
+
+- A mutation that would leave the caller with NO enabled AP while the caller is on WiFi → 409 `wifi_lockout_risk` BEFORE any write. Override only with `acknowledge_lockout: true`.
+- Caller classes: ethernet / wifi-ap / wifi-client / unknown. Unknown FAILS CLOSED (refuse unless acknowledged).
+- Affected mutations: mode→client, radio disable, role change to none/sta, AP disable, guest disable.
+- Must NOT block: SSID change, key change, disabling one radio while another AP is up, disabling guest while another AP is up, anything over Ethernet.
+- Verify on a device, not only in unit tests (a stranded operator once).
+
+## 3. Auth and access
+
+- Admin login = root password validated via rpcd `session.login`. Mock mode: local check.
+- Cookie session (HttpOnly, SameSite=Strict) + CSRF header. Live push is SSE on the same cookie. No tokens in query strings.
+- Session validity uses the MONOTONIC clock; the API returns only a relative `expires_in`; clients never compare server timestamps with their clock. Lifetime 24 h.
+- Protected routes default-DENY. The public list is a small explicit set (spec, health, login, first-run, time-sync). Adding a public route is a security change.
+- Routing is case-sensitive: `/API/v1/...` → 404 (a case-variant path once bypassed auth).
+- Password change → revoke ALL sessions (persisted epoch file), return a replacement session. Min length 8. Logout/revocation survives restart; only hashes stored, never tokens.
+- No fallback signing secret; entropy failure is fatal.
+- Rate-limit login and pre-login endpoints; periodically sweep per-IP state.
+- Optional IP allowlist (CIDR); health/login/time-sync bypass it.
+- Pre-login time-sync only while the router clock is implausible; sticky once plausible (a 1970 rewind once reopened it); bounded window; rate-limited. Authenticated callers unbounded.
+- Root SSH keys: write only dropbear `authorized_keys`; append exactly one validated line; reject `\n`/`\r`; strict key-type format; no options field (`command=`, `from=`); list/add/delete behind auth; not revoked by redeploy or password change.
+- Admin reachable on `br-lan` only (wired + AP WiFi). Uplink zones and guest get no admin access. Enforced by firewall AND daemon source check. No default password, ever.
+
+## 4. API contract
+
+- REST JSON under `/api/v1`. Health `GET /api/health` public. OpenAPI 3.1 at `GET /api/openapi.json` (public), GENERATED from typed handlers, never hand-written; drift fails CI.
+- Every operation has a unique id and summary. Every route is in the spec. No route outside the registration path.
+- Whole-config PUT is STRICT: unknown field, null, trailing data → 400 naming the field. GET and PUT shapes are symmetric.
+- Validate ranges/enums explicitly. Silent acceptance of a bad value is a defect.
+- Errors: `{error, code?}`; stable `code` for client branching, never message text. Ack: `{status:"ok"}`. Empty collections encode `[]`/`{}`, never `null`.
+- Missing optional package → 503 naming the package, not 500.
+- Limits: body 64 MB, read timeout 5 min, write timeout 45 min (package streams), idle 60 s, graceful shutdown ~20 s; HTTP drains BEFORE services and persistence close.
+- Long ops stream (NDJSON-like). Live status via one shared push subscription, never per page.
+- GET never mutates.
+
+## 5. Persistence
+
+- UCI is the source of truth for device config; no shadow state. Derived JSON in `/etc/travo/`; crash-critical records in `/etc/travo-guards/`.
+- Flash is NAND overlayfs: per-sample/per-request writes FORBIDDEN; batch; rare event-driven writes may write through. Keep ~20 MB free.
+- Atomic writes for every state file (temp + fsync + rename). A torn file fails closed, never reads as "empty".
+- Degraded persistence must be visible in the UI.
+- Backup/restore = config tarball; restore over `/` is guarded. Factory reset is guarded.
+- No embedded KV store in 0.1. Add one only with a retention rule for the data.
+
+## 6. UCI write discipline
+
+- ONE process-global staged-changes area. Concurrent writers of one config destroy each other's staged sections.
+- All writes go through one helper: lock the whole config set ONCE, revert the staged delta on failure, commit once.
+- Locks are keyed on CONFIG NAME (not service; `firewall`/`network` are shared). Global sorted lock order. Locks are NOT reentrant; a helper called inside a transaction must not lock.
+- Read paths are unlocked.
+- Known gap: external writers (cron/hotplug scripts) sit outside the model. Prefer helpers that call the daemon.
+
+## 7. Network and routing
+
+- Candidate uplinks: `wan`, `wwan` (STA), `usbtether`. Omitting one yields a false "No Internet".
+- "Internet reachable" is a real probe; carrier-only is a separate signal and must not be labelled "Internet". Route checks read the KERNEL table, never netifd status (see device-facts §1).
+- Throughput charts select interfaces by NAME, never index 0 (`br-lan`).
+- Tunnel state has 5 values: disabled / configured / enabled-not-up / no-handshake / connected.
+- WAN zone is resolved by name, never by index.
+- A new zone/forward/interface gets the full firewall surface (zone, masq, forwarding, input/output/forward policy) matching the `wan` pattern.
+- Direct firewall commits outside the apply flow are named exceptions, each with guard + rollback.
+- Wireless snapshot sets include firewall + dhcp.
+
+## 8. DNS layering
+
+dnsmasq on :53 is the single DNS authority. Features that change DNS push/pop a layer on ONE ordered stack.
+
+- Layers: `captive`, `vpn`, `adguard` (reserved: tailscale). Base state is captured before the first layer. No per-feature snapshot of the same options (`server`, `noresolv`, rebind protection, WAN DNS fields).
+- Enable is idempotent. Disabling a non-top layer removes only its own entry. Last layer out restores base and deletes the record.
+- Restore never reports success while a bypass could still be in force. Missing/corrupt record → refuse + keep guard (retry).
+- Status reads never mutate DNS. Only an explicit POST or a scheduler with its own guard mutates.
+- VPN self-heal on status read only for terminal "disabled"; "enabled-not-up" needs debounce (N readings over T seconds). A broken probe is not a broken tunnel.
+- Known gap: layer record survives but the tunnel config is deleted → heal never runs.
+- Captive bypass: back up WAN DNS fields, rebind flag, AdGuard upstream; never record the dnsmasq server list outside the stack. Auto-restore after 5 min.
+- AdGuard: liveness probe resolves a fresh uncached name via `127.0.0.1:5353`. After M failures the `adguard` layer is popped (fail OPEN), a loud banner shows, and it does not re-enable until the user confirms or a probe passed for a hold-down period.
+- AdGuard binds loopback only, has no accounts, and is reached through the Travo-gated proxy. No first-run wizard is ever exposed on the LAN.
+
+## 9. Multi-WAN failover (mwan3, IPv4 only; post-0.1)
+
+- Source of truth is Travo's failover JSON, generated into `/etc/config/mwan3`. Generated sections are prefixed `travo_`.
+- Ownership = PROVENANCE (fingerprint stamped by this build and still matching), never content. A non-namespaced section is NEVER deleted.
+- Operator-edited `travo_` section: overwrite Travo-owned options with a LOUD warning.
+- Back up EVERY section a save may write; restore on failure.
+- Staged apply: apply with rollback → verify every managed section → confirm (not confirm-then-verify).
+- Failback hold-down 30 s; walk the priority list, first uplink past hold-down wins (not "keep current first").
+- Liveness from netifd interface status, not ping. `family: ipv4` explicit; no IPv6 policy until device-validated.
+- Guard during the apply window. Mocks must match real UCI semantics (`set` = create-or-update).
+
+## 10. WiFi model
+
+- Roles: uplink STA (`mode=sta`, bound to `wwan`, in `wan` zone), downlink AP(s) (shared SSID/key default), guest AP (own subnet 192.168.2.0/24, own zone; refuse subnet overlap).
+- Max ONE enabled STA bound to `wwan`. Multiple saved upstreams = ordered priority list, one active.
+- With ≥2 radios, STA and AP go on DIFFERENT radios. Same-radio is an opt-in escape hatch, visible in health. Refuse STA enable on a radio carrying an enabled AP (409) unless single-radio/opt-in.
+- Radio pick is deterministic (sorted by name, prefer no-AP). "Uplink radio" = radio of ANY enabled `mode=sta` iface.
+- Layout reconcile happens BEFORE a single commit (stage STA, reconcile AP, commit once). Never commit AP+STA on one radio, even transiently.
+- Health endpoint reports fragile layouts and invariant violations.
+- Auto-reconnect has a failure counter so bad credentials are not retried forever; the counter is not a guard and is not cleared by redeploy.
+- Band switching: persisted choice, guarded, a refused tick leaves no guard behind.
+- Scan: one row per SSID, dual-band badge, per-AP disclosure. Scan must not commit the uplink onto an AP radio.
+- MAC clone/randomize; per-client MAC policies.
+- Radio hardware status is CONFIGURED state, labelled as such.
+- Post-apply probe proves each enabled AP/STA interface individually (see device-facts §2). Failure → rollback. "Could not read netifd" is distinct from "AP not up".
+
+## 11. VPN
+
+- WireGuard: profiles (import, list, activate, delete), enable/disable, kill switch, split tunnel, DNS verify, DNS leak test, speed test. Profiles in `/etc/travo/`, tunnel in UCI `network.wg0`.
+- Enable: commit tunnel → verify up BEFORE firewall/DNS; failure tears it down.
+- Disable MUST end with a kernel default route present, or report failure. Recovery waits are bounded and never assume the uplink is `wan`.
+- Tailscale (post-0.1): runs with `--accept-dns=false`; its resolver is a dnsmasq layer.
+
+## 12. Captive portal
+
+- Detection: HTTP probe to a known 204 endpoint + redirect inspection.
+- Probe skipped when no default route (instant offline). Concurrent callers share one probe; cache ~2 s; a DNS change invalidates the cache.
+- Auto-accept (post-0.1) walks portal steps. Only step 0 may renew the wwan DHCP lease, only when wwan is the active uplink, guarded, bounded waits.
+- Warning card only when an action exists (login, DNS bypass active, connected-but-no-internet).
+
+## 13. Package ops
+
+- Package manager (apk on 25.x, opkg older) is detected at runtime behind a `PackageManager` port; never hardcoded. Package lists live in `/tmp`: refresh before install, best effort.
+- Install writes init scripts, `/etc/config`, kernel modules → guarded, with a flash-space warning.
+- Missing optional package → 503 naming it. A failed presence check is not "absent".
+
+## 14. Updates and releases
+
+- Travo self-update: signed release (minisign public key embedded), download to `/tmp`, verify, keep previous as `.old`, atomic swap, procd restart, health check, automatic rollback on failure. Guarded. No background phone-home; on-demand and at most daily on page open. Release source configurable.
+- After any upgrade verify the RUNNING exe path, not just file existence; restart, not start.
+- Sysupgrade keep-list includes the init script, the boot link `/etc/rc.d/S99travo`, binary, and UCI enable.
+- Build stamps version and build time into the binary; build time is the time-plausibility floor. A missing stamp is a release defect.
+
+## 15. Footprint and ops
+
+- Single self-contained binary per arch, stripped, no runtime deps. Budget ~12.8 MB stripped; measure the delta before adding a dependency. Keep ≥20 MB flash headroom.
+- Cron log level 9 (keep an operator's own setting) so per-minute job starts don't flood the error log.
+- Install requires an explicit `--password` or the first-run screen; the installer verifies the service answers on its configured port before reporting success, and refuses to move LuCI otherwise.
+- Contract tests: scripts parse, guard paths under `/etc/travo-guards`, every route in the spec, auth covers every route (walk the live route table), strict PUT coverage, spec field names match models, no feature writes UCI outside the transaction module.
+- Record a decision with evidence (firmware version + captured payload) for every device finding.
+
+## Deliberate ceilings
+
+Accept; do not "fix" silently.
+
+- IPv6 failover deferred (IPv4 only). Needs a device matrix + decision record.
+- Traffic history ~10 min in memory; resets on restart.
+- Session registry is memory-only (cross-restart revocation via epoch only).
+- Positional SSH key index (breaking to change).
+- Dashboard rate = 2 s sample, not an average.
+- Config locks are held across blocking reload/apply; long holds queue all writers of that config.
+- Hardware button = detection only until actions are designed.
+- External writers (cron/hotplug) outside the lock model.
+- AdGuard sees all queries from 127.0.0.1 (no per-client stats) under the default topology.
