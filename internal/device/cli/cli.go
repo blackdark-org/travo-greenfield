@@ -1,16 +1,14 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/BlackDark/travo-greenfield/internal/runner"
 )
 
 // Timeout tiers: every shell-out gets one.
@@ -20,26 +18,10 @@ const (
 	TierApply = 60 * time.Second
 )
 
-// Runner executes a command. Production uses ExecRunner; tests inject a fake.
-type Runner func(ctx context.Context, name string, args ...string) (stdout string, exit int, err error)
-
-// ExecRunner runs a real process.
-func ExecRunner(ctx context.Context, name string, args ...string) (string, int, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	var out, errb bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	err := cmd.Run()
-	var ee *exec.ExitError
-	if errors.As(err, &ee) {
-		return out.String(), ee.ExitCode(), fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(errb.String()))
-	}
-	return out.String(), 0, err
-}
-
 // Device is the real-router adapter.
-type Device struct{ Run Runner }
+type Device struct{ Run runner.Runner }
 
-func New() *Device { return &Device{Run: ExecRunner} }
+func New() *Device { return &Device{Run: runner.Exec} }
 
 func (d *Device) run(ctx context.Context, tier time.Duration, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, tier)

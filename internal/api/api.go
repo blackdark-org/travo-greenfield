@@ -23,6 +23,7 @@ func New(version string) (http.Handler, huma.API) {
 	cfg.OpenAPIPath = "/api/openapi"
 	cfg.DocsPath = ""
 	cfg.SchemasPath = ""
+	cfg.CreateHooks = nil // no  links: that route does not exist
 	a := humago.New(mux, cfg)
 
 	huma.Register(a, huma.Operation{

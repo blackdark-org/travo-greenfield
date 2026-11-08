@@ -28,4 +28,4 @@ Scripts parse; guard paths under `/etc/travo-guards`; every route is in the spec
 
 ## Running the container layer
 
-`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci` inside `openwrt/rootfs:aarch64_generic-25.12.6` (needs Docker). Not in `mise run check` yet; CI needs an x86_64 image or QEMU first. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
+`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). Not in `mise run check` yet; CI needs an x86_64 image or QEMU first. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.

@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/BlackDark/travo-greenfield/internal/runner"
 )
 
 type call struct{ name, args string }
 
-func fake(calls *[]call, reply map[string]string, failCmd string) Runner {
+func fake(calls *[]call, reply map[string]string, failCmd string) runner.Runner {
 	return func(ctx context.Context, name string, args ...string) (string, int, error) {
 		a := strings.Join(args, " ")
 		*calls = append(*calls, call{name, a})
@@ -80,7 +81,7 @@ func TestExecRunnerHonoursTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, _, err := ExecRunner(ctx, "sleep", "5")
+	_, _, err := runner.Exec(ctx, "sleep", "5")
 	if err == nil || time.Since(start) > 2*time.Second {
 		t.Fatalf("timeout not enforced: %v after %v", err, time.Since(start))
 	}

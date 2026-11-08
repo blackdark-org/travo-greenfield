@@ -5,6 +5,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -45,5 +46,14 @@ func TestCaseVariantPathIs404(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/API/health", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status %d, want 404", rec.Code)
+	}
+}
+
+func TestResponsesCarryNoSchemaLink(t *testing.T) {
+	h, _ := New("test")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	if strings.Contains(rec.Body.String(), "$schema") {
+		t.Fatalf("body links to a nonexistent schema route: %s", rec.Body.String())
 	}
 }
