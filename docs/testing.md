@@ -46,3 +46,7 @@ Live checks (spike S4), each from Ethernet:
 3. Begin, then reboot within the window: startup recovery restores.
 4. From a phone on the AP, switch to client mode: refused with 409 `wifi_lockout_risk`.
 5. Probe with a wrong STA password: carrier stays false, rollback happens, UI says "rolled back" only after restore.
+
+## Web
+
+`pnpm -C web check`: Biome, svelte-check, Vitest (pure logic and server-rendered components), build, size-limit. Visual and keyboard behaviour (theme, drawer, focus) is checked in headless Chrome at 390 px and 1280 px before a UI PR; attach screenshots to the PR.
