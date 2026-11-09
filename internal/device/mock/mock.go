@@ -17,6 +17,8 @@ type config struct{ sections map[string]*device.Section }
 
 // Device implements device.Device.
 type Device struct {
+	Reloads      int
+	ReloadErr    error
 	mu           sync.Mutex
 	committed    map[string]*config
 	staged       map[string]*config
@@ -175,6 +177,13 @@ func (d *Device) Call(_ context.Context, object, method string, _ any) (json.Raw
 		return nil, fmt.Errorf("ubus %s.%s: %w", object, method, device.ErrNotFound)
 	}
 	return r, nil
+}
+
+func (d *Device) Reload(context.Context) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.Reloads++
+	return d.ReloadErr
 }
 
 func (d *Device) HasDefaultRoute(context.Context) (bool, error) {

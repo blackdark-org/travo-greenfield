@@ -6,7 +6,7 @@ import (
 	"github.com/BlackDark/travo-greenfield/internal/device"
 )
 
-// Load seeds a committed config from parsed sections (e.g. cli.ParseShow on a captured fixture).
+// Load seeds a committed config from parsed sections (cli.ParseExport on a captured fixture).
 func (d *Device) Load(ctx context.Context, cfg string, secs []device.Section) error {
 	for _, s := range secs {
 		if err := d.SetType(ctx, cfg, s.Name, s.Type); err != nil {

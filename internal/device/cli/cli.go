@@ -33,12 +33,14 @@ func (d *Device) run(ctx context.Context, tier time.Duration, name string, args 
 	return out, err
 }
 
+// Show reads via `uci export`: `uci show` cannot tell a one-element list from an option.
+// Staged (uncommitted) changes are included, like `uci show`.
 func (d *Device) Show(ctx context.Context, config string) ([]device.Section, error) {
-	out, err := d.run(ctx, TierRead, "uci", "show", config)
+	out, err := d.run(ctx, TierRead, "uci", "export", config)
 	if err != nil {
 		return nil, err
 	}
-	return ParseShow(config, out)
+	return ParseExport(config, out)
 }
 
 func (d *Device) Set(ctx context.Context, config, section, option, value string) error {
@@ -104,6 +106,12 @@ func (d *Device) Call(ctx context.Context, object, method string, args any) (jso
 		return nil, fmt.Errorf("ubus %s.%s: reply is not JSON", object, method)
 	}
 	return json.RawMessage(out), nil
+}
+
+// Reload runs procd's reload_config; it restarts only services whose config changed.
+func (d *Device) Reload(ctx context.Context) error {
+	_, err := d.run(ctx, TierApply, "reload_config")
+	return err
 }
 
 // HasDefaultRoute reads the kernel table (netifd status can lie, see device-facts §1).
