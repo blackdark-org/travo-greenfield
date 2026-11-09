@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,14 +28,26 @@ func main() {
 	addr := flag.String("listen", "127.0.0.1:8081", "listen address")
 	useMock := flag.Bool("mock", false, "run against the mock device (no router needed)")
 	firstRun := flag.Bool("mock-firstrun", false, "with --mock: start without a root password")
+	hostAllow := flag.String("host-allow", "", "comma-separated extra Host names accepted (DNS-rebinding guard)")
 	flag.Parse()
-	if err := run(*addr, *useMock, *firstRun); err != nil {
+	if err := run(*addr, *useMock, *firstRun, splitList(*hostAllow)); err != nil {
 		slog.Error("startup", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(addr string, useMock, firstRun bool) error {
+// splitList splits a comma-separated flag, dropping blanks.
+func splitList(s string) []string {
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func run(addr string, useMock, firstRun bool, hostAllow []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	workers := lifecycle.New(context.Background())
@@ -44,6 +57,11 @@ func run(addr string, useMock, firstRun bool) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := deps.Close(); err != nil {
+			slog.Warn("cleanup", "err", err)
+		}
+	}()
 	slog.Info("adapters", "mock", deps.Mock, "packages", deps.Packages.Name())
 
 	sessions, err := startState(ctx, deps)
@@ -64,6 +82,7 @@ func run(addr string, useMock, firstRun bool) error {
 		Version: version.Version, Accounts: deps.Accounts, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
 		Trusted:   provider.Allowed,
+		RouterIPs: provider.RouterIPs, HostAllow: hostAllow,
 		SaveEpoch: func(n uint64) error { return epochfile.Save(deps.Paths.EpochFile(), n) },
 	})
 	srv := &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}

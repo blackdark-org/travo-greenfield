@@ -27,7 +27,6 @@ func (SystemClock) Now() time.Time { return time.Now() }
 type Session struct {
 	Epoch   uint64
 	CSRF    string
-	Created time.Time
 	Expires time.Time
 }
 
@@ -66,7 +65,7 @@ func (s *Store) Create(now time.Time) (string, Session, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	sess := Session{Epoch: s.epoch, CSRF: csrf, Created: now, Expires: now.Add(Lifetime)}
+	sess := Session{Epoch: s.epoch, CSRF: csrf, Expires: now.Add(Lifetime)}
 	s.sessions[hash(token)] = sess
 	return token, sess, nil
 }
