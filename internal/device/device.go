@@ -32,6 +32,8 @@ type UCI interface {
 	DeleteSection(ctx context.Context, config, section string) error
 	Commit(ctx context.Context, config string) error
 	Revert(ctx context.Context, config string) error
+	// Pending reports whether config has staged, uncommitted changes (`uci changes`).
+	Pending(ctx context.Context, config string) (bool, error)
 }
 
 // Ubus calls an object method and returns the raw JSON reply.

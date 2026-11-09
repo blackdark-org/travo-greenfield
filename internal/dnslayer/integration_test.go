@@ -29,6 +29,9 @@ func (a uciCommit) Apply(ctx context.Context, cs []string) error {
 func TestRealStackRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	d := cli.New()
+	if p, err := d.Pending(ctx, "dhcp"); err != nil || p {
+		t.Fatalf("precondition: dhcp must have no staged changes (pending=%v err=%v)", p, err)
+	}
 	_, before, err := ReadState(ctx, d)
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +42,7 @@ func TestRealStackRoundTrip(t *testing.T) {
 	for _, l := range []Layer{
 		{Name: VPN, Servers: []string{"10.2.0.1"}, NoResolv: true},
 		{Name: Captive, Servers: []string{"10.0.0.1"}, DisableRebind: true},
-		{Name: Tailscale, Servers: []string{"/ts.net/100.100.100.100"}, Additive: true},
+		{Name: Tailscale, Servers: []string{"/ts.net/100.100.100.100"}},
 	} {
 		if err := s.Push(ctx, l); err != nil {
 			t.Fatal(err)

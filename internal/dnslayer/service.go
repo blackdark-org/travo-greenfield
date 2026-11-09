@@ -46,8 +46,12 @@ func (s *Service) Load() (*Record, error) {
 	return &r, nil
 }
 
-// Push activates a layer. The record (intent) is saved before the commit, so a crash
-// in between leaves the guard and a record that a retry re-applies idempotently.
+// ErrForeignStaged means dhcp has uncommitted changes from someone else; staging on top
+// would commit or revert them. The transaction module's single staging area prevents this.
+var ErrForeignStaged = errors.New("dhcp has foreign staged changes")
+
+// Push activates a layer. The record (intent) is saved before staging, so after a crash
+// or failed apply the guard stays and Resume re-applies the same record.
 func (s *Service) Push(ctx context.Context, l Layer) error {
 	return s.mutate(ctx, func(rec *Record, cur State) (*Record, error) {
 		out, err := Push(rec, cur, l)
@@ -61,6 +65,79 @@ func (s *Service) Pop(ctx context.Context, name Name) error {
 	return s.mutate(ctx, func(rec *Record, _ State) (*Record, error) { return Pop(rec, name) })
 }
 
+// Status is the read-only view. Pending means a guarded change did not finish:
+// the record is intent, not proof the device has it.
+type Status struct {
+	Layers  []Name `json:"layers"`
+	Pending bool   `json:"pending"`
+	// Corrupt is set when the record cannot be read; Pending still reflects the guard.
+	Corrupt string `json:"corrupt,omitempty"`
+}
+
+// Status never mutates. A corrupt record is reported in the value, not as an error,
+// so the UI can still show "pending" when it matters most.
+func (s *Service) Status() (Status, error) {
+	st := Status{Layers: []Name{}}
+	g, err := s.Guards.Stale()
+	if err != nil {
+		return st, err
+	}
+	for _, x := range g {
+		st.Pending = st.Pending || x.Name == guardName
+	}
+	rec, err := s.Load()
+	if err != nil {
+		st.Corrupt = err.Error()
+		return st, nil
+	}
+	if rec != nil {
+		for _, l := range rec.Layers {
+			st.Layers = append(st.Layers, l.Name)
+		}
+	}
+	return st, nil
+}
+
+// Resume is the explicit retry path after a failure kept the guard: it finishes the
+// interrupted operation (re-apply layers, or restore base if a last pop was in flight)
+// and releases the guard on success. It refuses on a corrupt record.
+func (s *Service) Resume(ctx context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	active, err := s.guardActive()
+	if err != nil {
+		return err
+	}
+	if !active {
+		return nil
+	}
+	rec, err := s.Load()
+	if err != nil {
+		return fmt.Errorf("dns layers: resume: %w (guard kept)", err)
+	}
+	if rec == nil {
+		// record already deleted: the last restore applied, only the release was lost
+		return s.Guards.Release(guardName)
+	}
+	if rec.Restoring {
+		return s.applyAndFinish(ctx, rec.Base, true)
+	}
+	return s.applyAndFinish(ctx, Effective(*rec), false)
+}
+
+func (s *Service) guardActive() (bool, error) {
+	g, err := s.Guards.Stale()
+	if err != nil {
+		return false, err
+	}
+	for _, x := range g {
+		if x.Name == guardName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (s *Service) mutate(ctx context.Context, f func(*Record, State) (*Record, error)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -71,35 +148,58 @@ func (s *Service) mutate(ctx context.Context, f func(*Record, State) (*Record, e
 	if err != nil {
 		return fmt.Errorf("dns layers: %w (guard kept)", err)
 	}
-	sec, cur, err := ReadState(ctx, s.Device)
+	// Nothing has been written yet: transient read errors release the guard.
+	release := func(err error) error {
+		if rerr := s.Guards.Release(guardName); rerr != nil {
+			return errors.Join(err, rerr)
+		}
+		return err
+	}
+	if pending, err := s.Device.Pending(ctx, "dhcp"); err != nil {
+		return release(fmt.Errorf("dns layers: %w", err))
+	} else if pending {
+		return release(fmt.Errorf("dns layers: %w", ErrForeignStaged))
+	}
+	_, cur, err := ReadState(ctx, s.Device)
 	if err != nil {
-		return fmt.Errorf("dns layers: %w (guard kept)", err)
+		return release(fmt.Errorf("dns layers: %w", err))
 	}
 	next, err := f(rec, cur)
 	if err != nil {
-		_ = s.Guards.Release(guardName) // validation error: nothing was written
-		return err
+		return release(err)
 	}
-	var target State
 	switch {
 	case next != nil:
 		if err := atomicfile.WriteJSON(s.RecordPath, next, 0o600); err != nil {
-			return fmt.Errorf("dns layers: save record: %w (guard kept)", err)
+			return release(fmt.Errorf("dns layers: save record: %w", err))
 		}
-		target = Effective(*next)
+		return s.applyAndFinish(ctx, Effective(*next), false)
 	case rec != nil:
-		target = rec.Base
+		marked := *rec
+		marked.Layers, marked.Restoring = nil, true
+		if err := atomicfile.WriteJSON(s.RecordPath, marked, 0o600); err != nil {
+			return release(fmt.Errorf("dns layers: save record: %w", err))
+		}
+		return s.applyAndFinish(ctx, rec.Base, true)
 	default:
-		return s.Guards.Release(guardName) // nothing active, nothing to do
+		return release(nil) // nothing active, nothing to do
+	}
+}
+
+// applyAndFinish stages target, applies, and on success deletes the record (if
+// restoring base) and releases the guard. Any failure reverts staging and keeps the guard.
+func (s *Service) applyAndFinish(ctx context.Context, target State, restoreBase bool) error {
+	sec, _, err := ReadState(ctx, s.Device)
+	if err != nil {
+		return fmt.Errorf("dns layers: %w (guard kept)", err)
 	}
 	if err := Stage(ctx, s.Device, sec, target); err != nil {
-		_ = s.Device.Revert(ctx, "dhcp")
-		return fmt.Errorf("dns layers: stage: %w (guard kept)", err)
+		return errors.Join(fmt.Errorf("dns layers: stage: %w (guard kept)", err), s.Device.Revert(ctx, "dhcp"))
 	}
 	if err := s.Apply.Apply(ctx, []string{"dhcp"}); err != nil {
-		return fmt.Errorf("dns layers: apply: %w (guard kept)", err)
+		return errors.Join(fmt.Errorf("dns layers: apply: %w (guard kept)", err), s.Device.Revert(ctx, "dhcp"))
 	}
-	if next == nil {
+	if restoreBase {
 		if err := os.Remove(s.RecordPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("dns layers: delete record: %w (guard kept)", err)
 		}
@@ -127,7 +227,7 @@ func ReadState(ctx context.Context, d device.Device) (string, State, error) {
 	if v, ok := s.Lists["server"]; ok {
 		st.Server = List{Set: true, Values: slices.Clone(v)}
 	} else if v, ok := s.Options["server"]; ok {
-		st.Server = List{Set: true, Values: []string{v}}
+		st.Server = List{Set: true, Values: []string{v}, Scalar: true}
 	}
 	if v, ok := s.Options["noresolv"]; ok {
 		st.NoResolv = Opt{Set: true, Value: v}
@@ -143,19 +243,27 @@ func Stage(ctx context.Context, d device.Device, sec string, st State) error {
 	if err := d.DeleteOption(ctx, "dhcp", sec, "server"); err != nil && !errors.Is(err, device.ErrNotFound) {
 		return err
 	}
-	if st.Server.Set {
+	switch {
+	case st.Server.Set && st.Server.Scalar && len(st.Server.Values) == 1:
+		if err := d.Set(ctx, "dhcp", sec, "server", st.Server.Values[0]); err != nil {
+			return err
+		}
+	case st.Server.Set:
 		for _, v := range st.Server.Values {
 			if err := d.AddToList(ctx, "dhcp", sec, "server", v); err != nil {
 				return err
 			}
 		}
 	}
-	for opt, o := range map[string]Opt{"noresolv": st.NoResolv, "rebind_protection": st.RebindProtection} {
+	for _, o := range []struct {
+		name string
+		opt  Opt
+	}{{"noresolv", st.NoResolv}, {"rebind_protection", st.RebindProtection}} {
 		var err error
-		if o.Set {
-			err = d.Set(ctx, "dhcp", sec, opt, o.Value)
+		if o.opt.Set {
+			err = d.Set(ctx, "dhcp", sec, o.name, o.opt.Value)
 		} else {
-			err = d.DeleteOption(ctx, "dhcp", sec, opt)
+			err = d.DeleteOption(ctx, "dhcp", sec, o.name)
 		}
 		if err != nil && !errors.Is(err, device.ErrNotFound) {
 			return err

@@ -22,16 +22,21 @@ const (
 // precedence: higher wins for Replace layers.
 var precedence = map[Name]int{Captive: 40, AdGuard: 30, VPN: 20, Tailscale: 10}
 
+// additive is fixed per name so a caller cannot turn captive into an append-only layer.
+var additive = map[Name]bool{Tailscale: true}
+
 // Opt is an option that may be absent; absent restores by deleting the option.
 type Opt struct {
 	Set   bool   `json:"set"`
 	Value string `json:"value,omitempty"`
 }
 
-// List is a list option that may be absent.
+// List is a list option that may be absent. Scalar records that base held
+// `option server` rather than `list server`, so restore writes the same shape.
 type List struct {
 	Set    bool     `json:"set"`
 	Values []string `json:"values,omitempty"`
+	Scalar bool     `json:"scalar,omitempty"`
 }
 
 // State is the slice of dnsmasq config the stack owns.
@@ -42,11 +47,10 @@ type State struct {
 }
 
 // Layer is what one feature wants. Replace layers override servers/noresolv (highest
-// precedence wins). Additive layers append domain-scoped servers (e.g. /ts.net/100.100.100.100).
+// precedence wins). Additive layers (by name, see additive) append domain-scoped servers.
 type Layer struct {
 	Name     Name     `json:"name"`
 	Servers  []string `json:"servers"`
-	Additive bool     `json:"additive,omitempty"`
 	NoResolv bool     `json:"noresolv,omitempty"`
 	// DisableRebind turns rebind protection off (captive: hotel portals answer with RFC1918).
 	DisableRebind bool `json:"disable_rebind,omitempty"`
@@ -57,6 +61,8 @@ type Record struct {
 	Version int     `json:"version"`
 	Base    State   `json:"base"`
 	Layers  []Layer `json:"layers"`
+	// Restoring marks an in-flight last pop: Resume must restore base, not re-apply layers.
+	Restoring bool `json:"restoring,omitempty"`
 }
 
 const recordVersion = 1
@@ -71,8 +77,11 @@ func validate(l Layer) error {
 	if _, ok := precedence[l.Name]; !ok {
 		return fmt.Errorf("%w: %q", ErrUnknownLayer, l.Name)
 	}
-	if !l.Additive && len(l.Servers) == 0 {
+	if len(l.Servers) == 0 {
 		return fmt.Errorf("%s: %w", l.Name, ErrNoServers)
+	}
+	if additive[l.Name] && l.NoResolv {
+		return fmt.Errorf("%s: additive layer cannot set noresolv", l.Name)
 	}
 	for _, s := range l.Servers {
 		if s == "" {
@@ -96,6 +105,7 @@ func Push(rec *Record, current State, l Layer) (Record, error) {
 			return Record{}, err
 		}
 		out = clone(*rec)
+		out.Restoring = false // live state is mid-restore; the saved base stays authoritative
 	}
 	out.Layers = slices.DeleteFunc(out.Layers, func(x Layer) bool { return x.Name == l.Name })
 	out.Layers = append(out.Layers, l)
@@ -104,7 +114,7 @@ func Push(rec *Record, current State, l Layer) (Record, error) {
 }
 
 // Pop removes only the named layer. It returns nil when the last layer left:
-// the caller then writes Effective(base) and deletes the record.
+// the caller then marks the record Restoring, writes base, and deletes the record.
 func Pop(rec *Record, name Name) (*Record, error) {
 	if rec == nil {
 		return nil, nil // nothing active: popping is a no-op, not an error
@@ -128,7 +138,7 @@ func Effective(rec Record) State {
 	var extra []string
 	for i := range rec.Layers {
 		l := &rec.Layers[i]
-		if l.Additive {
+		if additive[l.Name] {
 			extra = append(extra, l.Servers...)
 		} else if top == nil || precedence[l.Name] > precedence[top.Name] {
 			top = l
@@ -139,14 +149,16 @@ func Effective(rec Record) State {
 	}
 	if top != nil {
 		st.Server = List{Set: true, Values: slices.Clone(top.Servers)}
+		st.NoResolv = Opt{Set: true, Value: "0"}
 		if top.NoResolv {
-			st.NoResolv = Opt{Set: true, Value: "1"}
-		} else {
-			st.NoResolv = Opt{Set: true, Value: "0"}
+			st.NoResolv.Value = "1"
 		}
 	}
 	if len(extra) > 0 {
 		st.Server = List{Set: true, Values: append(slices.Clone(st.Server.Values), extra...)}
+	}
+	if top != nil || len(extra) > 0 {
+		st.Server.Scalar = false // layered state is always written as a list
 	}
 	return st
 }
@@ -164,8 +176,11 @@ func Check(r Record) error {
 	if r.Version != recordVersion {
 		return fmt.Errorf("%w: version %d", ErrBadRecord, r.Version)
 	}
-	if len(r.Layers) == 0 {
+	if len(r.Layers) == 0 && !r.Restoring {
 		return fmt.Errorf("%w: no layers (should have been deleted)", ErrBadRecord)
+	}
+	if len(r.Layers) != 0 && r.Restoring {
+		return fmt.Errorf("%w: restoring with active layers", ErrBadRecord)
 	}
 	seen := map[Name]bool{}
 	for _, l := range r.Layers {

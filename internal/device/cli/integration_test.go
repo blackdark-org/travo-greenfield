@@ -32,6 +32,9 @@ func TestRealUCIRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	if p, err := d.Pending(ctx, "dhcp"); err != nil || !p {
+		t.Fatalf("pending after set: %v %v", p, err)
+	}
 	secs, err := d.Show(ctx, "dhcp")
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +57,9 @@ func TestRealUCIRoundTrip(t *testing.T) {
 
 	if err := d.Revert(ctx, "dhcp"); err != nil {
 		t.Fatal(err)
+	}
+	if p, _ := d.Pending(ctx, "dhcp"); p {
+		t.Fatal("pending after revert")
 	}
 	secs, _ = d.Show(ctx, "dhcp")
 	for _, s := range secs {
@@ -80,6 +86,9 @@ func TestRealUCIRoundTrip(t *testing.T) {
 		t.Fatal("revert after commit removed committed data")
 	}
 	if err := d.DeleteSection(ctx, "dhcp", "travo_test"); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Commit(ctx, "dhcp"); err != nil { // leave no staged state for later tests
 		t.Fatal(err)
 	}
 }

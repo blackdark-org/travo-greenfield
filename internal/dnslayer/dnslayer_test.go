@@ -2,6 +2,7 @@ package dnslayer
 
 import (
 	"errors"
+	"fmt"
 	"math/rand/v2"
 	"reflect"
 	"testing"
@@ -17,7 +18,7 @@ var layers = map[Name]Layer{
 	Captive:   {Name: Captive, Servers: []string{"10.0.0.1"}, DisableRebind: true},
 	AdGuard:   {Name: AdGuard, Servers: []string{"127.0.0.1#5353"}, NoResolv: true},
 	VPN:       {Name: VPN, Servers: []string{"10.2.0.1"}, NoResolv: true},
-	Tailscale: {Name: Tailscale, Servers: []string{"/ts.net/100.100.100.100"}, Additive: true},
+	Tailscale: {Name: Tailscale, Servers: []string{"/ts.net/100.100.100.100"}},
 }
 
 func push(t *testing.T, r *Record, n Name) *Record {
@@ -109,19 +110,55 @@ func TestRejectsBadInputAndCorruptRecords(t *testing.T) {
 	}
 }
 
-// Property: for any sequence of pushes and pops, the effective state equals the state
-// computed from the set of active layers alone, and emptying the stack yields no record.
+func TestFirstPushCapturesLiveAsBase(t *testing.T) {
+	cur := State{Server: List{Set: true, Values: []string{"8.8.8.8"}, Scalar: true}}
+	r, err := Push(nil, cur, layers[VPN])
+	if err != nil || !reflect.DeepEqual(r.Base, cur) {
+		t.Fatalf("base %+v err %v", r.Base, err)
+	}
+	r2, _ := Push(&r, State{Server: List{Set: true, Values: []string{"other"}}}, layers[AdGuard])
+	if !reflect.DeepEqual(r2.Base, cur) {
+		t.Fatal("later push recaptured base")
+	}
+}
+
+func TestEmptyStackIsBase(t *testing.T) {
+	r := push(t, nil, VPN)
+	r2, _ := Pop(r, VPN)
+	if r2 != nil {
+		t.Fatal("record survived last pop")
+	}
+}
+
+// Property: for any sequence of pushes (with varying payloads) and pops, the effective
+// state equals the state computed from the final active layers alone, base never drifts,
+// and the stack is empty exactly when no layer is active.
 func TestPropertyRandomSequences(t *testing.T) {
 	names := []Name{Captive, AdGuard, VPN, Tailscale}
 	rng := rand.New(rand.NewPCG(1, 2))
-	for iter := 0; iter < 2000; iter++ {
+	gen := func(n Name) Layer {
+		l := Layer{Name: n, Servers: []string{fmt.Sprintf("10.%d.%d.1", rng.IntN(4), rng.IntN(4))}}
+		if n == Tailscale {
+			l.Servers = []string{fmt.Sprintf("/d%d.ts.net/100.100.100.100", rng.IntN(4))}
+			return l
+		}
+		l.NoResolv = rng.IntN(2) == 0
+		l.DisableRebind = n == Captive && rng.IntN(2) == 0
+		return l
+	}
+	for iter := 0; iter < 3000; iter++ {
 		var r *Record
-		active := map[Name]bool{}
-		for step := 0; step < 12; step++ {
+		active := map[Name]Layer{}
+		for step := 0; step < 14; step++ {
 			n := names[rng.IntN(len(names))]
-			if rng.IntN(2) == 0 {
-				r = push(t, r, n)
-				active[n] = true
+			if rng.IntN(3) != 0 {
+				l := gen(n)
+				out, err := Push(r, base, l)
+				if err != nil {
+					t.Fatal(err)
+				}
+				r = &out
+				active[n] = l
 			} else {
 				var err error
 				if r, err = Pop(r, n); err != nil {
@@ -135,17 +172,18 @@ func TestPropertyRandomSequences(t *testing.T) {
 			if r == nil {
 				continue
 			}
+			if !reflect.DeepEqual(r.Base, base) {
+				t.Fatal("base drifted")
+			}
 			var fresh *Record
-			for _, nn := range names {
-				if active[nn] {
-					fresh = push(t, fresh, nn)
+			for _, nn := range names { // fixed order, independent of history
+				if l, ok := active[nn]; ok {
+					out, _ := Push(fresh, base, l)
+					fresh = &out
 				}
 			}
 			if !reflect.DeepEqual(Effective(*r), Effective(*fresh)) {
 				t.Fatalf("history-dependent state at iter %d: %+v vs %+v", iter, Effective(*r), Effective(*fresh))
-			}
-			if !reflect.DeepEqual(r.Base, base) {
-				t.Fatal("base drifted")
 			}
 		}
 	}
