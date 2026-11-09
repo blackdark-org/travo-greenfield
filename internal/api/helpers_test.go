@@ -117,7 +117,8 @@ func newEnv(t *testing.T) *env {
 			"fedcba9876543210": {Meta: txn.Meta{ID: "fedcba9876543210"}, State: txn.Confirmed},
 		}},
 		Sessions: e.store, Limiter: auth.NewRateLimiter(), Clock: e.clock,
-		Trusted: func(a netip.Addr) bool { return trust.Allowed(a, lan) },
+		Trusted:   func(a netip.Addr) bool { return trust.Allowed(a, lan) },
+		RouterIPs: func() []netip.Addr { return []netip.Addr{netip.MustParseAddr("192.168.1.1")} },
 		SaveEpoch: func(n uint64) error {
 			if e.saveErr != nil {
 				return e.saveErr
@@ -131,7 +132,7 @@ func newEnv(t *testing.T) *env {
 
 type req struct {
 	method, path, body string
-	remote             string
+	remote, host       string
 	cookie, csrf       string
 	tls                bool
 }
@@ -146,6 +147,10 @@ func (e *env) do(r req) *httptest.ResponseRecorder {
 	}
 	hr := httptest.NewRequest(r.method, r.path, rd)
 	hr.RemoteAddr = lanAddr
+	hr.Host = "192.168.1.1" // httptest defaults to example.com, which the host guard refuses
+	if r.host != "" {
+		hr.Host = r.host
+	}
 	if r.remote != "" {
 		hr.RemoteAddr = r.remote
 	}
