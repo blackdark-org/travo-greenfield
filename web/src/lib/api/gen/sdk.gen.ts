@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetHealthData, GetHealthErrors, GetHealthResponses } from './types.gen';
+import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -22,3 +22,114 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * Liveness check
  */
 export const getHealth = <ThrowOnError extends boolean = false>(options?: Options<GetHealthData, ThrowOnError>): RequestResult<GetHealthResponses, GetHealthErrors, ThrowOnError> => (options?.client ?? client).get<GetHealthResponses, GetHealthErrors, ThrowOnError>({ url: '/api/health', ...options });
+
+/**
+ * Log in with the root password
+ */
+export const postLogin = <ThrowOnError extends boolean = false>(options: Options<PostLoginData, ThrowOnError>): RequestResult<PostLoginResponses, PostLoginErrors, ThrowOnError> => (options.client ?? client).post<PostLoginResponses, PostLoginErrors, ThrowOnError>({
+    url: '/api/v1/auth/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Log out and revoke the session
+ */
+export const postLogout = <ThrowOnError extends boolean = false>(options?: Options<PostLogoutData, ThrowOnError>): RequestResult<PostLogoutResponses, PostLogoutErrors, ThrowOnError> => (options?.client ?? client).post<PostLogoutResponses, PostLogoutErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/auth/logout',
+    ...options
+});
+
+/**
+ * Change the root password and revoke all sessions
+ */
+export const postPassword = <ThrowOnError extends boolean = false>(options: Options<PostPasswordData, ThrowOnError>): RequestResult<PostPasswordResponses, PostPasswordErrors, ThrowOnError> => (options.client ?? client).post<PostPasswordResponses, PostPasswordErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/auth/password',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Current session (recovers the CSRF token after a reload)
+ */
+export const getSession = <ThrowOnError extends boolean = false>(options?: Options<GetSessionData, ThrowOnError>): RequestResult<GetSessionResponses, GetSessionErrors, ThrowOnError> => (options?.client ?? client).get<GetSessionResponses, GetSessionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/auth/session',
+    ...options
+});
+
+/**
+ * First-run state
+ */
+export const getSetupState = <ThrowOnError extends boolean = false>(options?: Options<GetSetupStateData, ThrowOnError>): RequestResult<GetSetupStateResponses, GetSetupStateErrors, ThrowOnError> => (options?.client ?? client).get<GetSetupStateResponses, GetSetupStateErrors, ThrowOnError>({ url: '/api/v1/setup', ...options });
+
+/**
+ * Set the first root password (only while none is set)
+ */
+export const postSetupPassword = <ThrowOnError extends boolean = false>(options: Options<PostSetupPasswordData, ThrowOnError>): RequestResult<PostSetupPasswordResponses, PostSetupPasswordErrors, ThrowOnError> => (options.client ?? client).post<PostSetupPasswordResponses, PostSetupPasswordErrors, ThrowOnError>({
+    url: '/api/v1/setup/password',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Transaction status
+ */
+export const getTransaction = <ThrowOnError extends boolean = false>(options: Options<GetTransactionData, ThrowOnError>): RequestResult<GetTransactionResponses, GetTransactionErrors, ThrowOnError> => (options.client ?? client).get<GetTransactionResponses, GetTransactionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/transactions/{id}',
+    ...options
+});
+
+/**
+ * Keep the applied change
+ */
+export const confirmTransaction = <ThrowOnError extends boolean = false>(options: Options<ConfirmTransactionData, ThrowOnError>): RequestResult<ConfirmTransactionResponses, ConfirmTransactionErrors, ThrowOnError> => (options.client ?? client).post<ConfirmTransactionResponses, ConfirmTransactionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/transactions/{id}/confirm',
+    ...options
+});
+
+/**
+ * Undo the applied change now
+ */
+export const rollbackTransaction = <ThrowOnError extends boolean = false>(options: Options<RollbackTransactionData, ThrowOnError>): RequestResult<RollbackTransactionResponses, RollbackTransactionErrors, ThrowOnError> => (options.client ?? client).post<RollbackTransactionResponses, RollbackTransactionErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/transactions/{id}/rollback',
+    ...options
+});
