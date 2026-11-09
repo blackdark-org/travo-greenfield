@@ -32,6 +32,10 @@ type Deps struct {
 	Clock    auth.Clock
 	// Trusted reports whether a source address may reach the admin API (internal/trust).
 	Trusted func(netip.Addr) bool
+	// RouterIPs are the router's own lan addresses (internal/trust); nil before the first read.
+	RouterIPs func() []netip.Addr
+	// HostAllow are extra Host names accepted besides IP literals of the router and localhost.
+	HostAllow []string
 	// SaveEpoch persists the session epoch; it runs BEFORE a password change replies.
 	SaveEpoch func(uint64) error
 }

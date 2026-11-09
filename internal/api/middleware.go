@@ -5,8 +5,10 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/netip"
+	"strings"
 
 	"github.com/BlackDark/travo-greenfield/internal/auth"
 	"github.com/danielgtaylor/huma/v2"
@@ -47,14 +49,62 @@ func remoteAddr(hostport string) (netip.Addr, bool) {
 	return ap.Addr().Unmap(), true
 }
 
-// outer is the http-level chain: recover -> trust -> mux. Trust sits here so that 404s
-// and the spec are LAN-only too; only /api/health answers everyone.
+// hostAllowed is the DNS-rebinding guard: the Host header must name the router itself
+// (an IP literal of it or loopback), localhost, or an allowlisted name. A rebinding page
+// reaches us with the attacker's name in Host even though the source IP is a LAN client.
+func hostAllowed(host string, routerIPs []netip.Addr, names []string) bool {
+	h := strings.ToLower(host)
+	if hp, _, err := net.SplitHostPort(h); err == nil {
+		h = hp
+	}
+	h = strings.TrimSuffix(strings.TrimPrefix(h, "["), "]")
+	if h == "" {
+		return false
+	}
+	if h == "localhost" {
+		return true
+	}
+	for _, n := range names {
+		if h == strings.ToLower(strings.TrimSpace(n)) {
+			return true
+		}
+	}
+	ip, err := netip.ParseAddr(h)
+	if err != nil {
+		return false
+	}
+	ip = ip.Unmap()
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, r := range routerIPs {
+		if r.Unmap() == ip {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *server) hostOK(host string) bool {
+	var ips []netip.Addr
+	if s.RouterIPs != nil {
+		ips = s.RouterIPs()
+	}
+	return hostAllowed(host, ips, s.HostAllow)
+}
+
+// outer is the http-level chain: recover -> trust -> host -> mux. Trust sits here so that
+// 404s and the spec are LAN-only too; only /api/health answers everyone.
 func (s *server) outer(mux http.Handler) http.Handler {
 	return recoverPanics(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/health" {
 			ip, ok := remoteAddr(r.RemoteAddr)
 			if !ok || s.trusted == nil || !s.trusted(ip) {
 				writeJSONError(w, http.StatusForbidden, "not_lan", "admin is reachable from the LAN only")
+				return
+			}
+			if !s.hostOK(r.Host) {
+				writeJSONError(w, http.StatusMisdirectedRequest, "bad_host", "unexpected Host header")
 				return
 			}
 		}

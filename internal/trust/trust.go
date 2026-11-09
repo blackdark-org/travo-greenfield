@@ -42,10 +42,32 @@ func LANNets(ifaces []facts.Interface) []netip.Prefix {
 	return out
 }
 
-// Provider holds the last good LAN subnet set.
+// LANAddrs extracts the router's own host addresses on the lan interface (not masked).
+func LANAddrs(ifaces []facts.Interface) []netip.Addr {
+	var out []netip.Addr
+	for _, i := range ifaces {
+		if i.Name != "lan" {
+			continue
+		}
+		for _, p := range i.IPv4 {
+			out = append(out, p.Addr())
+		}
+	}
+	return out
+}
+
+// Provider holds the last good LAN subnet set and the router's own lan addresses.
 type Provider struct {
-	mu   sync.RWMutex
-	nets []netip.Prefix
+	mu    sync.RWMutex
+	nets  []netip.Prefix
+	addrs []netip.Addr
+}
+
+// RouterIPs are the router's lan addresses from the last good read; empty before the first one.
+func (p *Provider) RouterIPs() []netip.Addr {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return append([]netip.Addr(nil), p.addrs...)
 }
 
 // Allowed uses the last good set; before the first successful read only loopback passes.
@@ -65,9 +87,9 @@ func (p *Provider) Refresh(ctx context.Context, u device.Ubus) error {
 	if err != nil {
 		return err
 	}
-	nets := LANNets(ifaces)
+	nets, addrs := LANNets(ifaces), LANAddrs(ifaces)
 	p.mu.Lock()
-	p.nets = nets
+	p.nets, p.addrs = nets, addrs
 	p.mu.Unlock()
 	return nil
 }

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/netip"
 	"strings"
 	"testing"
 
@@ -137,5 +138,55 @@ func TestUnknownRouteIsJSON404(t *testing.T) {
 	rec := newEnv(t).do(req{method: "GET", path: "/api/v1/nothing"})
 	if rec.Code != http.StatusNotFound || errCode(t, rec) != "not_found" {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestHostAllowed(t *testing.T) {
+	router := []netip.Addr{netip.MustParseAddr("192.168.1.1"), netip.MustParseAddr("fd00::1")}
+	names := []string{"Router.Lan"}
+	cases := []struct {
+		host string
+		want bool
+	}{
+		{"192.168.1.1", true},
+		{"192.168.1.1:8081", true},
+		{"127.0.0.1:8081", true},
+		{"[::1]", true},
+		{"[::1]:8081", true},
+		{"::1", true},
+		{"[fd00::1]:80", true},
+		{"localhost", true},
+		{"LOCALHOST:8081", true},
+		{"router.lan", true},
+		{"ROUTER.LAN:80", true},
+		{"192.168.1.50", false}, // a LAN client's address is not the router's
+		{"192.168.1.0", false},
+		{"evil.example", false},
+		{"evil.example:80", false},
+		{"localhost.evil.example", false},
+		{"", false},
+	}
+	for _, c := range cases {
+		if got := hostAllowed(c.host, router, names); got != c.want {
+			t.Errorf("hostAllowed(%q) = %v, want %v", c.host, got, c.want)
+		}
+	}
+	if hostAllowed("192.168.1.1", nil, nil) || !hostAllowed("localhost", nil, nil) {
+		t.Error("before the first interface read only loopback/localhost may pass")
+	}
+}
+
+func TestRebindingHostIsRefusedAndCannotSetPassword(t *testing.T) {
+	e := newEnv(t)
+	e.dev.SetPassword("")
+	rec := e.do(req{method: "POST", path: "/api/v1/setup/password", host: "evil.example", body: `{"password":"takeover-pass"}`})
+	if rec.Code != http.StatusMisdirectedRequest || errCode(t, rec) != "bad_host" {
+		t.Fatalf("rebinding host: %d %s", rec.Code, rec.Body)
+	}
+	if e.acc.sets != 0 {
+		t.Fatal("password was set through a rebinding host")
+	}
+	if rec := e.do(req{method: "GET", path: "/api/health", host: "evil.example"}); rec.Code != http.StatusOK {
+		t.Fatalf("health must stay exempt: %d", rec.Code)
 	}
 }

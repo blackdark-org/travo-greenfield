@@ -38,7 +38,7 @@ Paths: guards in `/etc/travo-guards/`, state in `/etc/travo/`, settings in UCI `
 - Optional IP allowlist (CIDR); health/login/time-sync bypass it.
 - Pre-login time-sync only while the router clock is implausible; sticky once plausible (a 1970 rewind once reopened it); bounded window; rate-limited. Authenticated callers unbounded.
 - Root SSH keys: write only dropbear `authorized_keys`; append exactly one validated line; reject `\n`/`\r`; strict key-type format; no options field (`command=`, `from=`); list/add/delete behind auth; not revoked by redeploy or password change.
-- Admin reachable on `br-lan` only (wired + AP WiFi). Uplink zones and guest get no admin access. Enforced by firewall AND daemon source check (by `RemoteAddr`, never forwarded headers). No reverse proxy on loopback in front of the daemon: loopback is trusted. No default password, ever.
+- Admin reachable on `br-lan` only (wired + AP WiFi). Uplink zones and guest get no admin access. Enforced by firewall AND daemon source check (by `RemoteAddr`, never forwarded headers). No reverse proxy on loopback in front of the daemon: loopback is trusted. No default password, ever. The `Host` header must name the router (its lan IP, loopback, `localhost`, or an allowlisted name), else 421: DNS rebinding must not reach the API.
 
 ## 4. API contract
 
