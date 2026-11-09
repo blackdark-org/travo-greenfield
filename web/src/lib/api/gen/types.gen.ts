@@ -4,46 +4,19 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
-export type ErrorDetail = {
+export type ApiError = {
     /**
-     * Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'
+     * Stable error code
      */
-    location?: string;
+    code?: string;
     /**
-     * Error message text
+     * Human-readable message; not for branching
      */
-    message?: string;
-    /**
-     * The value at the given location
-     */
-    value?: unknown;
+    error: string;
 };
 
-export type ErrorModel = {
-    /**
-     * A human-readable explanation specific to this occurrence of the problem.
-     */
-    detail?: string;
-    /**
-     * Optional list of individual error details
-     */
-    errors?: Array<ErrorDetail> | null;
-    /**
-     * A URI reference that identifies the specific occurrence of the problem.
-     */
-    instance?: string;
-    /**
-     * HTTP status code
-     */
-    status?: number;
-    /**
-     * A short, human-readable summary of the problem type. This value should not change between occurrences of the error.
-     */
-    title?: string;
-    /**
-     * A URI reference to human-readable documentation for the error.
-     */
-    type?: string;
+export type GetSetupStateResponse = {
+    password_set: boolean;
 };
 
 export type HealthOutputBody = {
@@ -57,6 +30,55 @@ export type HealthOutputBody = {
     version: string;
 };
 
+export type LoginInputBody = {
+    /**
+     * Root password
+     */
+    password: string;
+};
+
+export type OkBody = {
+    status: 'ok';
+};
+
+export type PasswordInputBody = {
+    current: string;
+    /**
+     * 8 to 128 bytes, no NUL or line breaks
+     */
+    new: string;
+};
+
+export type SessionBody = {
+    /**
+     * Send as X-CSRF-Token on POST/PUT/PATCH/DELETE
+     */
+    csrf_token: string;
+    /**
+     * Seconds until the session ends; relative on purpose
+     */
+    expires_in: number;
+};
+
+export type SetupInputBody = {
+    /**
+     * New root password, 8 to 128 bytes
+     */
+    password: string;
+};
+
+export type TxnBody = {
+    configs: Array<string> | null;
+    id: string;
+    started: string;
+    state: 'pending' | 'confirmed' | 'rolled_back' | 'restoring' | 'rollback_failed';
+    summary: string;
+    /**
+     * Confirm window, counted from when the change was armed
+     */
+    window_seconds: number;
+};
+
 export type GetHealthData = {
     body?: never;
     path?: never;
@@ -68,7 +90,7 @@ export type GetHealthErrors = {
     /**
      * Error
      */
-    default: ErrorModel;
+    default: ApiError;
 };
 
 export type GetHealthError = GetHealthErrors[keyof GetHealthErrors];
@@ -81,3 +103,339 @@ export type GetHealthResponses = {
 };
 
 export type GetHealthResponse = GetHealthResponses[keyof GetHealthResponses];
+
+export type PostLoginData = {
+    body: LoginInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login';
+};
+
+export type PostLoginErrors = {
+    /**
+     * Unauthorized
+     */
+    401: ApiError;
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Too Many Requests
+     */
+    429: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostLoginError = PostLoginErrors[keyof PostLoginErrors];
+
+export type PostLoginResponses = {
+    /**
+     * OK
+     */
+    200: SessionBody;
+};
+
+export type PostLoginResponse = PostLoginResponses[keyof PostLoginResponses];
+
+export type PostLogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout';
+};
+
+export type PostLogoutErrors = {
+    /**
+     * Error
+     */
+    default: ApiError;
+};
+
+export type PostLogoutError = PostLogoutErrors[keyof PostLogoutErrors];
+
+export type PostLogoutResponses = {
+    /**
+     * OK
+     */
+    200: OkBody;
+};
+
+export type PostLogoutResponse = PostLogoutResponses[keyof PostLogoutResponses];
+
+export type PostPasswordData = {
+    body: PasswordInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/password';
+};
+
+export type PostPasswordErrors = {
+    /**
+     * Bad Request
+     */
+    400: ApiError;
+    /**
+     * Forbidden
+     */
+    403: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Too Many Requests
+     */
+    429: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostPasswordError = PostPasswordErrors[keyof PostPasswordErrors];
+
+export type PostPasswordResponses = {
+    /**
+     * OK
+     */
+    200: SessionBody;
+};
+
+export type PostPasswordResponse = PostPasswordResponses[keyof PostPasswordResponses];
+
+export type GetSessionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/session';
+};
+
+export type GetSessionErrors = {
+    /**
+     * Error
+     */
+    default: ApiError;
+};
+
+export type GetSessionError = GetSessionErrors[keyof GetSessionErrors];
+
+export type GetSessionResponses = {
+    /**
+     * OK
+     */
+    200: SessionBody;
+};
+
+export type GetSessionResponse = GetSessionResponses[keyof GetSessionResponses];
+
+export type GetSetupStateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/setup';
+};
+
+export type GetSetupStateErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetSetupStateError = GetSetupStateErrors[keyof GetSetupStateErrors];
+
+export type GetSetupStateResponses = {
+    /**
+     * OK
+     */
+    200: GetSetupStateResponse;
+};
+
+export type GetSetupStateResponse2 = GetSetupStateResponses[keyof GetSetupStateResponses];
+
+export type PostSetupPasswordData = {
+    body: SetupInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/setup/password';
+};
+
+export type PostSetupPasswordErrors = {
+    /**
+     * Bad Request
+     */
+    400: ApiError;
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Too Many Requests
+     */
+    429: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostSetupPasswordError = PostSetupPasswordErrors[keyof PostSetupPasswordErrors];
+
+export type PostSetupPasswordResponses = {
+    /**
+     * OK
+     */
+    200: SessionBody;
+};
+
+export type PostSetupPasswordResponse = PostSetupPasswordResponses[keyof PostSetupPasswordResponses];
+
+export type GetTransactionData = {
+    body?: never;
+    path: {
+        /**
+         * Transaction id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/transactions/{id}';
+};
+
+export type GetTransactionErrors = {
+    /**
+     * Not Found
+     */
+    404: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+};
+
+export type GetTransactionError = GetTransactionErrors[keyof GetTransactionErrors];
+
+export type GetTransactionResponses = {
+    /**
+     * OK
+     */
+    200: TxnBody;
+};
+
+export type GetTransactionResponse = GetTransactionResponses[keyof GetTransactionResponses];
+
+export type ConfirmTransactionData = {
+    body?: never;
+    path: {
+        /**
+         * Transaction id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/transactions/{id}/confirm';
+};
+
+export type ConfirmTransactionErrors = {
+    /**
+     * Not Found
+     */
+    404: ApiError;
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+};
+
+export type ConfirmTransactionError = ConfirmTransactionErrors[keyof ConfirmTransactionErrors];
+
+export type ConfirmTransactionResponses = {
+    /**
+     * OK
+     */
+    200: TxnBody;
+};
+
+export type ConfirmTransactionResponse = ConfirmTransactionResponses[keyof ConfirmTransactionResponses];
+
+export type RollbackTransactionData = {
+    body?: never;
+    path: {
+        /**
+         * Transaction id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/transactions/{id}/rollback';
+};
+
+export type RollbackTransactionErrors = {
+    /**
+     * Not Found
+     */
+    404: ApiError;
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+};
+
+export type RollbackTransactionError = RollbackTransactionErrors[keyof RollbackTransactionErrors];
+
+export type RollbackTransactionResponses = {
+    /**
+     * OK
+     */
+    200: TxnBody;
+};
+
+export type RollbackTransactionResponse = RollbackTransactionResponses[keyof RollbackTransactionResponses];
