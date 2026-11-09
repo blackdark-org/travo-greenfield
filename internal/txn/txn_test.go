@@ -154,11 +154,11 @@ func TestNoConfirmWatchdogRestores(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitFor(t, func() bool { return content(t, m, "network") == "original network\n" })
-	if content(t, m, "wireless") != "original wireless\n" {
+	// The script restores configs one by one, then writes result: wait for result, not for one file.
+	waitFor(t, func() bool { _, err := os.Stat(filepath.Join(m.Dir, st.ID, "result")); return err == nil })
+	if content(t, m, "network") != "original network\n" || content(t, m, "wireless") != "original wireless\n" {
 		t.Fatal("not restored")
 	}
-	waitFor(t, func() bool { _, err := os.Stat(filepath.Join(m.Dir, st.ID, "result")); return err == nil })
 	if _, err := m.Confirm(st.ID); !errors.Is(err, ErrClosed) {
 		t.Fatalf("late confirm must lose: %v", err)
 	}
