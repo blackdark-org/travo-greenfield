@@ -80,6 +80,14 @@ func (d *Device) Revert(ctx context.Context, config string) error {
 	return err
 }
 
+func (d *Device) Pending(ctx context.Context, config string) (bool, error) {
+	out, err := d.run(ctx, TierRead, "uci", "changes", config)
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(out) != "", nil
+}
+
 func (d *Device) Call(ctx context.Context, object, method string, args any) (json.RawMessage, error) {
 	payload := []byte("{}")
 	if args != nil {

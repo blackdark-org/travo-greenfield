@@ -160,6 +160,13 @@ func (d *Device) Revert(_ context.Context, cfg string) error {
 	return nil
 }
 
+func (d *Device) Pending(_ context.Context, cfg string) (bool, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	_, ok := d.staged[cfg]
+	return ok, nil
+}
+
 func (d *Device) Call(_ context.Context, object, method string, _ any) (json.RawMessage, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
