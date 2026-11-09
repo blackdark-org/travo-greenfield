@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // Worker runs until ctx is cancelled.
@@ -54,4 +55,20 @@ func (g *Group) Stop() {
 	g.mu.Unlock()
 	g.cancel()
 	g.wg.Wait()
+}
+
+// Every runs fn at once and then each interval until ctx ends.
+func Every(interval time.Duration, fn func(ctx context.Context)) Worker {
+	return func(ctx context.Context) {
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			fn(ctx)
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+			}
+		}
+	}
 }
