@@ -4,7 +4,7 @@ Travel-router web UI and API (Go daemon + Svelte SPA) that runs on OpenWrt next 
 
 ## Verify
 
-`mise run check` green before every commit. Hardware-only behaviour is gated by the playbook in `docs/testing.md`.
+`mise run check` green before every commit (Go, web, generated client, size). After API changes run `mise run gen` and commit the result. Hardware-only behaviour is gated by the playbook in `docs/testing.md`.
 
 ## Stack
 
