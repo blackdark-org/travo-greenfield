@@ -41,6 +41,8 @@ for spec in "linux/aarch64_generic arm64 openwrt/rootfs:aarch64_generic-25.12.6"
   # wait until boot finished (procd runs /etc/rc.d, then the "done" init script)
   for _ in $(seq 1 60); do docker exec $name sh -c 'ubus call service list "{\"name\":\"dnsmasq\"}" | grep -q running' 2>/dev/null && break; sleep 1; done
   docker exec $name /t/txn-$2.test -test.run TestRealWatchdogSurvivesProcdStop -test.v; rc=$?
+  # root account (empty shadow -> passwd -> rpcd login) needs the booted rpcd; runs last: it sets a password
+  [ $rc -eq 0 ] && { docker exec $name /t/cli-$2.test -test.run TestRealRootAccount -test.v; rc=$?; }
   docker rm -f $name >/dev/null
   [ $rc -eq 0 ] || exit $rc
 done

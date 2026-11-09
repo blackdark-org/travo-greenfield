@@ -19,9 +19,14 @@ const (
 )
 
 // Device is the real-router adapter.
-type Device struct{ Run runner.Runner }
+type Device struct {
+	Run runner.Runner
+	// RunInput carries stdin (passwd); ReadFile reads /etc/shadow. Nil ReadFile means os.ReadFile.
+	RunInput runner.InputRunner
+	ReadFile func(string) ([]byte, error)
+}
 
-func New() *Device { return &Device{Run: runner.Exec} }
+func New() *Device { return &Device{Run: runner.Exec, RunInput: runner.RunInput} }
 
 func (d *Device) run(ctx context.Context, tier time.Duration, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, tier)

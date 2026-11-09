@@ -52,10 +52,20 @@ type Reloader interface {
 	Reload(ctx context.Context) error
 }
 
+// Accounts manages the root account. Passwords travel as values and never reach argv or logs.
+type Accounts interface {
+	// VerifyRootPassword is false for a wrong password; unknown-user and wrong-password are one result.
+	VerifyRootPassword(ctx context.Context, password string) (bool, error)
+	// RootPasswordSet reads /etc/shadow. An error means "unknown": callers must not open first-run.
+	RootPasswordSet(ctx context.Context) (bool, error)
+	SetRootPassword(ctx context.Context, password string) error
+}
+
 // Device is the full port.
 type Device interface {
 	UCI
 	Ubus
 	Routes
 	Reloader
+	Accounts
 }
