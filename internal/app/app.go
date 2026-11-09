@@ -50,6 +50,16 @@ type Deps struct {
 	Guards   guard.Dir
 	Paths    Paths
 	Mock     bool
+	// cleanup removes the mock temp dir; nil for the real adapters.
+	cleanup func() error
+}
+
+// Close releases resources New created (the mock state dir). Safe to call on a zero Deps.
+func (d Deps) Close() error {
+	if d.cleanup == nil {
+		return nil
+	}
+	return d.cleanup()
 }
 
 // New builds real adapters, or mock adapters in mock mode (develop without a device).
@@ -65,7 +75,8 @@ func New(o Options) (Deps, error) {
 			return Deps{}, err
 		}
 		d = Deps{Device: dev, Accounts: dev, Packages: pkgmgr.NewMock(), Mock: true,
-			Paths: Paths{State: tmp, Guards: filepath.Join(tmp, "guards"), Txn: filepath.Join(tmp, "txn")}}
+			Paths:   Paths{State: tmp, Guards: filepath.Join(tmp, "guards"), Txn: filepath.Join(tmp, "txn")},
+			cleanup: func() error { return os.RemoveAll(tmp) }}
 	} else {
 		pm, err := pkgmgr.DetectSystem(runner.Exec)
 		if err != nil {
