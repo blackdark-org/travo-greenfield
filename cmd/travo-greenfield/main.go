@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"flag"
 	"log/slog"
@@ -14,41 +15,94 @@ import (
 
 	"github.com/BlackDark/travo-greenfield/internal/api"
 	"github.com/BlackDark/travo-greenfield/internal/app"
+	"github.com/BlackDark/travo-greenfield/internal/auth"
+	"github.com/BlackDark/travo-greenfield/internal/auth/epochfile"
+	"github.com/BlackDark/travo-greenfield/internal/lifecycle"
+	"github.com/BlackDark/travo-greenfield/internal/trust"
+	"github.com/BlackDark/travo-greenfield/internal/txn"
 	"github.com/BlackDark/travo-greenfield/internal/version"
 )
 
 func main() {
 	addr := flag.String("listen", "127.0.0.1:8081", "listen address")
 	useMock := flag.Bool("mock", false, "run against the mock device (no router needed)")
+	firstRun := flag.Bool("mock-firstrun", false, "with --mock: start without a root password")
 	flag.Parse()
-
-	deps, err := app.New(*useMock)
-	if err != nil {
+	if err := run(*addr, *useMock, *firstRun); err != nil {
 		slog.Error("startup", "err", err)
 		os.Exit(1)
 	}
-	slog.Info("adapters", "mock", deps.Mock, "packages", deps.Packages.Name())
+}
 
-	h, _ := api.New(version.Version)
-	srv := &http.Server{
-		Addr:              *addr,
-		Handler:           h,
-		ReadHeaderTimeout: 10 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
-
+func run(addr string, useMock, firstRun bool) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	workers := lifecycle.New(context.Background())
+	defer workers.Stop()
+
+	deps, err := app.New(app.Options{Mock: useMock, FirstRun: firstRun, StopCheck: workers.Stopped})
+	if err != nil {
+		return err
+	}
+	slog.Info("adapters", "mock", deps.Mock, "packages", deps.Packages.Name())
+
+	sessions, err := startState(ctx, deps)
+	if err != nil {
+		return err
+	}
+	limiter, provider := auth.NewRateLimiter(), &trust.Provider{}
+	clock := auth.SystemClock{}
+	workers.Go("rate-limit-sweep", lifecycle.Every(time.Minute, func(context.Context) { limiter.Sweep(clock.Now()) }))
+	workers.Go("session-sweep", lifecycle.Every(time.Minute, func(context.Context) { sessions.Sweep(clock.Now()) }))
+	workers.Go("trust-refresh", lifecycle.Every(30*time.Second, func(c context.Context) {
+		if err := provider.Refresh(c, deps.Device); err != nil && c.Err() == nil {
+			slog.Warn("trust: keeping last LAN subnets", "err", err)
+		}
+	}))
+
+	h, _ := api.New(api.Deps{
+		Version: version.Version, Accounts: deps.Accounts, Txns: deps.Txn,
+		Sessions: sessions, Limiter: limiter, Clock: clock,
+		Trusted:   provider.Allowed,
+		SaveEpoch: func(n uint64) error { return epochfile.Save(deps.Paths.EpochFile(), n) },
+	})
+	srv := &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
+
+	drained := make(chan struct{})
 	go func() {
+		defer close(drained)
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
-		_ = srv.Shutdown(shutdown)
+		_ = srv.Shutdown(shutdown) // HTTP drains first; workers stop after (deferred)
 	}()
-
-	slog.Info("listening", "addr", *addr, "version", version.Version)
+	slog.Info("listening", "addr", addr, "version", version.Version)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		slog.Error("server", "err", err)
-		os.Exit(1)
+		return err
 	}
+	<-drained
+	return nil
+}
+
+// startState reports stale guards, recovers transactions and loads the session epoch.
+func startState(ctx context.Context, deps app.Deps) (*auth.Store, error) {
+	stale, err := deps.Guards.Stale()
+	if err != nil {
+		return nil, err
+	}
+	for _, g := range stale {
+		slog.Warn("stale guard: the guarded feature stays off until cleared", "guard", g.Name, "since", g.Started)
+	}
+	if !deps.Mock { // mock mode has no watchdog scripts or /etc/config
+		if _, err := deps.Txn.Recover(ctx, txn.ProcAlive); err != nil {
+			return nil, err
+		}
+	}
+	epoch, err := epochfile.Load(deps.Paths.EpochFile())
+	if err != nil {
+		return nil, err
+	}
+	s := auth.NewStore(rand.Reader)
+	s.SetEpoch(epoch)
+	return s, nil
 }
