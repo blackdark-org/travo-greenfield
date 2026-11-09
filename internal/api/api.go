@@ -1,13 +1,49 @@
 // Package api registers every HTTP route; nothing is routed outside New.
+// Default-deny: a route is protected unless it is registered with public=true.
 package api
 
 import (
 	"context"
 	"net/http"
+	"net/netip"
+	"sync"
 
+	"github.com/BlackDark/travo-greenfield/internal/auth"
+	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/BlackDark/travo-greenfield/internal/txn"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )
+
+// Txns is the slice of txn.Manager the API needs.
+type Txns interface {
+	Get(id string) (txn.Status, error)
+	Confirm(id string) (txn.Status, error)
+	Rollback(id string) (txn.Status, error)
+}
+
+// Deps are everything the routes need; the daemon builds them, tests fake them.
+type Deps struct {
+	Version  string
+	Accounts device.Accounts
+	Txns     Txns
+	Sessions *auth.Store
+	Limiter  *auth.RateLimiter
+	Clock    auth.Clock
+	// Trusted reports whether a source address may reach the admin API (internal/trust).
+	Trusted func(netip.Addr) bool
+	// SaveEpoch persists the session epoch; it runs BEFORE a password change replies.
+	SaveEpoch func(uint64) error
+}
+
+type server struct {
+	Deps
+	sessions *auth.Store
+	clock    auth.Clock
+	trusted  func(netip.Addr) bool
+	// accountMu serialises setup and password change: "is it set?" and "set it" are one step.
+	accountMu sync.Mutex
+}
 
 type healthOutput struct {
 	Body struct {
@@ -16,27 +52,46 @@ type healthOutput struct {
 	}
 }
 
+// register is the only way to add a route: it records whether the route is public.
+func register[I, O any](s *server, public bool, op huma.Operation, a huma.API, h func(context.Context, *I) (*O, error)) {
+	op.Metadata = map[string]any{publicKey: public}
+	if !public {
+		op.Security = []map[string][]string{{"cookieAuth": {}}}
+	}
+	huma.Register(a, op, h)
+}
+
 // New builds the router and its generated OpenAPI 3.1 spec.
-func New(version string) (http.Handler, huma.API) {
+func New(d Deps) (http.Handler, huma.API) {
+	s := &server{Deps: d, sessions: d.Sessions, clock: d.Clock, trusted: d.Trusted}
 	mux := http.NewServeMux()
-	cfg := huma.DefaultConfig("travo-greenfield", version)
+	cfg := huma.DefaultConfig("travo-greenfield", d.Version)
 	cfg.OpenAPIPath = "/api/openapi"
 	cfg.DocsPath = ""
 	cfg.SchemasPath = ""
 	cfg.CreateHooks = nil // no  links: that route does not exist
+	cfg.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"cookieAuth": {Type: "apiKey", In: "cookie", Name: cookieName},
+	}
 	a := humago.New(mux, cfg)
+	a.UseMiddleware(s.gate)
 
-	huma.Register(a, huma.Operation{
-		OperationID: "getHealth",
-		Method:      http.MethodGet,
-		Path:        "/api/health",
-		Summary:     "Liveness check",
-		Tags:        []string{"system"},
-	}, func(context.Context, *struct{}) (*healthOutput, error) {
+	register(s, true, huma.Operation{
+		OperationID: "getHealth", Method: http.MethodGet, Path: "/api/health",
+		Summary: "Liveness check", Tags: []string{"system"},
+	}, a, func(context.Context, *struct{}) (*healthOutput, error) {
 		out := &healthOutput{}
 		out.Body.Status = "ok"
-		out.Body.Version = version
+		out.Body.Version = d.Version
 		return out, nil
 	})
-	return mux, a
+	s.registerAuth(a)
+	s.registerSetup(a)
+	s.registerTxn(a)
+	return s.outer(mux), a
+}
+
+// op builds an Operation with the documented extra error statuses.
+func op(id, method, path, summary, tag string, errs ...int) huma.Operation {
+	return huma.Operation{OperationID: id, Method: method, Path: path, Summary: summary, Tags: []string{tag}, Errors: errs}
 }
