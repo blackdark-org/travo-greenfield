@@ -10,7 +10,7 @@ See [spec.md](spec.md). Order of work (vertical slices, each shippable in mock m
 2. (done) Daemon skeleton: lifecycle, Huma, health/spec, `Device` and `PackageManager` ports with mock, CLI, apk and opkg adapters, guards, atomic files, `--mock`, binary size gate.
 3. Auth + first-run + LAN-only listener.
 4. Transaction module + watchdog + lockout classifier (spike on device first).
-5. DNS layer stack (property tests).
+5. (done) DNS layer stack (property tests, container round trip). Wire the `Applier` to the transaction module in slice 4.
 6. WiFi uplink/AP/guest.
 7. Captive assist.
 8. WireGuard.
