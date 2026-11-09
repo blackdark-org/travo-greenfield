@@ -8,6 +8,7 @@ import (
 )
 
 func TestDirectApplyCommitsAndReloads(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, time.Second)
 	_ = d.Device.SetType(ctx, "dhcp", "s", "x")
 	_ = d.Device.Commit(ctx, "dhcp")
@@ -20,6 +21,7 @@ func TestDirectApplyCommitsAndReloads(t *testing.T) {
 }
 
 func TestDirectApplyRefusesConnectivityConfigs(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, time.Second)
 	for _, c := range []string{"wireless", "network", "firewall"} {
 		if err := m.Apply(ctx, []string{"dhcp", c}, stageSet(d, c)); err == nil {
@@ -32,6 +34,7 @@ func TestDirectApplyRefusesConnectivityConfigs(t *testing.T) {
 }
 
 func TestDirectApplyRevertsOnStageAndCommitError(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, time.Second)
 	_ = d.Device.SetType(ctx, "dhcp", "s", "x")
 	_ = d.Device.Commit(ctx, "dhcp")
@@ -55,6 +58,7 @@ func TestDirectApplyRevertsOnStageAndCommitError(t *testing.T) {
 }
 
 func TestDirectApplyRefusesForeignStaged(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, time.Second)
 	_ = d.Device.SetType(ctx, "dhcp", "s", "x")
 	if err := m.Apply(ctx, []string{"dhcp"}, stageSet(d, "dhcp")); !errors.Is(err, ErrForeignStaged) {

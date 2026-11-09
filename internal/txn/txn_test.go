@@ -126,6 +126,7 @@ func waitFor(t *testing.T, cond func() bool) {
 }
 
 func TestConfirmKeepsChangeAndDisarmsWatchdog(t *testing.T) {
+	t.Parallel() // each test owns its temp dirs and manager
 	m, d := setup(t, 1*time.Second)
 	st, err := m.Begin(ctx, "test", []string{"network"}, stageSet(d, "network"), nil)
 	if err != nil || st.State != Pending {
@@ -147,6 +148,7 @@ func TestConfirmKeepsChangeAndDisarmsWatchdog(t *testing.T) {
 }
 
 func TestNoConfirmWatchdogRestores(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 1*time.Second)
 	st, err := m.Begin(ctx, "test", []string{"network", "wireless"}, func(ctx context.Context) error {
 		return errors.Join(stageSet(d, "network")(ctx), stageSet(d, "wireless")(ctx))
@@ -171,6 +173,7 @@ func TestNoConfirmWatchdogRestores(t *testing.T) {
 }
 
 func TestTimeoutRestoreIsReapedByNextBeginWithoutStatusCall(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 1*time.Second)
 	st, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
 	waitFor(t, func() bool { _, err := os.Stat(filepath.Join(m.Dir, st.ID, "result")); return err == nil })
@@ -180,6 +183,7 @@ func TestTimeoutRestoreIsReapedByNextBeginWithoutStatusCall(t *testing.T) {
 }
 
 func TestWindowStartsAfterArm(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 1*time.Second)
 	slow := func(context.Context) error { time.Sleep(2 * time.Second); return nil } // longer than the window
 	st, err := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), slow)
@@ -192,6 +196,7 @@ func TestWindowStartsAfterArm(t *testing.T) {
 }
 
 func TestArmLimitRestoresWhenApplyHangs(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 30*time.Second)
 	m.Spawner.(*shortSpawner).armArg = "1" // the script's view; Manager validation uses ArmLimit
 	hang := func(context.Context) error { time.Sleep(3 * time.Second); return nil }
@@ -205,6 +210,7 @@ func TestArmLimitRestoresWhenApplyHangs(t *testing.T) {
 }
 
 func TestStopDuringBeginDoesNotCommit(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 30*time.Second)
 	stop := false
 	m.Stopped = func() bool { return stop }
@@ -218,6 +224,7 @@ func TestStopDuringBeginDoesNotCommit(t *testing.T) {
 }
 
 func TestConfirmBeforeArmIsRefused(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 30*time.Second)
 	st, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
 	_ = os.Remove(filepath.Join(m.Dir, st.ID, "armed")) // as during commit/reload/probe
@@ -231,6 +238,7 @@ func TestConfirmBeforeArmIsRefused(t *testing.T) {
 }
 
 func TestProbeFailureRollsBackAtOnce(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	st, err := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), func(context.Context) error {
 		return errors.New("wlan1 carrier=false")
@@ -247,6 +255,7 @@ func TestProbeFailureRollsBackAtOnce(t *testing.T) {
 }
 
 func TestCommitFailureRollsBack(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	d.commitErr = errors.New("disk full")
 	st, err := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
@@ -256,6 +265,7 @@ func TestCommitFailureRollsBack(t *testing.T) {
 }
 
 func TestStageErrorRevertsAndCommitsNothing(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	_, err := m.Begin(ctx, "t", []string{"network"}, func(ctx context.Context) error {
 		_ = stageSet(d, "network")(ctx)
@@ -270,6 +280,7 @@ func TestStageErrorRevertsAndCommitsNothing(t *testing.T) {
 }
 
 func TestRefusals(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	if _, err := m.Begin(ctx, "t", []string{"network"}, func(context.Context) error { return nil }, nil); !errors.Is(err, ErrNoChanges) {
 		t.Errorf("no changes: %v", err)
@@ -295,6 +306,7 @@ func TestRefusals(t *testing.T) {
 }
 
 func TestSecondTransactionWhilePendingIsRefused(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	st, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
 	if _, err := m.Begin(ctx, "t", []string{"wireless"}, stageSet(d, "wireless"), nil); !errors.Is(err, ErrActive) {
@@ -309,6 +321,7 @@ func TestSecondTransactionWhilePendingIsRefused(t *testing.T) {
 }
 
 func TestAbsentConfigIsDeletedOnRestore(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	_ = d.Device.SetType(ctx, "travo", "s", "x")
 	_ = d.Device.Commit(ctx, "travo") // known to uci, but no file on disk yet
@@ -325,6 +338,7 @@ func TestAbsentConfigIsDeletedOnRestore(t *testing.T) {
 }
 
 func TestFailedRestoreKeepsGuardAndSaysSo(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	m.Reload = []string{"false"} // restore cannot complete
 	st, err := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), func(context.Context) error { return errors.New("down") })
@@ -334,6 +348,7 @@ func TestFailedRestoreKeepsGuardAndSaysSo(t *testing.T) {
 }
 
 func TestBadIDsAreNotFound(t *testing.T) {
+	t.Parallel()
 	m, _ := setup(t, time.Second)
 	for _, id := range []string{"", "../x", "0123456789abcdeg", "0123456789abcdef"} {
 		if _, err := m.Get(id); !errors.Is(err, ErrNotFound) {
@@ -343,6 +358,7 @@ func TestBadIDsAreNotFound(t *testing.T) {
 }
 
 func TestRecoverRestoresWhenWatchdogIsGone(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	st, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
 	// simulate reboot: watchdog died, daemon restarts
@@ -356,6 +372,7 @@ func TestRecoverRestoresWhenWatchdogIsGone(t *testing.T) {
 }
 
 func TestRecoverKeepsLiveWatchdogAndCleansConfirmed(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 60*time.Second)
 	st, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
 	out, err := m.Recover(ctx, func(int, string) bool { return true })
@@ -375,6 +392,7 @@ func TestRecoverKeepsLiveWatchdogAndCleansConfirmed(t *testing.T) {
 }
 
 func TestRecoverDiscardsCrashBeforeWatchdog(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 30*time.Second)
 	_ = m.Guards.Acquire(guardName)
 	dir := filepath.Join(m.Dir, "00000000000000aa")
@@ -396,6 +414,7 @@ func TestRecoverDiscardsCrashBeforeWatchdog(t *testing.T) {
 }
 
 func TestRollbackWaitsForClaimedRestore(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 30*time.Second)
 	st, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), nil)
 	_ = os.WriteFile(filepath.Join(m.Dir, st.ID, "claim"), []byte("restore\n"), 0o600) // watchdog claimed, still running
@@ -411,6 +430,7 @@ func TestRollbackWaitsForClaimedRestore(t *testing.T) {
 }
 
 func TestBadTimingRejected(t *testing.T) {
+	t.Parallel()
 	for _, f := range []func(*Manager){
 		func(m *Manager) { m.Window = time.Second },
 		func(m *Manager) { m.ApplyBudget = 0 },
@@ -428,6 +448,7 @@ func TestBadTimingRejected(t *testing.T) {
 }
 
 func TestReapDoesNotReleaseGuardHeldByFailedRestore(t *testing.T) {
+	t.Parallel()
 	m, d := setup(t, 30*time.Second)
 	m.Reload = []string{"false"}
 	failed, _ := m.Begin(ctx, "t", []string{"network"}, stageSet(d, "network"), func(context.Context) error { return errors.New("down") })
