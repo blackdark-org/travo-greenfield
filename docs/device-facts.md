@@ -4,6 +4,13 @@ Hard-won findings. Do not re-learn. Origin: the previous Travo implementation. R
 
 Reference hardware: GL-AXT1800 (IPQ6018, ath11k, radio0 = 5 GHz usually uplink STA, radio1 = AP), OpenWrt 25.12.3 (also 25.12.6), netifd 2026.02.26. Also targeted: GL-MT3000. dnsmasq config is a NAMED section (e.g. `dhcp.cfg01411c`), not `@dnsmasq[0]`. `rg` is absent on device. BusyBox `sed`/`wget`/`tar` differ from GNU. `jsonfilter` is present. `scp` needs `-O`.
 
+Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/device/axt1800-25.12.6/SPIKES.md`.
+
+## 0. UCI reads
+
+- [HW] `uci show` prints a one-element LIST exactly like an option (`dhcp.cfg01411c.server='127.0.0.1#5353'`). dnsmasq's init script reads `server` only as a list (`config_list_foreach`), so writing it back as `option server` silently drops it: no `server=` line, `noresolv=1`, every query REFUSED, config "looks" unchanged. Read with `uci export` (keeps `list`/`option`) or `ubus call uci get` (JSON array).
+- [HW] `reload_config` hands changes to procd triggers asynchronously: wireless live ~1.4 s, dnsmasq ~2–4 s after commit. Probes must wait, not read once.
+
 ## 1. Routes and netifd
 
 - [HW] After WireGuard disable: `network.interface.wwan` status shows a DHCP default route, `ip -4 route show table main` has none, `wget` exits 4. Netifd state ≠ kernel route. Every "route/internet ok" check reads the KERNEL table.
@@ -20,6 +27,8 @@ Reference hardware: GL-AXT1800 (IPQ6018, ath11k, radio0 = 5 GHz usually uplink S
 - [HW] If one radio hosts two expected interfaces (guest + main AP), the radio flag proves only one. Check EACH interface; a radio flag alone is a false confirm that cancels rollback.
 - Ubus round trips ~5 ms; budget ~100 ms per call. Unreadable payload (missing keys, unknown shape) ≠ down: report "cannot verify". Transport failure during a probe = unverifiable, retry; never claim "rolled back".
 - [TRIED] Trusting per-interface `up` (absent on this firmware). [TRIED] A 4 s probe budget against a ~10 s bring-up. Derive budgets from measured latency.
+- [HW greenfield] `uci commit wireless` + `reload_config` (no `wifi`) applied and restored an AP SSID change in ~1 s each; the STA on the other radio stayed associated. Wrong STA SSID: `carrier:false` and no kernel default route; after restore STA carrier in 7.8 s, default route 0.5 s later.
+- [HW] Only enabled APs have a `hostapd.<ifname>` ubus object. `iwinfo assoclist` was empty while `hostapd.*` `get_clients` listed the station: use `get_clients`.
 
 ## 3. ath11k crash triggers
 
@@ -80,7 +89,10 @@ Reference hardware: GL-AXT1800 (IPQ6018, ath11k, radio0 = 5 GHz usually uplink S
 - [HW] The init script read `/opt/AdGuardHome/AdGuardHome.yaml`; editing the path named in UCI `config_file` did nothing (relevant to the manual-binary install; the package route in ADR-0006 must be re-verified).
 - Open decision: refuse a downgrade on reinstall instead of silent breakage.
 - Old design exposed the first-run wizard LAN-wide and setting a password ADDED an admin instead of replacing one. Never reproduce: loopback bind, no accounts, Travo-gated proxy.
-- Reported by others, unverified here: AGH on :53 leaves the router unable to resolve for itself; Tailscale MagicDNS overwrites `resolv.conf` (tailscale#15174, luci#8641); AGH `/control/profile` 401 with auth disabled on one version (AGH#7985). Each is a spike item in [roadmap.md](roadmap.md).
+- [HW greenfield] Package `adguardhome` 0.107.79-r1 (25.12.6 feed): config `/etc/adguardhome/adguardhome.yaml`, work dir `/var/lib/adguardhome`, runs in ujail; yaml and `/etc/config/adguardhome` are apk conffiles and in `/lib/upgrade/keep.d/`.
+- [HW greenfield] As old Travo left it: `0.0.0.0:3000`, `users: []` → full admin API (GET and POST) open to the LAN without auth. A root-path reverse proxy on its own port serves UI and API unchanged; AGH#7985 did not reproduce on 0.107.79.
+- [HW greenfield] AGH stopped → LAN DNS REFUSED; a layer to the uplink resolver restored resolution in 0.13 s.
+- Reported by others, unverified here: AGH on :53 leaves the router unable to resolve for itself; Tailscale MagicDNS overwrites `resolv.conf` (tailscale#15174, luci#8641).
 
 ## 12. USB tethering (0.2)
 
@@ -95,5 +107,6 @@ Reference hardware: GL-AXT1800 (IPQ6018, ath11k, radio0 = 5 GHz usually uplink S
 
 - [HW] BusyBox crond logs every job start as `cron.err` at the default level; a per-minute job floods errors. Set level 9.
 - NAND overlayfs: writes = wear + stall. `/tmp` is RAM; staged UCI and package lists are lost on reboot.
+- [HW] BusyBox on 25.12.6 has no `timeout`, `diff`, `pkill`. Bound commands in Go, not in shell.
 - BusyBox `sed` vs GNU `sed` escapes disagree: never escape JSON in sed; encode in code and write bytes verbatim. `wget -O` is required. Check signatures with `ubus -v list`; do not assume.
 - `iw event` is a long-running listener: stop via signal, not a timeout tier. The uplink medium (ethernet/WiFi/USB) drives caller classification and failover candidates.
