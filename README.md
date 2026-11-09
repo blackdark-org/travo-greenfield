@@ -8,5 +8,6 @@ Status: design phase, no code yet. Target 0.1.0.
 
 - [Spec](docs/spec.md) · [Roadmap](docs/roadmap.md) · [Invariants](docs/invariants.md)
 - [Device facts](docs/device-facts.md) · [Testing](docs/testing.md) · [Glossary](docs/glossary.md) · [ADRs](docs/adr/)
+- Working state: [docs/handoff/](docs/handoff/) (temporary)
 
 License: [MIT](LICENSE).

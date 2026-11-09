@@ -21,6 +21,8 @@ Deviations:
 - `docs/invariants.md` MUST rules; read before touching live state, auth, DNS, WiFi. Breaking one needs an ADR.
 - `docs/device-facts.md` hardware lessons; `docs/testing.md` test layers and fixture rules.
 - `docs/adr/` decisions; `docs/glossary.md` terms.
+- `docs/handoff/` temporary working state for the next session (status, device access, next-slice plan). Read first when resuming; move durable content into the docs above and delete items when done.
+- `testdata/device/<device>-<firmware>/` verbatim device captures with `PROVENANCE.md` and redaction policy; `SPIKES.md` there has hardware results.
 
 ## Every change
 
