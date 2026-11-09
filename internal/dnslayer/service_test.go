@@ -269,3 +269,21 @@ func TestStatusIsReadOnly(t *testing.T) {
 		t.Fatal("read mutated DNS")
 	}
 }
+
+func TestResumeRefusesForeignStagedChanges(t *testing.T) {
+	s, d, a := setup(t, listFixture)
+	a.fail = true
+	_ = s.Push(ctx, layers[VPN])
+	a.fail = false
+	_ = d.Set(ctx, "dhcp", "lan", "leasetime", "1h") // staged while the guard is held
+	n := a.n
+	if err := s.Resume(ctx); !errors.Is(err, ErrForeignStaged) {
+		t.Fatal(err)
+	}
+	if a.n != n || !guarded(t, s) {
+		t.Fatal("resume applied foreign changes or released the guard")
+	}
+	if p, _ := d.Pending(ctx, "dhcp"); !p {
+		t.Fatal("resume reverted foreign changes")
+	}
+}

@@ -8,6 +8,6 @@ Implementation (`internal/dnslayer`):
 - Precedence is fixed by layer name, not push order: captive > adguard > vpn. The highest replace layer sets `server`/`noresolv`; tailscale is additive by name and appends domain-scoped servers. Any rebind-disabling layer turns rebind protection off. Effective state depends only on the active layers (property test with random payloads).
 - Base keeps the `option` vs `list` shape of `server` and is restored in that shape.
 - Push saves the record (intent) before staging. Last pop first marks the record `restoring`, then restores base, and deletes the record only after apply succeeded. Any failure after the first write reverts staging and keeps the guard; `Resume` finishes the interrupted operation. Read failures before any write release the guard.
-- A change is refused while dhcp has foreign staged changes (`uci changes`): the stack never commits or reverts someone else's edits.
+- A change or `Resume` is refused while dhcp has foreign staged changes (`uci changes`): the stack never commits or reverts someone else's edits. A daemon crash mid-stage looks the same; `uci revert dhcp` or a reboot (staging lives in /tmp) clears it. Residual: a writer staging between the check and apply; the transaction module's single staging area closes that.
 - `Status` is read-only and reports `pending` (guard held) and `corrupt` (unreadable record).
 - Commit goes through an `Applier` (the transaction module); the stack never commits itself.

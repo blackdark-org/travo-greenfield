@@ -119,6 +119,13 @@ func (s *Service) Resume(ctx context.Context) error {
 		// record already deleted: the last restore applied, only the release was lost
 		return s.Guards.Release(guardName)
 	}
+	// Staged dhcp changes may be someone else's: never commit or revert them. A crash
+	// mid-Stage also lands here; `uci revert dhcp` or a reboot (staging is in /tmp) clears it.
+	if pending, err := s.Device.Pending(ctx, "dhcp"); err != nil {
+		return fmt.Errorf("dns layers: resume: %w (guard kept)", err)
+	} else if pending {
+		return fmt.Errorf("dns layers: resume: %w (guard kept)", ErrForeignStaged)
+	}
 	if rec.Restoring {
 		return s.applyAndFinish(ctx, rec.Base, true)
 	}
