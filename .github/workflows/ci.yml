@@ -77,6 +77,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7 tools from mise.toml; Rust from rust-toolchain.toml via rustup
+        with:
+          cache_save: ${{ github.ref == 'refs/heads/main' }} # PRs reuse main's toolchain cache (192 MB each otherwise)
       # Go module + build cache and the pnpm store, keyed on the toolchain pins and lockfiles.
       # restore-keys fall back to the newest older cache, so a dependency bump stays warm.
       # Only main saves: PR runs reuse main's cache and cannot evict or poison it.
