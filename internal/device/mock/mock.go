@@ -24,6 +24,10 @@ type Device struct {
 	staged       map[string]*config
 	ubus         map[string]json.RawMessage
 	DefaultRoute bool
+	// AccountsErr makes every Accounts call fail (shadow unreadable).
+	AccountsErr  error
+	password     string
+	passwordInit bool
 }
 
 func New() *Device {
