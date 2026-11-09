@@ -9,8 +9,8 @@ See [spec.md](spec.md). Order of work (vertical slices, each shippable in mock m
 1. (done) Repo tooling: `mise.toml`, `mise run check`, CI from the agent-presets snippets, release-please, size-limit.
 2. (done) Daemon skeleton: lifecycle, Huma, health/spec, `Device` and `PackageManager` ports with mock, CLI, apk and opkg adapters, guards, atomic files, `--mock`, binary size gate.
 3. Auth + first-run + LAN-only listener.
-4. Transaction module + watchdog + lockout classifier (spike on device first).
-5. (done) DNS layer stack (property tests, container round trip). Wire the `Applier` to the transaction module in slice 4.
+4. (done) Transaction module + watchdog + lockout classifier, device parsers (S3) and watchdog on hardware (S4). Open: probes wired per feature, API endpoints for confirm/rollback (with auth, slice 3).
+5. (done) DNS layer stack (property tests, container round trip), applied through `txn.Manager.Apply`.
 6. WiFi uplink/AP/guest.
 7. Captive assist.
 8. WireGuard.
@@ -18,6 +18,8 @@ See [spec.md](spec.md). Order of work (vertical slices, each shippable in mock m
 10. Dashboard, system, backup, self-update.
 
 ### Spikes before the dependent slice
+
+Results: `testdata/device/axt1800-25.12.6/SPIKES.md` (all five done on 2026-11-09).
 
 | Spike | Unblocks | Question |
 |---|---|---|
