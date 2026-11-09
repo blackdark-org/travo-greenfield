@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"reflect"
 	"testing"
 
@@ -17,9 +18,13 @@ func TestOutputEqualsServedSpec(t *testing.T) {
 	if err := render(&out); err != nil {
 		t.Fatal(err)
 	}
-	h, _ := api.New(specVersion)
+	d := specDeps()
+	d.Trusted = func(netip.Addr) bool { return true } // the served spec is LAN-only
+	h, _ := api.New(d)
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/openapi.json", nil))
+	req := httptest.NewRequest(http.MethodGet, "/api/openapi.json", nil)
+	req.RemoteAddr, req.Host = "127.0.0.1:1234", "localhost"
+	h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
