@@ -46,9 +46,16 @@ type Routes interface {
 	HasDefaultRoute(ctx context.Context) (bool, error)
 }
 
+// Reloader applies committed config to running services: `reload_config`
+// (procd ucitrack). Never `wifi` (device-facts §3).
+type Reloader interface {
+	Reload(ctx context.Context) error
+}
+
 // Device is the full port.
 type Device interface {
 	UCI
 	Ubus
 	Routes
+	Reloader
 }

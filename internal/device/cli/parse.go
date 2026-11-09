@@ -8,8 +8,8 @@ import (
 	"github.com/BlackDark/travo-greenfield/internal/device"
 )
 
-// ParseShow parses `uci show <config>` output. Anonymous sections keep the
-// `@type[n]` name uci prints; callers address them the same way.
+// ParseShow parses `uci show <config>` output. Fixture use only: `uci show` cannot tell a
+// one-element list from an option (see ParseExport); the adapter reads with ParseExport.
 func ParseShow(config, out string) ([]device.Section, error) {
 	var order []string
 	byName := map[string]*device.Section{}
