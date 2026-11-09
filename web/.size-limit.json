@@ -1,0 +1,1 @@
+[{ "path": "dist/**/*.{html,js,css,svg}", "limit": "50 KB", "gzip": true }]

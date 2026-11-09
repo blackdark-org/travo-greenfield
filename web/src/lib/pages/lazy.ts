@@ -1,0 +1,29 @@
+import type { Component } from 'svelte';
+
+export type PageComponent = Component<Record<string, string>>;
+export type PageImport = () => Promise<PageComponent>;
+
+/**
+ * Wraps a dynamic import so each page chunk is requested once. A rejected import is not cached,
+ * so a retry after a network failure fetches the chunk again.
+ */
+export function lazyPage(importer: () => Promise<{ default: unknown }>): PageImport {
+  let cached: Promise<PageComponent> | undefined;
+  return () => {
+    cached ??= importer().then(
+      (module) => module.default as PageComponent,
+      (error) => {
+        cached = undefined;
+        throw error;
+      },
+    );
+    return cached;
+  };
+}
+
+export const pages = {
+  dashboard: lazyPage(() => import('./Dashboard.svelte')),
+  system: lazyPage(() => import('./System.svelte')),
+  info: lazyPage(() => import('./Info.svelte')),
+  notYet: lazyPage(() => import('./NotYet.svelte')),
+};

@@ -5,7 +5,7 @@ pnpm = "12.18.0"
 
 [tasks.check]
 description = "Everything CI checks"
-depends = ["check:go", "check:size"]
+depends = ["check:go", "check:web", "check:gen", "check:size"]
 
 [tasks."check:go"]
 description = "gofmt, vet, tests"
@@ -13,6 +13,32 @@ run = '''
 test -z "$(gofmt -l .)"
 go vet ./...
 go test ./...
+'''
+
+[tasks."web:install"]
+description = "Install web dependencies from the lockfile (shared so parallel tasks do not race)"
+run = "pnpm -C web install --frozen-lockfile"
+
+[tasks."check:web"]
+description = "Web: biome, svelte-check, vitest, build, size-limit"
+depends = ["web:install", "gen"] # gen first: check reads src/lib/api/gen
+run = "pnpm -C web check"
+
+[tasks.gen]
+description = "Regenerate the hey-api client from the Go spec (web/openapi.json is a git-ignored intermediate)"
+depends = ["web:install"]
+run = '''
+go run ./cmd/openapi > web/openapi.json
+pnpm -C web gen
+'''
+
+[tasks."check:gen"]
+description = "Generated client is committed and matches the Go handlers"
+depends = ["gen"]
+# porcelain also catches new untracked generated files, which `git diff` ignores
+run = '''
+git diff --exit-code -- web/src/lib/api/gen
+test -z "$(git status --porcelain -- web/src/lib/api/gen)"
 '''
 
 [tasks.build]
