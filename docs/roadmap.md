@@ -4,7 +4,9 @@ Nothing here may bypass the `Device` port, the transaction module or the DNS lay
 
 ## 0.1.0
 
-See [spec.md](spec.md). Order of work (vertical slices, each shippable in mock mode first):
+See [spec.md](spec.md). Release: `release-please-config.json` pins `release-as: 0.1.0`, so the first release PR is 0.1.0 no matter how many `feat:` commits land. Remove `release-as` right after 0.1.0 is tagged, or every later release stays 0.1.0. After that, `bump-minor-pre-major` keeps breaking changes on 0.x minors until 1.0 is a deliberate choice.
+
+Order of work (vertical slices, each shippable in mock mode first):
 
 1. (done) Repo tooling: `mise.toml`, `mise run check`, CI from the agent-presets snippets, release-please, size-limit.
 2. (done) Daemon skeleton: lifecycle, Huma, health/spec, `Device` and `PackageManager` ports with mock, CLI, apk and opkg adapters, guards, atomic files, `--mock`, binary size gate.
