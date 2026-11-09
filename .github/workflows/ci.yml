@@ -77,7 +77,36 @@ jobs:
         with:
           persist-credentials: false
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7 tools from mise.toml; Rust from rust-toolchain.toml via rustup
+      # Go module + build cache and the pnpm store, keyed on the toolchain pins and lockfiles.
+      # restore-keys fall back to the newest older cache, so a dependency bump stays warm.
+      # Only main saves: PR runs reuse main's cache and cannot evict or poison it.
+      - id: dirs
+        run: |
+          {
+            echo "gomod=$(go env GOMODCACHE)"
+            echo "gobuild=$(go env GOCACHE)"
+            echo "pnpm=$(pnpm -C web store path --silent)"
+          } >> "$GITHUB_OUTPUT"
+      - id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.dirs.outputs.gomod }}
+            ${{ steps.dirs.outputs.gobuild }}
+            ${{ steps.dirs.outputs.pnpm }}
+          key: build-${{ runner.os }}-${{ hashFiles('mise.toml', 'go.sum', 'web/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('mise.toml', 'go.sum', 'web/pnpm-lock.yaml') }}-
+            build-${{ runner.os }}-
       - run: mise run check
+      - if: github.ref == 'refs/heads/main' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.dirs.outputs.gomod }}
+            ${{ steps.dirs.outputs.gobuild }}
+            ${{ steps.dirs.outputs.pnpm }}
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
   actionlint:
     needs: changes
