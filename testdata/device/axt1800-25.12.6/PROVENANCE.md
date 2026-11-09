@@ -1,0 +1,50 @@
+Captured read-only from GL-AXT1800 (OpenWrt 25.12.6 r33311-981c978eff, qualcommax/ipq60xx) on Mon Nov  9 16:12:15 UTC 2026 via `date -u` on the router. Layout at capture: radio0 = uplink STA phy0-sta0 (SSID HomeUplink, wwan up), radio1 = AP phy1-ap0 (lan), radio0 AP disabled. Caller on Ethernet (LAN).
+
+interface-dump.json: ubus call network.interface dump
+interface-wwan-status.json: ubus call network.interface.wwan status
+interface-lan-status.json: ubus call network.interface.lan status
+interface-wan-status.json: ubus call network.interface.wan status
+device-status-all.json: ubus call network.device status
+device-status-phy1-ap0.json: ubus call network.device status '{"name":"phy1-ap0"}'
+device-status-phy0-sta0.json: ubus call network.device status '{"name":"phy0-sta0"}'
+device-status-br-lan.json: ubus call network.device status '{"name":"br-lan"}'
+wireless-status.json: ubus call network.wireless status
+hostapd-phy1-ap0-get_clients.json: ubus call hostapd.phy1-ap0 get_clients
+hostapd-list.txt: ubus -v list 'hostapd.*'
+wpa-list.txt: ubus -v list 'wpa_supplicant.*'
+iwinfo-devices.json: ubus call iwinfo devices
+iwinfo-info-phy1-ap0.json: ubus call iwinfo info '{"device":"phy1-ap0"}'
+iwinfo-info-phy0-sta0.json: ubus call iwinfo info '{"device":"phy0-sta0"}'
+iwinfo-assoclist-phy1-ap0.json: ubus call iwinfo assoclist '{"device":"phy1-ap0"}'
+ip-neigh.txt: ip -4 neigh show
+ip-neigh.json: ip -j -4 neigh show
+ip-route-main.txt: ip -4 route show table main
+ip-route-default.txt: ip -4 route show default
+ip-addr.json: ip -j -4 addr show
+uci-show-wireless.txt: uci show wireless
+uci-show-network.txt: uci show network
+uci-show-dhcp.txt: uci show dhcp
+uci-show-firewall.txt: uci show firewall
+uci-changes.txt: uci changes
+system-board.json: ubus call system board
+system-info.json: ubus call system info
+service-list-dnsmasq.json: ubus call service list '{"name":"dnsmasq"}'
+dhcp-leases.txt: cat /tmp/dhcp.leases
+resolv-auto.txt: cat /tmp/resolv.conf.d/resolv.conf.auto
+buttons.txt: for f in /sys/firmware/devicetree/base/keys/*/label; do echo "$f: $(cat $f)"; done
+ubus-list.txt: ubus list
+rpcd-acl-ls.txt: ls /usr/share/rpcd/acl.d/
+reload-config-which.txt: which reload_config wifi setsid ip jsonfilter
+
+REDACTIONS (values replaced with 'REDACTED', lines kept):
+- uci-show-wireless.txt: all wireless.*.key= lines (5 values, WiFi passphrases)
+- uci-show-network.txt: network.wg0.private_key= (WireGuard private key)
+Not redacted: network.wg0_peer0.public_key (public key, not secret). "psk"/"psk2" matches in JSON/encryption fields are type names, not secrets.
+- ubus-uci-get-dhcp.json: ubus call uci get '{"config":"dhcp"}' (after restoring /etc/config/dhcp to the backup: `list server '127.0.0.1#5353'`)
+- uci-show-dhcp-list-single.txt: uci show dhcp (same state). Shows `dhcp.cfg01411c.server='127.0.0.1#5353'`: a one-element LIST prints exactly like an option. Only `ubus call uci get` (JSON array) or `uci export` (`list` keyword) tell them apart.
+
+## Redaction policy (applies to this directory and subdirectories)
+Secrets, replaced with `REDACTED`: WiFi passphrases (`uci` `key`, and `"key"` inside `network.wireless status` JSON: wireless-status.json in both dirs), WireGuard private key.
+Location-identifying values, replaced with stable placeholders in every file (raw captures and spike logs alike): SSIDs (home uplink → `HomeUplink`, travel AP → `TravelAP`, other saved networks → `HomeNet`, `HotelA`, `HotelB`), DNS search domain → `home.lan`, WireGuard endpoint → `203.0.113.8` (RFC 5737). DHCP lease hostnames → `REDACTED-HOST`.
+Kept as captured: MAC addresses and private RFC1918 addresses. They are needed for classification tests and do not locate the user. Public keys are kept.
+Every other byte is verbatim. Placeholders were substituted after capture with exact string replacement.
