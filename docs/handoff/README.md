@@ -11,10 +11,20 @@ Long-term docs stay the source of truth: [../spec.md](../spec.md), [../roadmap.m
 | 1 tooling | merged |
 | 2 daemon skeleton, ports | merged (#5) |
 | 5 DNS layer stack | merged (#6) |
-| 4 transactions, watchdog, lockout, device parsers, hardware spikes S1–S5 | PR #7 |
+| 4 transactions, watchdog, lockout, device parsers, hardware spikes S1–S5 | merged (#7) |
+| release pinned to 0.1.0 | merged (#8) |
 | 3 auth + first-run | next, see [slice-3-auth.md](slice-3-auth.md) |
 
-Open release-please PR #4 proposes `1.0.0`. Do not merge it; the first release must be `0.1.0` (set `release-as` in `release-please-config.json` before 0.1.0, then remove it).
+Release-please PR #4 now proposes `0.1.0`. Do not merge it until the 0.1.0 scope and hardware playbook are done; remove `release-as` right after the tag.
+
+## Next, in order
+
+1. Slice 3 auth + first-run ([slice-3-auth.md](slice-3-auth.md)); also wires `txn` confirm/rollback endpoints and boot-time `Recover`.
+2. Daemon packaging for the device: init script, `uci-defaults`, keep-list, install script, LuCI port move (ADR 0007). Needed before any feature can be tried on the router.
+3. Frontend skeleton: Svelte 5 + Vite, hey-api client generation with a CI diff check, size-limit budget, Paraglide `en`, dark mode, layout and nav shell.
+4. Feature slices for 0.1.0, each with its hardware playbook item: WiFi (uplink scan/join, AP, guest), captive portal assist, WireGuard, AdGuard (install, migrate to loopback, gated proxy, fail-open probe), dashboard, system, self-update.
+5. CI: run `mise run test:integration` (needs an amd64 image path or QEMU on the runner).
+6. 0.1.0 hardware playbook, then merge #4.
 
 ## Device access
 
