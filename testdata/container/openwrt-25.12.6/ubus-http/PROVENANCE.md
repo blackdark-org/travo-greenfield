@@ -6,3 +6,4 @@ Requests: JSON-RPC POST to `http://127.0.0.1/ubus` with the null session `000000
 - login-ok.json: root/"s3cret-pass", timeout 5.
 - destroy-own-session.json, destroy-again.json: `session destroy` is denied by the default ACL; use a short login `timeout` instead.
 `ubus_rpc_session` values are throwaway container sessions. ACL maps kept verbatim.
+These captures are reference for the rpcd JSON-RPC shapes; the code uses the ubus CLI, covered by the booted-container integration test.
