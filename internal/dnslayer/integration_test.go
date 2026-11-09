@@ -9,21 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
 	"github.com/BlackDark/travo-greenfield/internal/device/cli"
 	"github.com/BlackDark/travo-greenfield/internal/guard"
+	"github.com/BlackDark/travo-greenfield/internal/txn"
+	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
 )
-
-type uciCommit struct{ d device.Device }
-
-func (a uciCommit) Apply(ctx context.Context, cs []string) error {
-	for _, c := range cs {
-		if err := a.d.Commit(ctx, c); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // Real uci in an OpenWrt container: anonymous @dnsmasq[0], list rewrite, absent-option restore.
 func TestRealStackRoundTrip(t *testing.T) {
@@ -38,7 +28,7 @@ func TestRealStackRoundTrip(t *testing.T) {
 	}
 	dir := t.TempDir()
 	s := &Service{Device: d, Guards: guard.Dir{Path: filepath.Join(dir, "g"), Now: time.Now},
-		RecordPath: filepath.Join(dir, "r.json"), Apply: uciCommit{d}}
+		RecordPath: filepath.Join(dir, "r.json"), Apply: &txn.Manager{Device: d, Locks: &uciwrite.Locks{}}}
 	for _, l := range []Layer{
 		{Name: VPN, Servers: []string{"10.2.0.1"}, NoResolv: true},
 		{Name: Captive, Servers: []string{"10.0.0.1"}, DisableRebind: true},

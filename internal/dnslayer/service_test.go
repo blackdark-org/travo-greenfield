@@ -20,10 +20,14 @@ type commitApplier struct {
 	n    int
 }
 
-func (a *commitApplier) Apply(ctx context.Context, configs []string) error {
+// commitApplier mirrors txn.Manager.Apply semantics: stage, then commit; revert on failure.
+func (a *commitApplier) Apply(ctx context.Context, configs []string, stage func(context.Context) error) error {
 	a.n++
+	if err := stage(ctx); err != nil {
+		return errors.Join(err, a.d.Revert(ctx, "dhcp"))
+	}
 	if a.fail {
-		return errors.New("apply failed")
+		return errors.Join(errors.New("apply failed"), a.d.Revert(ctx, "dhcp"))
 	}
 	for _, c := range configs {
 		if err := a.d.Commit(ctx, c); err != nil {
@@ -35,14 +39,14 @@ func (a *commitApplier) Apply(ctx context.Context, configs []string) error {
 
 var ctx = context.Background()
 
-// setup loads a captured `uci show dhcp` fixture (see internal/device/cli/testdata/PROVENANCE.md).
+// setup loads a captured `uci export dhcp` fixture (see internal/device/cli/testdata/PROVENANCE.md).
 func setup(t *testing.T, fixture string) (*Service, *mock.Device, *commitApplier) {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join("..", "device", "cli", "testdata", fixture))
 	if err != nil {
 		t.Fatal(err)
 	}
-	secs, err := cli.ParseShow("dhcp", string(b))
+	secs, err := cli.ParseExport("dhcp", string(b))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +64,11 @@ func setup(t *testing.T, fixture string) (*Service, *mock.Device, *commitApplier
 	}, d, a
 }
 
-const listFixture, scalarFixture = "uci-show-dhcp.txt", "uci-show-dhcp-scalar-server.txt"
+const listFixture, scalarFixture = "uci-export-dhcp.txt", "uci-export-dhcp-scalar-server.txt"
+
+// deviceFixture is the real router's dnsmasq: a ONE-element `list server` (old Travo's
+// AdGuard forwarding). Restoring it as an option silently broke all DNS on the device.
+const deviceFixture = "../../../../testdata/device/axt1800-25.12.6/uci-export-dhcp.txt"
 
 func live(t *testing.T, d *mock.Device) State {
 	t.Helper()
@@ -81,7 +89,7 @@ func guarded(t *testing.T, s *Service) bool {
 }
 
 func TestPushThenPopRestoresBaseExactly(t *testing.T) {
-	for _, fx := range []string{listFixture, scalarFixture} {
+	for _, fx := range []string{listFixture, scalarFixture, deviceFixture} {
 		t.Run(fx, func(t *testing.T) {
 			s, d, _ := setup(t, fx)
 			before := live(t, d)
@@ -285,5 +293,20 @@ func TestResumeRefusesForeignStagedChanges(t *testing.T) {
 	}
 	if p, _ := d.Pending(ctx, "dhcp"); !p {
 		t.Fatal("resume reverted foreign changes")
+	}
+}
+
+// Regression for the S5 finding: the device's one-element list must come back as a list.
+func TestDeviceSingleElementListRestoresAsList(t *testing.T) {
+	s, d, _ := setup(t, deviceFixture)
+	_, before, _ := ReadState(ctx, d)
+	if before.Server.Scalar || !reflect.DeepEqual(before.Server.Values, []string{"127.0.0.1#5353"}) {
+		t.Fatalf("base read wrong: %+v", before.Server)
+	}
+	_ = s.Push(ctx, layers[Captive])
+	_ = s.Pop(ctx, Captive)
+	secs, _ := d.Show(ctx, "dhcp")
+	if _, isOpt := secs[0].Options["server"]; isOpt || len(secs[0].Lists["server"]) != 1 {
+		t.Fatalf("restored as option: dnsmasq would ignore it: %+v", secs[0])
 	}
 }

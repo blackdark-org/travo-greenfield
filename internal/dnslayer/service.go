@@ -15,10 +15,10 @@ import (
 
 const guardName = "dns-layer-in-progress"
 
-// Applier commits staged UCI configs and reloads services. The transaction module
-// implements it; nothing here commits directly.
+// Applier stages under the config locks, commits and reloads (txn.Manager.Apply).
+// Nothing here commits directly; staging inside the lock closes the foreign-writer race.
 type Applier interface {
-	Apply(ctx context.Context, configs []string) error
+	Apply(ctx context.Context, configs []string, stage func(ctx context.Context) error) error
 }
 
 // Service is the only writer of the DNS options the stack owns.
@@ -193,18 +193,19 @@ func (s *Service) mutate(ctx context.Context, f func(*Record, State) (*Record, e
 	}
 }
 
-// applyAndFinish stages target, applies, and on success deletes the record (if
-// restoring base) and releases the guard. Any failure reverts staging and keeps the guard.
+// applyAndFinish stages target and applies through the Applier (which reverts staging on
+// failure), then deletes the record (if restoring base) and releases the guard.
+// Any failure keeps the guard.
 func (s *Service) applyAndFinish(ctx context.Context, target State, restoreBase bool) error {
-	sec, _, err := ReadState(ctx, s.Device)
+	err := s.Apply.Apply(ctx, []string{"dhcp"}, func(lctx context.Context) error {
+		sec, _, err := ReadState(lctx, s.Device)
+		if err != nil {
+			return err
+		}
+		return Stage(lctx, s.Device, sec, target)
+	})
 	if err != nil {
-		return fmt.Errorf("dns layers: %w (guard kept)", err)
-	}
-	if err := Stage(ctx, s.Device, sec, target); err != nil {
-		return errors.Join(fmt.Errorf("dns layers: stage: %w (guard kept)", err), s.Device.Revert(ctx, "dhcp"))
-	}
-	if err := s.Apply.Apply(ctx, []string{"dhcp"}); err != nil {
-		return errors.Join(fmt.Errorf("dns layers: apply: %w (guard kept)", err), s.Device.Revert(ctx, "dhcp"))
+		return fmt.Errorf("dns layers: apply: %w (guard kept)", err)
 	}
 	if restoreBase {
 		if err := os.Remove(s.RecordPath); err != nil && !errors.Is(err, os.ErrNotExist) {
