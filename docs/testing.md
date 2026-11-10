@@ -50,3 +50,5 @@ Per release, each from Ethernet unless stated (issues with label `needs-hardware
 ## Web
 
 `pnpm -C web check`: Biome, svelte-check, Vitest (pure logic and server-rendered components), build, size-limit. Visual and keyboard behaviour (theme, drawer, focus) is checked in headless Chrome at 390 px and 1280 px before a UI PR; attach screenshots to the PR.
+
+`mise run screenshots` writes PNGs for UI PRs to `web/screenshots/`; `web/scripts/cdp.mjs` is the shared headless-Chrome helper for browser checks.
