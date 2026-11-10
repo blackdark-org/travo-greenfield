@@ -11,7 +11,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/atomicfile"
+	"github.com/blackdark-org/travo-greenfield/internal/atomicfile"
 )
 
 // ErrActive means a guard of that name already exists.

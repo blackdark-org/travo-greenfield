@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live as GitHub issues in `BlackDark/travo-greenfield`, milestone `0.1.0`, project board https://github.com/users/BlackDark/projects/1. Use the `gh` CLI for all operations (gh 2.94+: native sub-issues and blocked-by).
+Issues and specs for this repo live as GitHub issues in `blackdark-org/travo-greenfield`, milestone `0.1.0`, project board https://github.com/orgs/blackdark-org/projects/1. Use the `gh` CLI for all operations (gh 2.94+: native sub-issues and blocked-by).
 
 ## Conventions
 
@@ -16,7 +16,7 @@ Issues and specs for this repo live as GitHub issues in `BlackDark/travo-greenfi
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
-File issues only into the user's own repo. This repo is `BlackDark/travo-greenfield`. In a fork, `gh` can default to the upstream parent, so before the first `gh issue create` of a session, check the target with `gh repo view --json nameWithOwner` and confirm it with the user if it is not their repo.
+File issues only into the user's own repo. This repo is `blackdark-org/travo-greenfield`. In a fork, `gh` can default to the upstream parent, so before the first `gh issue create` of a session, check the target with `gh repo view --json nameWithOwner` and confirm it with the user if it is not their repo.
 
 ## Pull requests as a triage surface
 
@@ -53,5 +53,5 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 
 Status column per issue: `Backlog` (epic or not ready) → `Ready` (`ready-for-agent`, no open blockers) → `In progress` (claimed, worktree open) → `In review` (PR open) → `Needs hardware` (merged; waiting for the playbook step on the router) → `Done`.
 
-- Move a card: `gh project item-edit 1 --owner BlackDark --url <issue-url> --field Status --value "In progress"`.
-- Add a new issue to the board: `gh project item-add 1 --owner BlackDark --url <issue-url>`.
+- Move a card: `gh project item-edit 1 --owner blackdark-org --url <issue-url> --field Status --value "In progress"`.
+- Add a new issue to the board: `gh project item-add 1 --owner blackdark-org --url <issue-url>`.

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	dfacts "github.com/BlackDark/travo-greenfield/internal/device/facts"
+	dfacts "github.com/blackdark-org/travo-greenfield/internal/device/facts"
 )
 
 const dev = "../../testdata/device/axt1800-25.12.6"

@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device/cli"
-	dfacts "github.com/BlackDark/travo-greenfield/internal/device/facts"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
-	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
+	"github.com/blackdark-org/travo-greenfield/internal/device/cli"
+	dfacts "github.com/blackdark-org/travo-greenfield/internal/device/facts"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 )
 
 // Spike S4 on the router. Run from Ethernet only. Each test changes live wireless state

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 )
 
 type config struct{ sections map[string]*device.Section }

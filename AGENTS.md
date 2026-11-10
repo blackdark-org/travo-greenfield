@@ -34,7 +34,7 @@ Work is GitHub issues, rules are `docs/`. Before any task, read `docs/agents/wor
 
 ### Issue tracker
 
-GitHub issues on `BlackDark/travo-greenfield`, milestone `0.1.0`, project board 1, native sub-issues and blocked-by. See `docs/agents/issue-tracker.md`.
+GitHub issues on `blackdark-org/travo-greenfield`, milestone `0.1.0`, project board 1, native sub-issues and blocked-by. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

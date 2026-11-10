@@ -10,7 +10,7 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/BlackDark/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/auth"
 	"github.com/danielgtaylor/huma/v2"
 )
 

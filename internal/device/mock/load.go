@@ -3,7 +3,7 @@ package mock
 import (
 	"context"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 )
 
 // Load seeds a committed config from parsed sections (cli.ParseExport on a captured fixture).

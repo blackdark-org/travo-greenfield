@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 )
 
 // Runs against the real uci inside an OpenWrt container (see mise task test:integration).

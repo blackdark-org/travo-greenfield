@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/auth"
 )
 
 func TestDefaultDenyWalk(t *testing.T) {

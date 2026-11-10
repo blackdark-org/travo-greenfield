@@ -9,14 +9,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
-	"github.com/BlackDark/travo-greenfield/internal/device/cli"
-	"github.com/BlackDark/travo-greenfield/internal/device/mock"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
-	"github.com/BlackDark/travo-greenfield/internal/pkgmgr"
-	"github.com/BlackDark/travo-greenfield/internal/runner"
-	"github.com/BlackDark/travo-greenfield/internal/txn"
-	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device/cli"
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/pkgmgr"
+	"github.com/blackdark-org/travo-greenfield/internal/runner"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 )
 
 // Paths are the daemon's on-disk locations. Guards never live in the state dir (invariants §1).

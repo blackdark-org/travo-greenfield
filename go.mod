@@ -1,4 +1,4 @@
-module github.com/BlackDark/travo-greenfield
+module github.com/blackdark-org/travo-greenfield
 
 go 1.27.3
 

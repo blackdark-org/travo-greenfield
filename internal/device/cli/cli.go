@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
-	"github.com/BlackDark/travo-greenfield/internal/runner"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/runner"
 )
 
 // Timeout tiers: every shell-out gets one.

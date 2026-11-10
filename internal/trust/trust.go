@@ -7,8 +7,8 @@ import (
 	"net/netip"
 	"sync"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
-	"github.com/BlackDark/travo-greenfield/internal/device/facts"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device/facts"
 )
 
 // Allowed is pure: remote must be loopback or inside one of lanNets.
