@@ -28,24 +28,24 @@ Scripts parse; guard paths under `/etc/travo-guards`; every route is in the spec
 
 ## Running the container layer
 
-`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). A second step boots the image with `/sbin/init` (procd as PID 1, real ubusd/rpcd/netifd) for tests that need procd. Not in `mise run check` yet; CI needs an x86_64 image or QEMU first. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
+`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). A second step boots the image with `/sbin/init` (procd as PID 1, real ubusd/rpcd/netifd) for tests that need procd. Not in `mise run check`; CI integration is tracked in an issue (label `area/ci`). Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
 
 ## Hardware layer
 
+Test router: GL-AXT1800, OpenWrt 25.12.6, `ssh root@192.168.1.1` (key auth) when the operator has it on LAN. Old Travo 0.10.2 runs on it (`:80`; LuCI `:8080`/`:8443`; AdGuard `:3000`/`:5353`). Before any live test: take a `sysupgrade -b` backup to the operator's machine (never into the repo), stop old Travo and pause its per-minute cron (`/etc/travo/wifi-reconnect.sh`), restore both afterwards, and diff `/etc/config/*` and the crontab against the backup. Never `wifi` / `wifi up/down/reload`. GET-only first.
+
 `hardware`-tagged tests (`internal/txn/hardware_test.go`, `internal/dnslayer/hardware_test.go`) run ON the router from Ethernet: cross-compile with `GOOS=linux GOARCH=arm64 go test -tags hardware -c`, copy with `scp -O`, run with `-test.timeout` (no `timeout` in BusyBox). They change live wireless/DNS state and rely on the watchdog/stack to restore it; take a sysupgrade backup first and pause other writers (old Travo, its cron). The reboot test needs a temporary boot hook that calls `Recover`; remove it after. Results of the first run: `testdata/device/axt1800-25.12.6/SPIKES.md`.
 
-## Hardware playbook (run before 0.1.0; console or Ethernet fallback ready)
+## Hardware playbook (run before each release; console or Ethernet fallback ready)
 
-GET-only captures first (spike S3), saved verbatim as fixtures with provenance:
-- `ubus call network.interface dump`, `ubus call network.device status`, `ip -4 neigh`, `ip -4 route show table main`, `ubus list hostapd.*` and `ubus call hostapd.<if> get_clients`, `uci show wireless`, `uci show network`, `uci show dhcp`
-- once on Ethernet, once from a phone on the AP, once with an uplink STA up
+Done on 2026-11-09 (results: `testdata/device/axt1800-25.12.6/SPIKES.md`): payload captures; watchdog restore without confirm, after daemon kill and across reboot; wrong uplink password reads `carrier:false` and rolls back; DNS layer round trip with AdGuard and captive.
 
-Live checks (spike S4), each from Ethernet:
-1. Begin a wireless change, do not confirm: WiFi returns after the window via `reload_config` alone. Measure time to AP up and STA carrier; set the confirm window from it.
-2. Begin, then `kill -9` the daemon: the watchdog restores.
-3. Begin, then reboot within the window: startup recovery restores.
-4. From a phone on the AP, switch to client mode: refused with 409 `wifi_lockout_risk`.
-5. Probe with a wrong STA password: carrier stays false, rollback happens, UI says "rolled back" only after restore.
+Per release, each from Ethernet unless stated (issues with label `needs-hardware` add their step here when they merge):
+1. Install the release tarball next to old Travo; health answers; `sysupgrade -l` lists every keep.d path; reboot; still running; uninstall leaves old Travo working.
+2. Wireless change not confirmed: restores via `reload_config` alone; confirm keeps it.
+3. From a phone on the AP, switch to client mode: refused with 409 `wifi_lockout_risk`.
+4. Wrong uplink password: carrier stays false, rollback happens, UI says "rolled back" only after restore.
+5. DNS: captive bypass over AdGuard restores base exactly; AdGuard stopped → fail-open within seconds.
 
 ## Web
 

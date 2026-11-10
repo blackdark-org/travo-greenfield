@@ -6,8 +6,7 @@ Status: design phase, no code yet. Target 0.1.0.
 
 ## Docs
 
-- [Spec](docs/spec.md) · [Roadmap](docs/roadmap.md) · [Invariants](docs/invariants.md)
+- [Spec](docs/spec.md) · [Invariants](docs/invariants.md) · Plan: [milestone 0.1.0](https://github.com/BlackDark/travo-greenfield/milestone/1) and [project board](https://github.com/users/BlackDark/projects/1)
 - [Device facts](docs/device-facts.md) · [Testing](docs/testing.md) · [Glossary](docs/glossary.md) · [ADRs](docs/adr/)
-- Working state: [docs/handoff/](docs/handoff/) (temporary)
 
 License: [MIT](LICENSE).

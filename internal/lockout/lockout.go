@@ -1,6 +1,6 @@
 // Package lockout refuses changes that would leave the caller without a way back in
 // (invariants §2). Pure: inputs are already-parsed facts; the parsers for neighbour
-// table and hostapd station dumps land with real device captures (roadmap spike S3).
+// table and hostapd station dumps live in internal/device/facts (device captures).
 package lockout
 
 import (
