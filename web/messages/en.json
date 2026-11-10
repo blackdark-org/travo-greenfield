@@ -16,6 +16,7 @@
   "load_loading": "Loading",
   "load_error": "Could not load this data: {cause}",
   "load_retry": "Retry",
+  "load_stale": "Last known value",
   "dashboard_title": "Dashboard",
   "dashboard_daemon": "Daemon",
   "dashboard_status": "Status",
@@ -44,5 +45,17 @@
   "logout": "Log out",
   "system_title": "System",
   "system_about": "About",
-  "system_theme": "Theme"
+  "system_theme": "Theme",
+  "system_device": "Device",
+  "system_model": "Model",
+  "system_hostname": "Hostname",
+  "system_openwrt": "OpenWrt",
+  "system_kernel": "Kernel",
+  "system_uptime": "Uptime",
+  "system_load": "Load",
+  "system_memory": "Memory",
+  "system_storage": "Storage",
+  "system_app_version": "travo-greenfield version",
+  "system_build_time": "Build time",
+  "system_used_of": "{used} of {total}"
 }

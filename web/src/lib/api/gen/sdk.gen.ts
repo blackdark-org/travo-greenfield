@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
+import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -93,6 +93,19 @@ export const postSetupPassword = <ThrowOnError extends boolean = false>(options:
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Device and firmware information
+ */
+export const getSystemInfo = <ThrowOnError extends boolean = false>(options?: Options<GetSystemInfoData, ThrowOnError>): RequestResult<GetSystemInfoResponses, GetSystemInfoErrors, ThrowOnError> => (options?.client ?? client).get<GetSystemInfoResponses, GetSystemInfoErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/system/info',
+    ...options
 });
 
 /**

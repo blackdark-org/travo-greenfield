@@ -26,6 +26,8 @@ type Txns interface {
 type Deps struct {
 	Version  string
 	Accounts device.Accounts
+	// Ubus feeds read-only system facts; nil answers 503 device_unavailable.
+	Ubus     device.Ubus
 	Txns     Txns
 	Sessions *auth.Store
 	Limiter  *auth.RateLimiter
@@ -94,6 +96,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerAuth(a)
 	s.registerSetup(a)
 	s.registerTxn(a)
+	s.registerSystem(a)
 	if d.UI != nil {
 		mux.Handle("/", d.UI)
 	}
