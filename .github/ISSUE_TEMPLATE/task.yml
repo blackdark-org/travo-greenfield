@@ -1,13 +1,13 @@
-name: Task
-description: One PR's worth of work with a full contract, so any agent (including a small model) can implement it.
+name: Agent brief
+description: One tracer-bullet slice with a full contract; ready-for-agent once the readiness probe passes (docs/agents/workflow.md).
 title: "<area>: <outcome>"
-labels: ["type/task"]
+labels: ["needs-triage", "enhancement"]
 body:
   - type: textarea
     id: goal
     attributes:
       label: Goal
-      description: One or two sentences on the outcome for the user or the codebase.
+      description: One or two sentences on the behaviour after this lands, from the user's (or caller's) side. Use GLOSSARY.md terms.
     validations:
       required: true
   - type: textarea
@@ -25,7 +25,7 @@ body:
     id: contract
     attributes:
       label: Contract
-      description: Files and packages, function signatures, endpoints (method, path, body, status codes, error codes), UI states. Concrete enough that no design decision is left.
+      description: Behavioural contract and key interfaces (types, signatures, endpoints with method/path/body/status/error codes, UI states). Concrete enough that no design decision is left. Name packages and types; avoid line numbers.
     validations:
       required: true
   - type: textarea
@@ -59,7 +59,7 @@ body:
     id: depends
     attributes:
       label: Depends on
-      description: Issue numbers that must be merged first, e.g. "#12, #14", or "none".
+      description: Informational only. Set the real edges with GitHub's native "blocked by" (gh issue edit <n> --add-blocked-by <m>).
       value: none
   - type: dropdown
     id: model

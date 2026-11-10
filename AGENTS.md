@@ -20,14 +20,29 @@ Deviations:
 - `docs/spec.md` product scope for 0.1.0.
 - `docs/invariants.md` MUST rules; read before touching live state, auth, DNS, WiFi. Breaking one needs an ADR.
 - `docs/device-facts.md` hardware lessons; `docs/testing.md` test layers and fixture rules.
-- `docs/adr/` decisions; `docs/glossary.md` terms.
+- `docs/adr/` decisions; `GLOSSARY.md` terms (use them verbatim in code, tests, issues).
 - `testdata/device/<device>-<firmware>/` verbatim device captures with `PROVENANCE.md` and redaction policy; `SPIKES.md` there has hardware results.
 
 ## Work
 
-- Work comes from GitHub issues: milestone `0.1.0`, board https://github.com/users/BlackDark/projects/1. Pick a `Ready` `type/task` issue whose dependencies are merged. `type/epic` issues are placeholders: write a full Task (template `.github/ISSUE_TEMPLATE/task.yml`) before implementing.
-- Issues hold the plan and the contract; `docs/` holds the rules. Never copy a rule into an issue; link the section. A decision made while implementing goes into an ADR or invariants in the same PR.
-- One issue = one PR (`Closes #N`), one worktree. `needs-hardware` issues stay open until the playbook step passes on the router.
+Work is GitHub issues, rules are `docs/`. Before any task, read `docs/agents/workflow.md`: how an issue becomes a brief, who implements, reviews and merges, and when a `needs-hardware` issue may close.
+- Implement only `ready-for-agent` issues with no open blocker; an `epic` gets `/to-tickets` first.
+- The brief is the contract. When it contradicts the repo, stop and report `blocked`: the coordinator fixes the brief.
+- A decision made while implementing lands in an ADR or `docs/invariants.md` in the same PR; the issue links it.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub issues on `BlackDark/travo-greenfield`, milestone `0.1.0`, project board 1, native sub-issues and blocked-by. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical role names, plus `epic`, `area/*`, `model:*`, `needs-hardware`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single context: `GLOSSARY.md`, `docs/adr/`, `docs/invariants.md`, `docs/device-facts.md`. See `docs/agents/domain.md`.
 
 ## Every change
 
