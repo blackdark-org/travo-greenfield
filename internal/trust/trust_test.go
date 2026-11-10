@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/BlackDark/travo-greenfield/internal/device/facts"
-	"github.com/BlackDark/travo-greenfield/internal/device/mock"
+	"github.com/blackdark-org/travo-greenfield/internal/device/facts"
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
 )
 
 func nets(t *testing.T) []netip.Prefix {

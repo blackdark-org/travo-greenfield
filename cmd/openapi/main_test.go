@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/BlackDark/travo-greenfield/internal/api"
+	"github.com/blackdark-org/travo-greenfield/internal/api"
 )
 
 // The committed spec must describe exactly what the daemon serves.

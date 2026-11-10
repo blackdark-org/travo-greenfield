@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device/cli"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
-	"github.com/BlackDark/travo-greenfield/internal/txn"
-	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
+	"github.com/blackdark-org/travo-greenfield/internal/device/cli"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 )
 
 // Real uci in an OpenWrt container: anonymous @dnsmasq[0], list rewrite, absent-option restore.

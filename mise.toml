@@ -45,7 +45,7 @@ test -z "$(git status --porcelain -- web/src/lib/api/gen)"
 description = "Static aarch64 binary for the router"
 run = '''
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
-  -ldflags "-s -w -X github.com/BlackDark/travo-greenfield/internal/version.Version=${VERSION:-dev} -X github.com/BlackDark/travo-greenfield/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -ldflags "-s -w -X github.com/blackdark-org/travo-greenfield/internal/version.Version=${VERSION:-dev} -X github.com/blackdark-org/travo-greenfield/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o dist/travo-greenfield-arm64 ./cmd/travo-greenfield
 '''
 

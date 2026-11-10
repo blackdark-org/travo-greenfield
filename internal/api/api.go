@@ -8,9 +8,9 @@ import (
 	"net/netip"
 	"sync"
 
-	"github.com/BlackDark/travo-greenfield/internal/auth"
-	"github.com/BlackDark/travo-greenfield/internal/device"
-	"github.com/BlackDark/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 )

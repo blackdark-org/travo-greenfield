@@ -14,7 +14,7 @@ An issue is **ready-for-agent** only when it carries an agent brief that a small
 
 ## 2. Implement
 
-- **Frontier**: open `ready-for-agent` issues with zero open blockers (`gh api repos/BlackDark/travo-greenfield/issues/<n> --jq .issue_dependencies_summary.blocked_by` is `0`). Dispatch the whole frontier in parallel.
+- **Frontier**: open `ready-for-agent` issues with zero open blockers (`gh api repos/blackdark-org/travo-greenfield/issues/<n> --jq .issue_dependencies_summary.blocked_by` is `0`). Dispatch the whole frontier in parallel.
 - One issue, one fresh implementer, one worktree (`../travo-greenfield-<slug>`, branch `<type>/<slug>` from `origin/main`). Model by the issue's `model:*` label. Move the card to `In progress`.
 - The implementer runs `/implement` for the issue: `/tdd` red→green at the seams the brief names, `mise run check` green, then `/code-review` on its own diff. It commits (Conventional Commits, one logical unit each, every commit green), pushes, and opens a PR with `Closes #<n>` following the `/pr` shape (summary, evidence, merge danger). It stops and reports `blocked` when the brief contradicts the repo, instead of guessing.
 

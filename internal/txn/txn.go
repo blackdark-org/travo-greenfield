@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/atomicfile"
-	"github.com/BlackDark/travo-greenfield/internal/device"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
-	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
+	"github.com/blackdark-org/travo-greenfield/internal/atomicfile"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 )
 
 //go:embed watchdog.sh

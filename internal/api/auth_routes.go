@@ -7,7 +7,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/BlackDark/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/auth"
 )
 
 type sessionBody struct {

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/runner"
+	"github.com/blackdark-org/travo-greenfield/internal/runner"
 )
 
 // Runner is the shared command runner.

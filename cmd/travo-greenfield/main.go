@@ -14,14 +14,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/api"
-	"github.com/BlackDark/travo-greenfield/internal/app"
-	"github.com/BlackDark/travo-greenfield/internal/auth"
-	"github.com/BlackDark/travo-greenfield/internal/auth/epochfile"
-	"github.com/BlackDark/travo-greenfield/internal/lifecycle"
-	"github.com/BlackDark/travo-greenfield/internal/trust"
-	"github.com/BlackDark/travo-greenfield/internal/txn"
-	"github.com/BlackDark/travo-greenfield/internal/version"
+	"github.com/blackdark-org/travo-greenfield/internal/api"
+	"github.com/blackdark-org/travo-greenfield/internal/app"
+	"github.com/blackdark-org/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/auth/epochfile"
+	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
+	"github.com/blackdark-org/travo-greenfield/internal/trust"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/version"
 )
 
 func main() {

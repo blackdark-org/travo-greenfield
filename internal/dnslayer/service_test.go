@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device/cli"
-	"github.com/BlackDark/travo-greenfield/internal/device/mock"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/device/cli"
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
 )
 
 type commitApplier struct {

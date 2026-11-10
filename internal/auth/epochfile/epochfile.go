@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/BlackDark/travo-greenfield/internal/atomicfile"
+	"github.com/blackdark-org/travo-greenfield/internal/atomicfile"
 )
 
 type file struct {

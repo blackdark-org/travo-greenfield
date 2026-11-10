@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 )
 
 // Apply is the direct path for changes that cannot cut the caller off the router

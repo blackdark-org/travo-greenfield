@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/BlackDark/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 )
 
 var ctx = context.Background()

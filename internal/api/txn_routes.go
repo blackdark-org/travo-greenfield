@@ -8,7 +8,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
-	"github.com/BlackDark/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
 )
 
 type txnBody struct {

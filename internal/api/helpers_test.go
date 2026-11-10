@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/auth"
-	"github.com/BlackDark/travo-greenfield/internal/device/mock"
-	"github.com/BlackDark/travo-greenfield/internal/trust"
-	"github.com/BlackDark/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
+	"github.com/blackdark-org/travo-greenfield/internal/trust"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/danielgtaylor/huma/v2"
 )
 

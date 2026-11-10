@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BlackDark/travo-greenfield/internal/device/mock"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
-	"github.com/BlackDark/travo-greenfield/internal/uciwrite"
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 )
 
 // fileDevice makes Commit write the config file, like real uci does.

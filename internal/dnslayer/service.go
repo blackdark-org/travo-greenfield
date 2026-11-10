@@ -8,9 +8,9 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/BlackDark/travo-greenfield/internal/atomicfile"
-	"github.com/BlackDark/travo-greenfield/internal/device"
-	"github.com/BlackDark/travo-greenfield/internal/guard"
+	"github.com/blackdark-org/travo-greenfield/internal/atomicfile"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
 )
 
 const guardName = "dns-layer-in-progress"
