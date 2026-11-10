@@ -105,7 +105,7 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir stri
 	}))
 
 	h, _ := api.New(api.Deps{
-		Version: version.Version, Accounts: deps.Accounts, Txns: deps.Txn,
+		Version: version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
 		Trusted:   provider.Allowed,
 		RouterIPs: provider.RouterIPs, HostAllow: hostAllow,

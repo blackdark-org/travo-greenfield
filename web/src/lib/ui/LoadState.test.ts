@@ -6,8 +6,8 @@ import { createLoader, type LoadStatus } from './loader.svelte';
 
 const content = createRawSnippet(() => ({ render: () => '<p>CONTENT</p>' }));
 
-function html(status: LoadStatus): string {
-  return render(LoadState, { props: { status, retry: () => {}, children: content } }).body;
+function html(status: LoadStatus, stale = false): string {
+  return render(LoadState, { props: { status, retry: () => {}, stale, children: content } }).body;
 }
 
 describe('LoadState', () => {
@@ -23,6 +23,28 @@ describe('LoadState', () => {
     expect(out).toContain('boom');
     expect(out).toContain('<button');
     expect(out).not.toContain('CONTENT');
+  });
+
+  it('keeps the known value, dimmed, beside the error when stale', () => {
+    const out = html({ state: 'error', message: 'boom' }, true);
+    expect(out).toContain('CONTENT');
+    expect(out).toContain('opacity-60');
+    expect(out).toContain('boom');
+    expect(out).toContain('Last known value');
+    expect(out).toContain('<button');
+  });
+
+  it('keeps the known value, dimmed, while a retry loads', () => {
+    const out = html({ state: 'loading' }, true);
+    expect(out).toContain('CONTENT');
+    expect(out).toContain('opacity-60');
+    expect(out).not.toContain('skeleton');
+  });
+
+  it('renders only the error when not stale', () => {
+    const out = html({ state: 'error', message: 'boom' }, false);
+    expect(out).not.toContain('CONTENT');
+    expect(out).not.toContain('Last known value');
   });
 
   it('renders content when ready', () => {

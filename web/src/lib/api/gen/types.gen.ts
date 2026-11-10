@@ -15,6 +15,17 @@ export type ApiError = {
     error: string;
 };
 
+export type AppBody = {
+    /**
+     * Build time, RFC 3339; empty for unstamped builds
+     */
+    build_time: string;
+    /**
+     * travo-greenfield build version
+     */
+    version: string;
+};
+
 export type GetSetupStateResponse = {
     password_set: boolean;
 };
@@ -35,6 +46,11 @@ export type LoginInputBody = {
      * Root password
      */
     password: string;
+};
+
+export type MemoryBody = {
+    available_bytes: number;
+    total_bytes: number;
 };
 
 export type OkBody = {
@@ -65,6 +81,34 @@ export type SetupInputBody = {
      * New root password, 8 to 128 bytes
      */
     password: string;
+};
+
+export type SystemInfoBody = {
+    app: AppBody;
+    board_name: string;
+    hostname: string;
+    kernel: string;
+    /**
+     * Load averages over 1, 5 and 15 minutes (not CPU percent)
+     */
+    load: [
+        number,
+        number,
+        number
+    ];
+    memory: MemoryBody;
+    model: string;
+    /**
+     * OpenWrt release version
+     */
+    openwrt: string;
+    revision: string;
+    /**
+     * The overlay (root) filesystem
+     */
+    storage: MemoryBody;
+    target: string;
+    uptime_seconds: number;
 };
 
 export type TxnBody = {
@@ -317,6 +361,35 @@ export type PostSetupPasswordResponses = {
 };
 
 export type PostSetupPasswordResponse = PostSetupPasswordResponses[keyof PostSetupPasswordResponses];
+
+export type GetSystemInfoData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/info';
+};
+
+export type GetSystemInfoErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetSystemInfoError = GetSystemInfoErrors[keyof GetSystemInfoErrors];
+
+export type GetSystemInfoResponses = {
+    /**
+     * OK
+     */
+    200: SystemInfoBody;
+};
+
+export type GetSystemInfoResponse = GetSystemInfoResponses[keyof GetSystemInfoResponses];
 
 export type GetTransactionData = {
     body?: never;
