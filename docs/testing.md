@@ -28,7 +28,7 @@ Scripts parse; guard paths under `/etc/travo-guards`; every route is in the spec
 
 ## Running the container layer
 
-`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). A second step boots the image with `/sbin/init` (procd as PID 1, real ubusd/rpcd/netifd) for tests that need procd. Not in `mise run check`; CI integration is tracked in an issue (label `area/ci`). Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
+`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). A second step boots the image with `/sbin/init` (procd as PID 1, real ubusd/rpcd/netifd) for tests that need procd. Not in `mise run check`. CI runs it on every PR that touches non-docs files: one job per arch (`integration (arm64)` on the native arm runner, `integration (amd64)`), each running `mise run test:integration <arch>`; no arg runs both locally. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
 
 ## Hardware layer
 
