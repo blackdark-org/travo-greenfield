@@ -3,7 +3,9 @@
 import { launchChrome } from './cdp.mjs';
 
 const DEBUG_PORT = 9333; // cdp.mjs's fixed port; a second client on the page target sees the events
-const BASE_URL = process.env.E2E_URL ?? `http://127.0.0.1:${process.env.DAEMON_PORT ?? 18081}/`;
+// Anonymous visitors are redirected from / to #/login, and open() waits for the exact URL.
+const BASE_URL =
+  process.env.E2E_URL ?? `http://127.0.0.1:${process.env.DAEMON_PORT ?? 18081}/#/login`;
 
 /** Returns a problem description when a CDP event is an exception or a CSP violation. */
 export function problemOf(msg) {

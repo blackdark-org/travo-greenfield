@@ -103,3 +103,8 @@ run = "pnpm -C web build && scripts/with-mock.sh -- node web/scripts/screenshots
 description = "Build, let the mock daemon serve web/dist, fail on CSP violations or script errors in headless Chrome"
 depends = ["web:install"]
 run = "pnpm -C web build && scripts/with-daemon-ui.sh -- node web/scripts/e2e-csp.mjs"
+
+[tasks."e2e:auth"]
+description = "Build, run the login/setup flow in headless Chrome against the first-run mock daemon"
+depends = ["web:install"]
+run = "pnpm -C web build && scripts/with-mock.sh --firstrun -- node web/scripts/e2e-auth.mjs"

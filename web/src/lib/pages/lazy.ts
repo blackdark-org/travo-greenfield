@@ -24,6 +24,7 @@ export function lazyPage(importer: () => Promise<{ default: unknown }>): PageImp
 export const pages = {
   dashboard: lazyPage(() => import('./Dashboard.svelte')),
   system: lazyPage(() => import('./System.svelte')),
-  info: lazyPage(() => import('./Info.svelte')),
+  login: lazyPage(() => import('./Login.svelte')),
+  setup: lazyPage(() => import('./Setup.svelte')),
   notYet: lazyPage(() => import('./NotYet.svelte')),
 };

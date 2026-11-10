@@ -1,5 +1,6 @@
 <script lang="ts">
 import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+import LogOut from '@lucide/svelte/icons/log-out';
 import Menu from '@lucide/svelte/icons/menu';
 import MoonStar from '@lucide/svelte/icons/moon-star';
 import Network from '@lucide/svelte/icons/network';
@@ -9,12 +10,15 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sun from '@lucide/svelte/icons/sun';
 import Wifi from '@lucide/svelte/icons/wifi';
 import X from '@lucide/svelte/icons/x';
+import { navigate } from './lib/navigate';
 import { pages } from './lib/pages/lazy';
 import PageHost from './lib/pages/PageHost.svelte';
 import { m } from './lib/paraglide/messages.js';
-import { href, type Route } from './lib/router';
+import { guard, href, type Route } from './lib/router';
 import { router } from './lib/router.svelte';
+import { session } from './lib/session.svelte';
 import { theme } from './lib/theme.svelte';
+import LoadState from './lib/ui/LoadState.svelte';
 
 let drawerOpen = $state(false);
 let menuButton: HTMLButtonElement | undefined = $state();
@@ -50,6 +54,40 @@ const nav: { route: Route | null; label: () => string; icon: typeof Wifi }[] = [
   { route: 'system', label: () => m.nav_system(), icon: Settings },
 ];
 
+void session.bootstrap();
+
+function logout() {
+  // Leave the page first so the guard does not remember it as the place to return to.
+  navigate('dashboard');
+  void session.logout();
+}
+
+const authenticated = $derived(session.state === 'authenticated');
+// What is shown: the requested route after the guard. While the state is unknown nothing is shown
+// but the loader (or the bootstrap error), so a reload never flashes the wrong page.
+const shown = $derived(guard(session.state, router.route));
+const bootstrapStatus = $derived(
+  session.error === null
+    ? ({ state: 'loading' } as const)
+    : ({ state: 'error', message: session.error } as const),
+);
+
+// Apply the guard to the address bar too, and remember where an expired or anonymous user was going.
+// Leaving login/setup after authenticating goes to returnTo here, in one step, so the dashboard
+// never mounts in between.
+$effect(() => {
+  const wanted = router.route;
+  if (shown === wanted) return;
+  if (shown === 'login') session.returnTo = wanted === 'setup' ? null : wanted;
+  if (session.state === 'authenticated' && (wanted === 'login' || wanted === 'setup')) {
+    const next = session.returnTo ?? 'dashboard';
+    session.returnTo = null;
+    navigate(next, { replace: true });
+    return;
+  }
+  navigate(shown, { replace: true });
+});
+
 // Close the drawer after navigating.
 $effect(() => {
   void router.route;
@@ -71,6 +109,7 @@ $effect(() => {
     ></button>
   {/if}
 
+  {#if authenticated}
   <aside
     id="sidebar"
     inert={mobile.value && !drawerOpen}
@@ -98,7 +137,7 @@ $effect(() => {
             {#if item.route}
               <a
                 href={href(item.route)}
-                aria-current={router.route === item.route ? 'page' : undefined}
+                aria-current={shown === item.route ? 'page' : undefined}
                 class="flex items-center gap-3 rounded-md px-3 py-2 hover:bg-bg aria-[current=page]:bg-bg aria-[current=page]:font-semibold"
                 ><Icon aria-hidden="true" size={18} />{item.label()}</a
               >
@@ -112,6 +151,7 @@ $effect(() => {
       </ul>
     </nav>
   </aside>
+  {/if}
 
   <!-- inert while the drawer is open so Tab cannot leave the drawer -->
   <div class="flex min-w-0 flex-1 flex-col" inert={mobile.value && drawerOpen}>
@@ -123,41 +163,52 @@ $effect(() => {
         aria-controls="sidebar"
         aria-expanded={drawerOpen}
         bind:this={menuButton}
+        class:invisible={!authenticated}
         onclick={openDrawer}
       >
         <Menu aria-hidden="true" size={20} />
       </button>
-      <button
-        type="button"
-        class="rounded-md p-2 hover:bg-bg"
-        aria-label={m.theme_toggle()}
-        onclick={() => theme.toggle()}
-      >
-        {#if theme.value === 'dark'}
-          <Sun aria-hidden="true" size={20} />
-        {:else}
-          <MoonStar aria-hidden="true" size={20} />
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          class="rounded-md p-2 hover:bg-bg"
+          aria-label={m.theme_toggle()}
+          onclick={() => theme.toggle()}
+        >
+          {#if theme.value === 'dark'}
+            <Sun aria-hidden="true" size={20} />
+          {:else}
+            <MoonStar aria-hidden="true" size={20} />
+          {/if}
+        </button>
+        {#if authenticated}
+          <button
+            type="button"
+            class="rounded-md p-2 hover:bg-bg"
+            aria-label={m.logout()}
+            onclick={logout}
+          >
+            <LogOut aria-hidden="true" size={20} />
+          </button>
         {/if}
-      </button>
+      </div>
     </header>
 
     <main class="flex-1 overflow-y-auto p-4">
       <div class="mx-auto max-w-3xl">
-        {#key router.route}
-          {#if router.route === 'dashboard'}
+        {#key shown}
+          {#if session.state === 'unknown'}
+            <LoadState status={bootstrapStatus} retry={() => session.bootstrap()}>
+              <span></span>
+            </LoadState>
+          {:else if shown === 'dashboard'}
             <PageHost load={pages.dashboard} />
-          {:else if router.route === 'system'}
+          {:else if shown === 'system'}
             <PageHost load={pages.system} />
-          {:else if router.route === 'login'}
-            <PageHost
-              load={pages.info}
-              props={{ title: m.login_title(), body: m.login_body() }}
-            />
-          {:else if router.route === 'setup'}
-            <PageHost
-              load={pages.info}
-              props={{ title: m.setup_title(), body: m.setup_body() }}
-            />
+          {:else if shown === 'login'}
+            <PageHost load={pages.login} />
+          {:else if shown === 'setup'}
+            <PageHost load={pages.setup} />
           {:else}
             <PageHost load={pages.notYet} />
           {/if}
