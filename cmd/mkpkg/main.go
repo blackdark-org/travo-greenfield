@@ -28,6 +28,7 @@ func run() error {
 	web := flag.String("web", "", "built web UI directory")
 	files := flag.String("files", "", "directory copied verbatim into the tarball root/")
 	install := flag.String("install", "", "install.sh")
+	pubkey := flag.String("pubkey", "", "minisign public key, shipped as minisign.pub (optional: unsigned build without it)")
 	flag.Parse()
 	for name, v := range map[string]string{"out": *out, "version": *version, "binary": *binary, "web": *web, "files": *files, "install": *install} {
 		if v == "" {
@@ -45,20 +46,31 @@ func run() error {
 	if in.Install, err = readFile(*install, "install.sh"); err != nil {
 		return err
 	}
+	if *pubkey != "" {
+		if in.Pubkey, err = os.ReadFile(*pubkey); err != nil {
+			return err
+		}
+	}
 	if in.Web, err = readTree(*web); err != nil {
 		return err
 	}
 	if in.Files, err = readTree(*files); err != nil {
 		return err
 	}
+	tarFiles := Assemble(in)
 	var buf bytes.Buffer
-	if err := Build(&buf, Assemble(in), mtime); err != nil {
+	if err := Build(&buf, tarFiles, mtime); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
+	dir := filepath.Dir(*out)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(*out, buf.Bytes(), 0o644)
+	if err := os.WriteFile(*out, buf.Bytes(), 0o644); err != nil {
+		return err
+	}
+	// Next to the tarball, same bytes as inside it: CI signs exactly what install.sh verifies.
+	return os.WriteFile(filepath.Join(dir, "checksums.txt"), checksums(tarFiles), 0o644)
 }
 
 func epoch(s string) (time.Time, error) {
@@ -100,4 +112,14 @@ func readTree(dir string) ([]File, error) {
 		return err
 	})
 	return out, err
+}
+
+// checksums returns the body of the checksums.txt entry.
+func checksums(files []File) []byte {
+	for _, f := range files {
+		if f.Name == "checksums.txt" {
+			return f.Body
+		}
+	}
+	return nil
 }
