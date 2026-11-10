@@ -1,0 +1,73 @@
+name: Task
+description: One PR's worth of work with a full contract, so any agent (including a small model) can implement it.
+title: "<area>: <outcome>"
+labels: ["type/task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: One or two sentences on the outcome for the user or the codebase.
+    validations:
+      required: true
+  - type: textarea
+    id: read
+    attributes:
+      label: Read first
+      description: Exact links into docs/ (invariants sections, ADRs, device-facts, testing). Rules live there; do not copy them here.
+      value: |
+        - AGENTS.md
+        - docs/invariants.md §
+        - docs/adr/
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Contract
+      description: Files and packages, function signatures, endpoints (method, path, body, status codes, error codes), UI states. Concrete enough that no design decision is left.
+    validations:
+      required: true
+  - type: textarea
+    id: out
+    attributes:
+      label: Out of scope
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checkable items, each backed by a test or a command.
+      value: |
+        - [ ] `mise run check` green
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests required
+      description: Unit / container integration / hardware; which fixtures (verbatim, with provenance; never invented fields).
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware
+      description: "None, or the playbook step in docs/testing.md that must pass on the router before closing (then add label needs-hardware)."
+      value: None
+  - type: input
+    id: depends
+    attributes:
+      label: Depends on
+      description: Issue numbers that must be merged first, e.g. "#12, #14", or "none".
+      value: none
+  - type: dropdown
+    id: model
+    attributes:
+      label: Model hint
+      options:
+        - small (mechanical)
+        - medium (normal)
+        - large (security or design heavy)
+    validations:
+      required: true

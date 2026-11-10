@@ -17,12 +17,17 @@ Deviations:
 
 ## Map
 
-- `docs/spec.md` product scope for 0.1.0; `docs/roadmap.md` order and later features.
+- `docs/spec.md` product scope for 0.1.0.
 - `docs/invariants.md` MUST rules; read before touching live state, auth, DNS, WiFi. Breaking one needs an ADR.
 - `docs/device-facts.md` hardware lessons; `docs/testing.md` test layers and fixture rules.
 - `docs/adr/` decisions; `docs/glossary.md` terms.
-- `docs/handoff/` temporary working state for the next session (status, device access, next-slice plan). Read first when resuming; move durable content into the docs above and delete items when done.
 - `testdata/device/<device>-<firmware>/` verbatim device captures with `PROVENANCE.md` and redaction policy; `SPIKES.md` there has hardware results.
+
+## Work
+
+- Work comes from GitHub issues: milestone `0.1.0`, board https://github.com/users/BlackDark/projects/1. Pick a `Ready` `type/task` issue whose dependencies are merged. `type/epic` issues are placeholders: write a full Task (template `.github/ISSUE_TEMPLATE/task.yml`) before implementing.
+- Issues hold the plan and the contract; `docs/` holds the rules. Never copy a rule into an issue; link the section. A decision made while implementing goes into an ADR or invariants in the same PR.
+- One issue = one PR (`Closes #N`), one worktree. `needs-hardware` issues stay open until the playbook step passes on the router.
 
 ## Every change
 

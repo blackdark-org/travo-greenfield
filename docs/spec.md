@@ -28,7 +28,7 @@ Travel-router web UI and API that runs ON the router, next to stock LuCI. Clean-
 
 ## Out of 0.1 (do not break when adding)
 
-See [roadmap.md](roadmap.md). Every later feature must go through the `Device` port, the transaction module and the DNS layer stack; a contract test enforces it.
+Planned work lives in GitHub issues (milestone `0.1.0`, project board "travo-greenfield"); later features are issues without a milestone. Every later feature must go through the `Device` port, the transaction module and the DNS layer stack; a contract test enforces it.
 
 ## Frontend requirements
 
