@@ -2,7 +2,7 @@
 
 MUST rules. Each came from a real incident or device finding (see [device-facts.md](device-facts.md)). A change that breaks one needs an ADR first. `[HW]` = proven on hardware only.
 
-Paths: guards in `/etc/travo-guards/`, state in `/etc/travo/`, settings in UCI `/etc/config/travo`. Guards never live in `/etc/travo/`.
+Paths: guards in `/etc/travo-greenfield-guards/`, state in `/etc/travo-greenfield/`, settings in UCI `/etc/config/travo-greenfield`. Guards never live in `/etc/travo-greenfield/`.
 
 ## 1. Live-state safety
 
@@ -54,7 +54,7 @@ Paths: guards in `/etc/travo-guards/`, state in `/etc/travo/`, settings in UCI `
 
 ## 5. Persistence
 
-- UCI is the source of truth for device config; no shadow state. Derived JSON in `/etc/travo/`; crash-critical records in `/etc/travo-guards/`.
+- UCI is the source of truth for device config; no shadow state. Derived JSON in `/etc/travo-greenfield/`; crash-critical records in `/etc/travo-greenfield-guards/`.
 - Flash is NAND overlayfs: per-sample/per-request writes FORBIDDEN; batch; rare event-driven writes may write through. Keep ~20 MB free.
 - Atomic writes for every state file (temp + fsync + rename). A torn file fails closed, never reads as "empty".
 - Degraded persistence must be visible in the UI.
@@ -122,7 +122,7 @@ dnsmasq on :53 is the single DNS authority. Features that change DNS push/pop a 
 
 ## 11. VPN
 
-- WireGuard: profiles (import, list, activate, delete), enable/disable, kill switch, split tunnel, DNS verify, DNS leak test, speed test. Profiles in `/etc/travo/`, tunnel in UCI `network.wg0`.
+- WireGuard: profiles (import, list, activate, delete), enable/disable, kill switch, split tunnel, DNS verify, DNS leak test, speed test. Profiles in `/etc/travo-greenfield/`, tunnel in UCI `network.wg0`.
 - Enable: commit tunnel → verify up BEFORE firewall/DNS; failure tears it down.
 - Disable MUST end with a kernel default route present, or report failure. Recovery waits are bounded and never assume the uplink is `wan`.
 - Tailscale (post-0.1): runs with `--accept-dns=false`; its resolver is a dnsmasq layer.
@@ -152,7 +152,7 @@ dnsmasq on :53 is the single DNS authority. Features that change DNS push/pop a 
 - Single self-contained binary per arch, stripped, no runtime deps. Budget ~12.8 MB stripped; measure the delta before adding a dependency. Keep ≥20 MB flash headroom.
 - Cron log level 9 (keep an operator's own setting) so per-minute job starts don't flood the error log.
 - Install requires an explicit `--password` or the first-run screen; the installer verifies the service answers on its configured port before reporting success, and refuses to move LuCI otherwise.
-- Contract tests: scripts parse, guard paths under `/etc/travo-guards`, every route in the spec, auth covers every route (walk the live route table), strict PUT coverage, spec field names match models, no feature writes UCI outside the transaction module.
+- Contract tests: scripts parse, guard paths under `/etc/travo-greenfield-guards/`, every route in the spec, auth covers every route (walk the live route table), strict PUT coverage, spec field names match models, no feature writes UCI outside the transaction module.
 - Record a decision with evidence (firmware version + captured payload) for every device finding.
 
 ## Deliberate ceilings
