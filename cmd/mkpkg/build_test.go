@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"io"
 	"io/fs"
+	"strings"
 	"testing"
 	"time"
 )
@@ -153,5 +154,32 @@ func TestAssemble(t *testing.T) {
 	}
 	if _, ok := byName["root/etc/travo-greenfield/manifest.txt"]; ok {
 		t.Error("manifest copy must be made by install.sh, not packed")
+	}
+}
+
+func TestAssembleShipsPubkeyInChecksums(t *testing.T) {
+	in := Inputs{Version: "1", Binary: []byte("ELF"), Install: File{Body: []byte("sh\n")}, Pubkey: []byte("untrusted comment: k\nRWQ\n")}
+	byName := map[string]File{}
+	for _, f := range Assemble(in) {
+		byName[f.Name] = f
+	}
+	pub, ok := byName["minisign.pub"]
+	if !ok || pub.Mode != 0o644 || string(pub.Body) != "untrusted comment: k\nRWQ\n" {
+		t.Fatalf("minisign.pub entry %+v", pub)
+	}
+	h := sha256.Sum256(pub.Body)
+	if want := hex.EncodeToString(h[:]) + "  ./minisign.pub\n"; !strings.Contains(string(byName["checksums.txt"].Body), want) {
+		t.Errorf("checksums.txt lacks %q:\n%s", want, byName["checksums.txt"].Body)
+	}
+	if strings.Contains(string(byName["manifest.txt"].Body), "minisign.pub") {
+		t.Error("minisign.pub must not be in the manifest (install.sh places it)")
+	}
+}
+
+func TestAssembleWithoutPubkeyHasNoKeyEntry(t *testing.T) {
+	for _, f := range Assemble(Inputs{Version: "1", Binary: []byte("ELF"), Install: File{Body: []byte("sh\n")}}) {
+		if f.Name == "minisign.pub" {
+			t.Fatal("unsigned build must not contain minisign.pub")
+		}
 	}
 }

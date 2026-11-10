@@ -2,7 +2,9 @@
 # Installs or removes travo-greenfield on OpenWrt. Run as root from the extracted tarball:
 #   tar -xzf travo-greenfield-<version>-aarch64.tar.gz -C /tmp/tg && sh /tmp/tg/install.sh
 # Flags: (none) install | --uninstall | --purge (with --uninstall: also config and state)
-#        | --force (skip the OS and architecture checks only).
+#        | --force (skip the OS and architecture checks only)
+#        | --insecure (install without a signature check) | --rotate-key (accept a new signing key).
+# Before installing it verifies $here/checksums.txt.sig over checksums.txt with usign (docs/adr/0007).
 # Touches only the paths in manifest.txt and the ones named in uninstall() (invariants §15).
 set -eu
 
@@ -16,7 +18,7 @@ die() {
 }
 
 usage() {
-  echo "usage: install.sh [--force] | --uninstall [--purge]" >&2
+  echo "usage: install.sh [--force] [--insecure] [--rotate-key] | --uninstall [--purge]" >&2
   exit 2
 }
 
@@ -66,12 +68,57 @@ wait_healthy() {
   return 1
 }
 
+# Verifies checksums.txt against checksums.txt.sig with a key the router already trusts: the
+# installed one, or on the first install the one in the tarball (trust on first use).
+# Sets new_key=1 when the verified key is the tarball's and must be saved after the install.
+verify_signature() {
+  new_key=0
+  key=$here/minisign.pub
+  installed=$STATE_DIR/minisign.pub
+  if [ -f "$installed" ]; then
+    key=$installed
+    if [ -f "$here/minisign.pub" ] && ! cmp -s "$installed" "$here/minisign.pub"; then
+      [ "$rotate" = 1 ] || die "tarball key differs from the installed key; re-run with --rotate-key if this rotation is intended"
+      key=$here/minisign.pub
+      new_key=1
+    fi
+  elif [ -f "$key" ]; then
+    new_key=1
+  fi
+  if [ -f "$key" ] && [ -f "$here/checksums.txt.sig" ]; then
+    command -v usign >/dev/null 2>&1 || die "usign not found"
+    usign -V -q -p "$key" -m "$here/checksums.txt" -x "$here/checksums.txt.sig" || die "signature check failed"
+    return 0
+  fi
+  new_key=0
+  [ "$insecure" = 1 ] || die "unsigned: no checksums.txt.sig or minisign.pub; re-run with --insecure to install without a signature check"
+  if [ -f "$installed" ]; then
+    echo "install.sh: WARNING: --insecure although a signing key is installed: this tarball is NOT verified against it" >&2
+  else
+    echo "install.sh: WARNING: --insecure: installing without a signature check" >&2
+  fi
+}
+
 install() {
   [ "$force" = 1 ] || { check_os; check_arch; }
   check_space
   cd "$here"
   [ -f checksums.txt ] && [ -d root ] || die "$here is not an extracted release tarball"
+  verify_signature
   sha256sum -c checksums.txt >/dev/null || die "checksum mismatch in $here (run sha256sum -c checksums.txt)"
+  # Only regular files and directories: a symlink passes sha256sum (it follows it) but cp -a
+  # would install the link itself.
+  if [ -n "$(find root ! -type f ! -type d | head -n 1)" ]; then
+    die "$here/root contains something other than regular files and directories"
+  fi
+  # sha256sum -c checks only listed files; cp copies all of root/. Refuse anything unlisted.
+  find root ! -type d | sed 's|^|./|' | LC_ALL=C sort >"$here/.on-disk"
+  sed -n 's|^[0-9a-f]\{64\}  \(\./root/.*\)$|\1|p' checksums.txt | LC_ALL=C sort >"$here/.listed"
+  if ! cmp -s "$here/.on-disk" "$here/.listed"; then
+    rm -f "$here/.on-disk" "$here/.listed"
+    die "files under $here/root are not all listed in checksums.txt"
+  fi
+  rm -f "$here/.on-disk" "$here/.listed"
   version=$(cat VERSION)
 
   cp -a root/. / || die "copying files to / failed"
@@ -83,6 +130,10 @@ install() {
   fi
   mkdir -p "$STATE_DIR"
   cp manifest.txt "$STATE_DIR/manifest.txt" || die "cannot save the manifest to $STATE_DIR"
+  # only a verified install may establish or rotate the trusted key
+  if [ "$new_key" = 1 ]; then
+    cp "$here/minisign.pub" "$STATE_DIR/minisign.pub" || die "cannot save the signing key to $STATE_DIR"
+  fi
 
   # restart, not start: an older binary may be running
   /etc/init.d/$NAME restart || die "/etc/init.d/$NAME restart failed"
@@ -137,16 +188,19 @@ uninstall() {
   echo "$NAME removed"
 }
 
-force=0 purge=0 mode=install
+force=0 purge=0 insecure=0 rotate=0 new_key=0 mode=install
 for arg in "$@"; do
   case "$arg" in
     --uninstall) mode=uninstall ;;
     --purge) purge=1 ;;
     --force) force=1 ;;
+    --insecure) insecure=1 ;;
+    --rotate-key) rotate=1 ;;
     *) usage ;;
   esac
 done
 [ "$purge" = 0 ] || [ "$mode" = uninstall ] || usage
+[ "$mode" = install ] || { [ "$insecure" = 0 ] && [ "$rotate" = 0 ]; } || usage
 
 [ "$(id -u)" = 0 ] || die "must run as root"
 here=$(cd "$(dirname "$0")" && pwd)

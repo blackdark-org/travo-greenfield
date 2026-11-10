@@ -6,12 +6,15 @@ Status: design phase, no code yet. Target 0.1.0.
 
 ## Install
 
-On the router, as root (OpenWrt 25.12 or newer, aarch64). Copy the release tarball over, then:
+On the router, as root (OpenWrt 25.12 or newer, aarch64). Download `travo-greenfield-<version>-aarch64.tar.gz` and `checksums.txt.sig` from the GitHub release and copy both over. Extract, put the `.sig` next to the extracted files, then run the installer; it verifies the signature with the router's `usign` before it touches anything:
 
 ```sh
 mkdir -p /tmp/tg && tar -xzf travo-greenfield-<version>-aarch64.tar.gz -C /tmp/tg
+cp checksums.txt.sig /tmp/tg/
 sh /tmp/tg/install.sh
 ```
+
+The first install trusts the release key inside the tarball and stores it in `/etc/travo-greenfield/minisign.pub`; later installs must match that key, or pass `--rotate-key` once when the release notes announce a new one. Builds you made yourself are unsigned: install them with `--insecure`.
 
 The UI answers on `http://<router>:8090`. Remove it with `sh /tmp/tg/install.sh --uninstall`; add `--purge` to also delete its config and state. Settings live in `/etc/config/travo-greenfield`. Build the tarball yourself with `mise run package`.
 

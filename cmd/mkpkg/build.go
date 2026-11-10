@@ -66,8 +66,10 @@ type Inputs struct {
 	Version string
 	Binary  []byte
 	Install File
-	Web     []File
-	Files   []File
+	// Pubkey is the minisign public key shipped as minisign.pub; nil for an unsigned build.
+	Pubkey []byte
+	Web    []File
+	Files  []File
 }
 
 const (
@@ -76,7 +78,7 @@ const (
 )
 
 // Assemble lays the sources out as the tarball (docs: issue #19 contract) and adds
-// VERSION, manifest.txt and checksums.txt. Binary and install.sh are always 0755.
+// VERSION, manifest.txt, checksums.txt and, when in.Pubkey is set, minisign.pub. Binary and install.sh are always 0755.
 func Assemble(in Inputs) []File {
 	var root []File // Name = absolute target path
 	root = append(root, File{Name: binaryTarget, Mode: 0o755, Body: in.Binary})
@@ -98,6 +100,9 @@ func Assemble(in Inputs) []File {
 		install,
 		{Name: "VERSION", Mode: 0o644, Body: []byte(in.Version + "\n")},
 		{Name: "manifest.txt", Mode: 0o644, Body: []byte(manifest.String())},
+	}
+	if in.Pubkey != nil {
+		files = append(files, File{Name: "minisign.pub", Mode: 0o644, Body: in.Pubkey})
 	}
 	for _, f := range root {
 		files = append(files, File{Name: "root" + f.Name, Mode: f.Mode, Body: f.Body})

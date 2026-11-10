@@ -45,3 +45,15 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
+    # zizmor prefers `$/` (self-repository syntax); actionlint 1.7.12 rejects it, so keep `./` until it does.
+    uses: ./.github/workflows/release.yml # zizmor: ignore[self-repository]
+    with:
+      tag: ${{ needs.release-please.outputs.tag }}
+    secrets:
+      MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+      MINISIGN_PASSWORD: ${{ secrets.MINISIGN_PASSWORD }}
+    permissions:
+      contents: write # a called workflow cannot exceed its caller; top-level permissions are empty
