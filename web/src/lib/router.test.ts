@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { href, parseHash } from './router';
+import { type AuthState, guard, href, parseHash, type Route } from './router';
 
 describe('router', () => {
   it.each([
@@ -23,5 +23,46 @@ describe('router', () => {
     for (const r of ['dashboard', 'login', 'setup', 'wifi', 'system'] as const) {
       expect(parseHash(href(r))).toBe(r);
     }
+  });
+});
+
+describe('guard', () => {
+  const routes: Route[] = ['dashboard', 'login', 'setup', 'wifi', 'system'];
+  const expected: Record<AuthState, Record<Route, Route>> = {
+    unknown: {
+      dashboard: 'dashboard',
+      login: 'login',
+      setup: 'setup',
+      wifi: 'wifi',
+      system: 'system',
+    },
+    setup_required: {
+      dashboard: 'setup',
+      login: 'setup',
+      setup: 'setup',
+      wifi: 'setup',
+      system: 'setup',
+    },
+    anonymous: {
+      dashboard: 'login',
+      login: 'login',
+      setup: 'login',
+      wifi: 'login',
+      system: 'login',
+    },
+    authenticated: {
+      dashboard: 'dashboard',
+      login: 'dashboard',
+      setup: 'dashboard',
+      wifi: 'wifi',
+      system: 'system',
+    },
+  };
+  const cases = (Object.keys(expected) as AuthState[]).flatMap((state) =>
+    routes.map((route) => [state, route, expected[state][route]] as const),
+  );
+
+  it.each(cases)('%s + %s -> %s', (state, route, want) => {
+    expect(guard(state, route)).toBe(want);
   });
 });

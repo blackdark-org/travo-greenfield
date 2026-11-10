@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { launchChrome } from './cdp.mjs';
 
 const BASE_URL = process.env.SCREENSHOT_URL ?? `http://localhost:${process.env.WEB_PORT ?? 18092}`;
-const ROUTES = ['/', '/system'];
+// Login and setup are only reachable signed out; the rest needs the session (see main).
+const SIGNED_IN_ROUTES = ['/', '/system'];
+const MOCK_PASSWORD = 'mock-password';
 const VIEWPORTS = [
   { width: 390, height: 844, mobile: true },
   { width: 1280, height: 800, mobile: false },
@@ -23,20 +25,59 @@ export function screenshotPath(route, width, scheme) {
   return `${OUT_DIR}${routeName(route)}-${width}-${scheme}.png`;
 }
 
+async function shootAll(chrome, routes) {
+  for (const route of routes) {
+    for (const vp of VIEWPORTS) {
+      for (const scheme of SCHEMES) {
+        await chrome.open(`${BASE_URL}/#${route}`, { ...vp, scheme });
+        const out = screenshotPath(route, vp.width, scheme);
+        await chrome.screenshot(out);
+        console.log(`wrote ${out}`);
+      }
+    }
+  }
+}
+
+// The mock daemon here already has a password, so /setup would redirect to login. Make the page
+// believe it is first run: only the setup-state read is faked, the form is the real one.
+const FAKE_FIRST_RUN = `(() => {
+  const real = window.fetch;
+  window.fetch = (input, init) => {
+    const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+    if (url.pathname === '/api/v1/setup') {
+      return Promise.resolve(Response.json({ password_set: false }));
+    }
+    return real(input, init);
+  };
+})()`;
+
+async function signIn(chrome) {
+  await chrome.open(`${BASE_URL}/#/login`, { width: 1280, height: 800 });
+  await chrome.evaluate(`(() => {
+    const el = document.getElementById('login-password');
+    el.value = ${JSON.stringify(MOCK_PASSWORD)};
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    document.querySelector('form').requestSubmit();
+  })()`);
+  for (let i = 0; i < 100; i++) {
+    if (await chrome.evaluate(`location.hash === '#/' && !!document.querySelector('dl')`)) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw new Error('could not sign in to the mock daemon');
+}
+
 async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   const chrome = await launchChrome();
   try {
-    for (const route of ROUTES) {
-      for (const vp of VIEWPORTS) {
-        for (const scheme of SCHEMES) {
-          await chrome.open(`${BASE_URL}/#${route}`, { ...vp, scheme });
-          const out = screenshotPath(route, vp.width, scheme);
-          await chrome.screenshot(out);
-          console.log(`wrote ${out}`);
-        }
-      }
-    }
+    await shootAll(chrome, ['/login']);
+    const { identifier } = await chrome.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: FAKE_FIRST_RUN,
+    });
+    await shootAll(chrome, ['/setup']);
+    await chrome.send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+    await signIn(chrome);
+    await shootAll(chrome, SIGNED_IN_ROUTES);
   } finally {
     chrome.close();
   }
