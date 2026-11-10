@@ -85,3 +85,16 @@ size=$(wc -c < dist/travo-greenfield-arm64)
 echo "binary: $size bytes (budget 13421772)"
 test "$size" -le 13421772
 '''
+
+[tasks.dev]
+description = "Web UI against the mock daemon (daemon :18081, Vite :18092)"
+run = "scripts/dev.sh"
+
+[tasks."dev:firstrun"]
+description = "Same as dev, daemon starts without a root password"
+run = "scripts/dev.sh --firstrun"
+
+[tasks.screenshots]
+description = "Build, serve the UI against the mock daemon, write web/screenshots/*.png"
+depends = ["web:install"]
+run = "pnpm -C web build && scripts/with-mock.sh -- node web/scripts/screenshots.mjs"
