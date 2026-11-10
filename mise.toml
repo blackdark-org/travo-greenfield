@@ -98,3 +98,8 @@ run = "scripts/dev.sh --firstrun"
 description = "Build, serve the UI against the mock daemon, write web/screenshots/*.png"
 depends = ["web:install"]
 run = "pnpm -C web build && scripts/with-mock.sh -- node web/scripts/screenshots.mjs"
+
+[tasks."e2e:csp"]
+description = "Build, let the mock daemon serve web/dist, fail on CSP violations or script errors in headless Chrome"
+depends = ["web:install"]
+run = "pnpm -C web build && scripts/with-daemon-ui.sh -- node web/scripts/e2e-csp.mjs"
