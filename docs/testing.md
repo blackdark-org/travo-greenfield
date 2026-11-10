@@ -28,7 +28,7 @@ Scripts parse; guard paths under `/etc/travo-greenfield-guards/`; every route is
 
 ## Running the container layer
 
-`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). A second step boots the image with `/sbin/init` (procd as PID 1, real ubusd/rpcd/netifd) for tests that need procd. Not in `mise run check`. CI runs it on every PR that touches non-docs files: one job per arch (`integration (arm64)` on the native arm runner, `integration (amd64)`), each running `mise run test:integration <arch>`; no arg runs both locally. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
+`mise run test:integration` cross-compiles the `integration`-tagged tests and runs them against real `uci`, `apk` (`openwrt/rootfs:aarch64_generic-25.12.6`) and `opkg` (`openwrt/rootfs:x86-64-24.10.8`, amd64: no arm64 24.10 manifest exists) (needs Docker). A second step boots the image with `/sbin/init` (procd as PID 1, real ubusd/rpcd/netifd) for tests that need procd. `mise run test:package` builds the release tarball and, in a booted `aarch64_generic-25.12.6` container, runs `install.sh` (refusals, install, health on `:8090`, pre-existing listeners intact), restarts the container (boot link), then `--uninstall` and `--uninstall --purge`. Arm64 only. Neither task is in `mise run check`. CI runs it on every PR that touches non-docs files: one job per arch (`integration (arm64)` on the native arm runner, `integration (amd64)`), each running `mise run test:integration <arch>` (the arm64 job then runs `mise run test:package`); no arg runs both locally. Container fixtures prove format and quoting only, never wireless or netifd behaviour; mark them as such in `testdata/PROVENANCE.md`.
 
 ## Hardware layer
 
@@ -41,7 +41,7 @@ Test router: GL-AXT1800, OpenWrt 25.12.6, `ssh root@192.168.1.1` (key auth) when
 Done on 2026-11-09 (results: `testdata/device/axt1800-25.12.6/SPIKES.md`): payload captures; watchdog restore without confirm, after daemon kill and across reboot; wrong uplink password reads `carrier:false` and rolls back; DNS layer round trip with AdGuard and captive.
 
 Per release, each from Ethernet unless stated (issues with label `needs-hardware` add their step here when they merge):
-1. Install the release tarball next to old Travo; health answers; `sysupgrade -l` lists every keep.d path; reboot; still running; uninstall leaves old Travo working.
+1. Install the release tarball next to old Travo: copy it to the AXT1800, `tar -xzf X.tar.gz -C /tmp/tg && sh /tmp/tg/install.sh`, open `http://192.168.1.1:8090`, set up/log in. `sysupgrade -l | grep travo-greenfield` lists every keep.d path. Reboot; still answers. `--uninstall` leaves old Travo on `:80` and LuCI working.
 2. Wireless change not confirmed: restores via `reload_config` alone; confirm keeps it.
 3. From a phone on the AP, switch to client mode: refused with 409 `wifi_lockout_risk`.
 4. Wrong uplink password: carrier stays false, rollback happens, UI says "rolled back" only after restore.

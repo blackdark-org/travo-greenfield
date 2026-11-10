@@ -150,6 +150,8 @@ jobs:
             build-${{ runner.os }}-${{ hashFiles('mise.toml', 'go.sum', 'web/pnpm-lock.yaml') }}-
             build-${{ runner.os }}-
       - run: mise run test:integration ${{ matrix.arch }}
+      - if: matrix.arch == 'arm64'
+        run: mise run test:package # needs the native arm runner for the aarch64 image
 
   actionlint:
     needs: changes

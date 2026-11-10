@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 [ "${1:-}" = "--" ] && shift
 [ $# -gt 0 ] || { echo "usage: scripts/with-daemon-ui.sh -- <command...>" >&2; exit 2; }
 
+# shellcheck disable=SC2119 # start_daemon takes optional flags; none here
 start_daemon
 export DAEMON_PORT
 "$@"
