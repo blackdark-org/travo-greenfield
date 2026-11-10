@@ -19,6 +19,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/auth"
 	"github.com/blackdark-org/travo-greenfield/internal/auth/epochfile"
 	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
+	"github.com/blackdark-org/travo-greenfield/internal/static"
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
@@ -29,11 +30,36 @@ func main() {
 	useMock := flag.Bool("mock", false, "run against the mock device (no router needed)")
 	firstRun := flag.Bool("mock-firstrun", false, "with --mock: start without a root password")
 	hostAllow := flag.String("host-allow", "", "comma-separated extra Host names accepted (DNS-rebinding guard)")
+	staticDir := flag.String("static-dir", "/www/travo-greenfield", "directory with the built web UI")
 	flag.Parse()
-	if err := run(*addr, *useMock, *firstRun, splitList(*hostAllow)); err != nil {
+	dir := *staticDir
+	if *useMock && !flagGiven("static-dir") {
+		dir = "web/dist"
+	}
+	if err := run(*addr, *useMock, *firstRun, splitList(*hostAllow), dir); err != nil {
 		slog.Error("startup", "err", err)
 		os.Exit(1)
 	}
+}
+
+func flagGiven(name string) bool {
+	given := false
+	flag.Visit(func(f *flag.Flag) { given = given || f.Name == name })
+	return given
+}
+
+// uiHandler serves dir, or a 503 stub when it is missing. Missing or bad csp.json is logged
+// and the policy then has no script hashes: the inline theme script is blocked (fails closed).
+func uiHandler(dir string) http.Handler {
+	if st, err := os.Stat(dir); err != nil || !st.IsDir() {
+		slog.Warn("web UI directory missing: UI disabled", "dir", dir, "err", err)
+		return static.Missing()
+	}
+	hashes, err := static.LoadHashes(dir)
+	if err != nil {
+		slog.Warn("csp.json unreadable: inline script will be blocked", "dir", dir, "err", err)
+	}
+	return static.Handler(dir, static.CSP(hashes))
 }
 
 // splitList splits a comma-separated flag, dropping blanks.
@@ -47,7 +73,7 @@ func splitList(s string) []string {
 	return out
 }
 
-func run(addr string, useMock, firstRun bool, hostAllow []string) error {
+func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	workers := lifecycle.New(context.Background())
@@ -84,6 +110,7 @@ func run(addr string, useMock, firstRun bool, hostAllow []string) error {
 		Trusted:   provider.Allowed,
 		RouterIPs: provider.RouterIPs, HostAllow: hostAllow,
 		SaveEpoch: func(n uint64) error { return epochfile.Save(deps.Paths.EpochFile(), n) },
+		UI:        uiHandler(staticDir),
 	})
 	srv := &http.Server{Addr: addr, Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second}
 

@@ -38,6 +38,8 @@ type Deps struct {
 	HostAllow []string
 	// SaveEpoch persists the session epoch; it runs BEFORE a password change replies.
 	SaveEpoch func(uint64) error
+	// UI serves the web UI at "/" (internal/static); nil disables it. /api/ routes keep precedence.
+	UI http.Handler
 }
 
 type server struct {
@@ -92,6 +94,9 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerAuth(a)
 	s.registerSetup(a)
 	s.registerTxn(a)
+	if d.UI != nil {
+		mux.Handle("/", d.UI)
+	}
 	return s.outer(mux), a
 }
 
