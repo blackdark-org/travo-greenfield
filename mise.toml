@@ -2,10 +2,11 @@
 go = "1.27.3"
 node = "26.13.0"
 pnpm = "12.18.0"
+shellcheck = "0.11.0"
 
 [tasks.check]
 description = "Everything CI checks"
-depends = ["check:go", "check:web", "check:gen", "check:size"]
+depends = ["check:go", "check:sh", "check:web", "check:gen", "check:size"]
 
 [tasks."check:go"]
 description = "gofmt, vet, tests"
@@ -13,6 +14,14 @@ run = '''
 test -z "$(gofmt -l .)"
 go vet ./...
 go test ./...
+'''
+
+[tasks."check:sh"]
+description = "sh -n and shellcheck (POSIX sh) on install, init and helper scripts"
+run = '''
+set -- packaging/install.sh packaging/files/etc/init.d/travo-greenfield packaging/files/etc/uci-defaults/90-travo-greenfield scripts/*.sh scripts/lib/*.sh
+for f in "$@"; do sh -n "$f"; done
+shellcheck -s sh "$@"
 '''
 
 [tasks."web:install"]
@@ -48,6 +57,27 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
   -ldflags "-s -w -X github.com/blackdark-org/travo-greenfield/internal/version.Version=${VERSION:-dev} -X github.com/blackdark-org/travo-greenfield/internal/version.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   -o dist/travo-greenfield-arm64 ./cmd/travo-greenfield
 '''
+
+[tasks.package]
+description = "Release tarball dist/travo-greenfield-<version>-aarch64.tar.gz, reproducible from SOURCE_DATE_EPOCH"
+depends = ["web:install"]
+run = '''
+SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}
+export SOURCE_DATE_EPOCH
+VERSION=${VERSION:-0.0.0-dev}
+pnpm -C web build
+# BSD date takes -r <epoch>, GNU date takes -d @<epoch>
+build_time=$(date -u -r "$SOURCE_DATE_EPOCH" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%dT%H:%M:%SZ)
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
+  -ldflags "-s -w -X github.com/blackdark-org/travo-greenfield/internal/version.Version=$VERSION -X github.com/blackdark-org/travo-greenfield/internal/version.BuildTime=$build_time" \
+  -o dist/travo-greenfield-arm64 ./cmd/travo-greenfield
+go run ./cmd/mkpkg -out "dist/travo-greenfield-$VERSION-aarch64.tar.gz" -version "$VERSION" \
+  -binary dist/travo-greenfield-arm64 -web web/dist -files packaging/files -install packaging/install.sh
+'''
+
+[tasks."test:package"]
+description = "Install, reboot, uninstall the release tarball in a booted OpenWrt container (needs Docker)"
+run = "scripts/test-package.sh"
 
 [tasks."test:integration"]
 description = "Run adapter tests against real uci/apk/opkg in OpenWrt containers (needs Docker)"

@@ -4,6 +4,17 @@
 
 Status: design phase, no code yet. Target 0.1.0.
 
+## Install
+
+On the router, as root (OpenWrt 25.12 or newer, aarch64). Copy the release tarball over, then:
+
+```sh
+mkdir -p /tmp/tg && tar -xzf travo-greenfield-<version>-aarch64.tar.gz -C /tmp/tg
+sh /tmp/tg/install.sh
+```
+
+The UI answers on `http://<router>:8090`. Remove it with `sh /tmp/tg/install.sh --uninstall`; add `--purge` to also delete its config and state. Settings live in `/etc/config/travo-greenfield`. Build the tarball yourself with `mise run package`.
+
 ## Docs
 
 - [Spec](docs/spec.md) · [Invariants](docs/invariants.md) · Plan: [milestone 0.1.0](https://github.com/blackdark-org/travo-greenfield/milestone/1) and [project board](https://github.com/orgs/blackdark-org/projects/1)
