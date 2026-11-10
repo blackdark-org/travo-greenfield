@@ -27,6 +27,14 @@
   // Go: keep go.sum tidy (CI's `go mod tidy -diff` stays green); rewrite import paths on /vN majors.
   postUpdateOptions: ["gomodTidy", "gomodUpdateImportPaths"],
 
+  customManagers: [{
+    customType: "regex",
+    description: "OpenWrt test images in mise.toml",
+    managerFilePatterns: ["/^mise\\.toml$/"],
+    matchStrings: ["(?<depName>openwrt/rootfs):(?<currentValue>[a-z0-9_.-]+)@(?<currentDigest>sha256:[a-f0-9]{64})"],
+    datasourceTemplate: "docker",
+  }],
+
   // Later rules override earlier ones, and these override renovate-base: general first, specific after.
   packageRules: [
     {

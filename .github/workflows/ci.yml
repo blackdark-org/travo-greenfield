@@ -110,6 +110,47 @@ jobs:
             ${{ steps.dirs.outputs.pnpm }}
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
+  # Container layer (docs/testing.md): one matrix job per OpenWrt image, same gate as `app`.
+  integration:
+    name: integration (${{ matrix.arch }})
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm # aarch64_generic image runs natively, no QEMU
+          - arch: amd64
+            runner: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7 tools from mise.toml
+        with:
+          cache_save: ${{ github.ref == 'refs/heads/main' }} # restore-only here; the app job on main saves
+      - id: dirs
+        run: |
+          {
+            echo "gomod=$(go env GOMODCACHE)"
+            echo "gobuild=$(go env GOCACHE)"
+            echo "pnpm=$(pnpm -C web store path --silent)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ steps.dirs.outputs.gomod }}
+            ${{ steps.dirs.outputs.gobuild }}
+            ${{ steps.dirs.outputs.pnpm }}
+          key: build-${{ runner.os }}-${{ hashFiles('mise.toml', 'go.sum', 'web/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ runner.os }}-${{ hashFiles('mise.toml', 'go.sum', 'web/pnpm-lock.yaml') }}-
+            build-${{ runner.os }}-
+      - run: mise run test:integration ${{ matrix.arch }}
+
   actionlint:
     needs: changes
     if: needs.changes.outputs.lint == 'true'
@@ -153,7 +194,7 @@ jobs:
 
   check:
     if: always()
-    needs: [changes, app, actionlint, renovate-config, zizmor]
+    needs: [changes, app, integration, actionlint, renovate-config, zizmor]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
