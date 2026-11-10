@@ -20,7 +20,7 @@ Unit-green does not mean it works. Several real bugs shipped green because a fix
 
 ## Contract tests
 
-Scripts parse; guard paths under `/etc/travo-guards`; every route is in the spec; auth covers every route (walk the live route table); strict-PUT coverage; spec field names match models; no feature writes UCI outside the transaction module; generated files (OpenAPI, TS client) have no diff.
+Scripts parse; guard paths under `/etc/travo-greenfield-guards/`; every route is in the spec; auth covers every route (walk the live route table); strict-PUT coverage; spec field names match models; no feature writes UCI outside the transaction module; generated files (OpenAPI, TS client) have no diff.
 
 ## Mock mode
 
