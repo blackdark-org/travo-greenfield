@@ -1,6 +1,6 @@
 # Spec: travo-greenfield 0.1.0
 
-Travel-router web UI and API that runs ON the router, next to stock LuCI. Clean-room rewrite of Travo; reuses its lessons ([invariants.md](invariants.md), [device-facts.md](device-facts.md)), not its code. Terms: [glossary.md](glossary.md). Decisions: [adr/](adr/).
+Travel-router web UI and API that runs ON the router, next to stock LuCI. Clean-room rewrite of Travo; reuses its lessons ([invariants.md](invariants.md), [device-facts.md](device-facts.md)), not its code. Terms: [GLOSSARY.md](../GLOSSARY.md). Decisions: [adr/](adr/).
 
 ## Users
 
