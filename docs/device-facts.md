@@ -108,5 +108,6 @@ Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/d
 - [HW] BusyBox crond logs every job start as `cron.err` at the default level; a per-minute job floods errors. Set level 9.
 - NAND overlayfs: writes = wear + stall. `/tmp` is RAM; staged UCI and package lists are lost on reboot.
 - [HW] BusyBox on 25.12.6 has no `timeout`, `diff`, `pkill`. Bound commands in Go, not in shell.
+- [HW] BusyBox `tr` has no character classes: `tr '[:upper:]' '[:lower:]'` turned `OpenWrt` into `wenrt`. Use explicit ranges (`tr A-Z a-z`).
 - BusyBox `sed` vs GNU `sed` escapes disagree: never escape JSON in sed; encode in code and write bytes verbatim. `wget -O` is required. Check signatures with `ubus -v list`; do not assume.
 - `iw event` is a long-running listener: stop via signal, not a timeout tier. The uplink medium (ethernet/WiFi/USB) drives caller classification and failover candidates.

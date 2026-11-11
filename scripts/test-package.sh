@@ -147,6 +147,11 @@ grep -q ':8090$' "$tmp/listeners-after.txt" || fail "nothing listens on :8090: $
 echo "ok: all $(wc -l <"$tmp/listeners-before.txt" | tr -d ' ') pre-install listeners still present"
 dx '[ -L /etc/rc.d/S99travo-greenfield ] && [ -L /etc/rc.d/K10travo-greenfield ]' || fail "boot links missing"
 dx '[ ! -e /etc/uci-defaults/90-travo-greenfield ]' || fail "uci-defaults script not consumed"
+# BusyBox tr has no [:upper:] class: it once turned OpenWrt into wenrt.lan
+# shellcheck disable=SC2018,SC2019 # same ASCII-only mapping as the script under test
+want=$(dx 'uci -q get system.@system[0].hostname' | tr 'A-Z' 'a-z').lan
+got=$(dx 'uci -q get travo-greenfield.main.host_allow')
+[ "$got" = "$want" ] || fail "host_allow is '$got', want '$want'"
 dx 'sysupgrade -l 2>/dev/null' | grep -q travo-greenfield || fail "sysupgrade -l lists no travo-greenfield path"
 
 step "restart the container (boot link)"
