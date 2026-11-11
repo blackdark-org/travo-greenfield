@@ -4,7 +4,9 @@
 
 # Names the router's own .lan host so the DNS-rebinding guard accepts it; empty hostname -> empty value.
 # Hostnames are [a-z0-9-]; anything else is dropped so the value is safe to pass to uci.
-host_allow=$(uci -q get 'system.@system[0].hostname' | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9.-')
+# Explicit ranges: BusyBox tr has no [:upper:]/[:lower:] classes (it mangled OpenWrt to wenrt).
+# shellcheck disable=SC2018,SC2019 # [:upper:] is what breaks on BusyBox; hostnames are ASCII
+host_allow=$(uci -q get 'system.@system[0].hostname' | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9.-')
 [ -n "$host_allow" ] && host_allow="$host_allow.lan"
 
 touch /etc/config/travo-greenfield
