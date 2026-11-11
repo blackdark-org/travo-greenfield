@@ -28,6 +28,7 @@ Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/d
 - Ubus round trips ~5 ms; budget ~100 ms per call. Unreadable payload (missing keys, unknown shape) ≠ down: report "cannot verify". Transport failure during a probe = unverifiable, retry; never claim "rolled back".
 - [TRIED] Trusting per-interface `up` (absent on this firmware). [TRIED] A 4 s probe budget against a ~10 s bring-up. Derive budgets from measured latency.
 - [HW greenfield] `uci commit wireless` + `reload_config` (no `wifi`) applied and restored an AP SSID change in ~1 s each; the STA on the other radio stayed associated. Wrong STA SSID: `carrier:false` and no kernel default route; after restore STA carrier in 7.8 s, default route 0.5 s later.
+- [HW] `ubus call iwinfo scan '{"device":"phy0-sta0"}'` on the STA (associated or not) returns one entry per BSSID with `band` (2/5), `channel`, `mhz`, `signal` (dBm), `quality`/`quality_max`, `encryption.{enabled,wpa,authentication,ciphers}`; hidden networks have no `ssid` key. No crash with an AP up on the other radio (testdata `wwan-down/`).
 - [HW] Only enabled APs have a `hostapd.<ifname>` ubus object. `iwinfo assoclist` was empty while `hostapd.*` `get_clients` listed the station: use `get_clients`.
 
 ## 3. ath11k crash triggers
@@ -108,6 +109,7 @@ Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/d
 - [HW] BusyBox crond logs every job start as `cron.err` at the default level; a per-minute job floods errors. Set level 9.
 - NAND overlayfs: writes = wear + stall. `/tmp` is RAM; staged UCI and package lists are lost on reboot.
 - [HW] BusyBox on 25.12.6 has no `timeout`, `diff`, `pkill`. Bound commands in Go, not in shell.
+- [HW] BusyBox `wget` has no `-S`; with no default route it fails at once with `Operation not permitted`, exit 4. `ubus call dhcp ipv4leases` does not exist on 25.12.6 (`Method not found`): read `/tmp/dhcp.leases`.
 - [HW] BusyBox `tr` has no character classes: `tr '[:upper:]' '[:lower:]'` turned `OpenWrt` into `wenrt`. Use explicit ranges (`tr A-Z a-z`).
 - BusyBox `sed` vs GNU `sed` escapes disagree: never escape JSON in sed; encode in code and write bytes verbatim. `wget -O` is required. Check signatures with `ubus -v list`; do not assume.
 - `iw event` is a long-running listener: stop via signal, not a timeout tier. The uplink medium (ethernet/WiFi/USB) drives caller classification and failover candidates.
