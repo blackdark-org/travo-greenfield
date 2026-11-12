@@ -1,15 +1,9 @@
 #!/bin/sh
 # Sourced by install.sh after checking package integrity.
 
-old_travo_enabled() {
-  [ -e /etc/init.d/travo ] && [ -e /etc/rc.d/S99travo ]
-}
-
 port80_holder() {
   if [ "$(uci -q get travo-greenfield.main.listen)" = :80 ]; then
     echo self
-  elif old_travo_enabled; then
-    echo old-travo
   elif uhttpd_listen_lines | grep -q " listen_http .*:80'$"; then
     echo uhttpd
   elif port_is_listening 80; then
@@ -87,15 +81,6 @@ port_is_listening() {
 wait_listen() (
   i=0
   until netstat -ltn | awk -v addr="$1" '$4 == addr {found=1} END {exit !found}'; do
-    i=$((i + 1))
-    [ "$i" -lt "$2" ] || exit 1
-    sleep 1
-  done
-)
-
-wait_unlisten() (
-  i=0
-  while port_is_listening "$1"; do
     i=$((i + 1))
     [ "$i" -lt "$2" ] || exit 1
     sleep 1
@@ -260,7 +245,6 @@ install_ports() {
   holder=$(port80_holder)
   case "$holder" in
     self) echo "$NAME $1 installed and healthy on port 80"; return ;;
-    old-travo) die "old Travo holds :80; replacing it is not supported yet (see #22)" ;;
     other) die "port 80 is in use by something other than uhttpd" ;;
     uhttpd) swap_uhttpd "$1" ;;
   esac

@@ -143,9 +143,6 @@ install() {
   version=$(cat VERSION)
 
   load_port80
-  if [ -z "$alternate_port" ] && old_travo_enabled; then
-    die "old Travo holds :80; replacing it is not supported yet (see #22)"
-  fi
   mkdir -p /etc/travo-greenfield-guards
   recover_port_swap
   first_install=0
