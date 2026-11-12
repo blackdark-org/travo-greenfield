@@ -62,7 +62,7 @@ tar -tzf "$tarball" | grep -v '/$' | grep '^root/' | sed 's|^root||' | LC_ALL=C 
 cmp "$tmp/on-disk.txt" "$tmp/listed.txt" || fail "tar listing differs from extracted files"
 cmp "$tmp/listed.txt" "$tmp/pkg/manifest.txt" || fail "manifest.txt differs from the files under root/"
 tar -tzf "$tarball" | LC_ALL=C sort >"$tmp/all.txt"
-for f in install.sh VERSION manifest.txt checksums.txt minisign.pub; do
+for f in install.sh port80.sh VERSION manifest.txt checksums.txt minisign.pub; do
   grep -qx "$f" "$tmp/all.txt" || fail "$f missing from the tarball"
 done
 echo "ok: $(wc -l <"$tmp/pkg/manifest.txt" | tr -d ' ') manifest paths"
@@ -108,15 +108,17 @@ echo "ok: --insecure installed, no key written"
 step "install"
 listeners >"$tmp/listeners-before.txt"
 dx 'sh /tmp/tg/install.sh'
-wait_health "after install" 8090
+wait_health "after install" 80
 dx 'cat /etc/travo-greenfield/minisign.pub' | cmp - "$tmp/k1.pub" || fail "signed install did not store the tarball key"
 echo "ok: signed install stored the key"
 listeners >"$tmp/listeners-after.txt"
 while IFS= read -r l; do
+  case "$l" in *:80|*:443) continue ;; esac
   grep -qxF "$l" "$tmp/listeners-after.txt" || fail "listener $l disappeared after install"
 done <"$tmp/listeners-before.txt"
-grep -q ':8090$' "$tmp/listeners-after.txt" || fail "nothing listens on :8090: $(cat "$tmp/listeners-after.txt")"
-echo "ok: all $(wc -l <"$tmp/listeners-before.txt" | tr -d ' ') pre-install listeners still present"
+grep -q ':80$' "$tmp/listeners-after.txt" || fail "nothing listens on :80"
+grep -q ':8080$' "$tmp/listeners-after.txt" || fail "nothing listens on :8080"
+echo "ok: LuCI moved and the other pre-install listeners are still present"
 dx '[ -L /etc/rc.d/S99travo-greenfield ] && [ -L /etc/rc.d/K10travo-greenfield ]' || fail "boot links missing"
 dx '[ ! -e /etc/uci-defaults/90-travo-greenfield ]' || fail "uci-defaults script not consumed"
 # BusyBox tr has no [:upper:] class: it once turned OpenWrt into wenrt.lan
@@ -129,7 +131,7 @@ dx 'sysupgrade -l 2>/dev/null' | grep -q travo-greenfield || fail "sysupgrade -l
 step "restart the container (boot link)"
 docker restart "$NAME" >/dev/null
 wait_boot
-wait_health "after reboot" 8090
+wait_health "after reboot" 80
 
 # Signature case 4: the installed key (k1) is trusted; a tarball with another key needs --rotate-key.
 step "signature: key rotation"
@@ -143,7 +145,7 @@ echo "$out" | grep -q 'differs from the installed key' || fail "refusal does not
 dx 'cat /etc/travo-greenfield/minisign.pub' | cmp - "$tmp/k1.pub" || fail "refused rotation changed the installed key"
 dx 'sh /tmp/tg2/install.sh --rotate-key'
 dx 'cat /etc/travo-greenfield/minisign.pub' | cmp - "$tmp/k2.pub" || fail "--rotate-key did not store the new key"
-wait_health "after key rotation" 8090
+wait_health "after key rotation" 80
 echo "ok: different key refused, --rotate-key stored it"
 
 step "uninstall keeps config and ignores foreign manifest paths"

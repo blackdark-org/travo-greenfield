@@ -66,6 +66,7 @@ type Inputs struct {
 	Version string
 	Binary  []byte
 	Install File
+	Port80  File
 	// Pubkey is the minisign public key shipped as minisign.pub; nil for an unsigned build.
 	Pubkey []byte
 	Web    []File
@@ -96,8 +97,11 @@ func Assemble(in Inputs) []File {
 	}
 	install := in.Install
 	install.Name, install.Mode = "install.sh", 0o755
+	port80 := in.Port80
+	port80.Name, port80.Mode = "port80.sh", 0o644
 	files := []File{
 		install,
+		port80,
 		{Name: "VERSION", Mode: 0o644, Body: []byte(in.Version + "\n")},
 		{Name: "manifest.txt", Mode: 0o644, Body: []byte(manifest.String())},
 	}

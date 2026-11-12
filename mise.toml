@@ -20,7 +20,7 @@ go test ./...
 [tasks."check:sh"]
 description = "sh -n and shellcheck (POSIX sh) on install, init and helper scripts"
 run = '''
-set -- packaging/install.sh packaging/files/etc/init.d/travo-greenfield packaging/files/etc/uci-defaults/90-travo-greenfield scripts/*.sh scripts/lib/*.sh
+set -- packaging/install.sh packaging/port80.sh packaging/files/etc/init.d/travo-greenfield packaging/files/etc/uci-defaults/90-travo-greenfield scripts/*.sh scripts/lib/*.sh
 for f in "$@"; do sh -n "$f"; done
 shellcheck -s sh "$@"
 '''
@@ -75,13 +75,17 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath \
 PUBKEY=${PUBKEY:-}
 [ -n "$PUBKEY" ] || ! [ -f packaging/minisign.pub ] || PUBKEY=packaging/minisign.pub
 go run ./cmd/mkpkg -out "dist/travo-greenfield-$VERSION-aarch64.tar.gz" -version "$VERSION" \
-  -binary dist/travo-greenfield-arm64 -web web/dist -files packaging/files -install packaging/install.sh \
+  -binary dist/travo-greenfield-arm64 -web web/dist -files packaging/files -install packaging/install.sh -port80 packaging/port80.sh \
   ${PUBKEY:+-pubkey "$PUBKEY"}
 '''
 
 [tasks."test:package"]
 description = "Install, reboot, uninstall the release tarball in a booted OpenWrt container (needs Docker)"
 run = "scripts/test-package.sh"
+
+[tasks."test:port80"]
+description = "Verify the reversible LuCI port move in a booted OpenWrt container (needs Docker)"
+run = "scripts/test-port80.sh"
 
 [tasks."test:integration"]
 description = "Run adapter tests against real uci/apk/opkg in OpenWrt containers (needs Docker)"

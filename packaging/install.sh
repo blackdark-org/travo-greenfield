@@ -2,15 +2,19 @@
 # Installs or removes travo-greenfield on OpenWrt. Run as root from the extracted tarball:
 #   tar -xzf travo-greenfield-<version>-aarch64.tar.gz -C /tmp/tg && sh /tmp/tg/install.sh
 # Flags: (none) install | --uninstall | --purge (with --uninstall: also config and state)
+#        | --port N (alternate port, keeps LuCI unchanged)
 #        | --force (skip the OS and architecture checks only)
 #        | --insecure (install without a signature check) | --rotate-key (accept a new signing key).
 # Before installing it verifies $here/checksums.txt.sig over checksums.txt with usign (docs/adr/0007).
+# Test hooks: TRAVO_TEST_STOP_AFTER_SWAP=1 exits after moving LuCI.
+# TRAVO_TEST_HOLD_80=1 starts a listener that blocks greenfield from taking port 80.
 # Touches only the paths in manifest.txt and the ones named in uninstall() (invariants §15).
 set -eu
 
 NAME=travo-greenfield
 STATE_DIR=/etc/travo-greenfield
 MIN_FREE_KIB=20480
+PORT_SWAP_GUARD=/etc/travo-greenfield-guards/port-swap
 
 die() {
   echo "install.sh: $*" >&2
@@ -18,7 +22,7 @@ die() {
 }
 
 usage() {
-  echo "usage: install.sh [--force] [--insecure] [--rotate-key] | --uninstall [--purge]" >&2
+  echo "usage: install.sh [--force] [--insecure] [--rotate-key] [--port N] | --uninstall [--purge]" >&2
   exit 2
 }
 
@@ -55,11 +59,13 @@ check_space() {
 
 # Polls /api/health once a second (BusyBox has no timeout or curl) until it reports $1.
 wait_healthy() {
+  expected_health='"version":"'
+  [ -z "$1" ] || expected_health=$expected_health$1'"'
   listen=$(uci -q get "$NAME.main.listen") || die "no $NAME.main.listen in UCI"
   port=${listen##*:}
   i=0
   while [ "$i" -lt 30 ]; do
-    if wget -q -O - "http://127.0.0.1:$port/api/health" 2>/dev/null | grep -qF "\"version\":\"$1\""; then
+    if wget -q -T 2 -O - "http://127.0.0.1:$port/api/health" 2>/dev/null | grep -qF "$expected_health"; then
       return 0
     fi
     i=$((i + 1))
@@ -99,6 +105,21 @@ verify_signature() {
   fi
 }
 
+load_port80() {
+  [ -f "$here/port80.sh" ] && [ ! -L "$here/port80.sh" ] ||
+    die "port80.sh must be a regular file from the release tarball"
+  # Verify the exact entry; checking the whole manifest alone does not require
+  # an entry for the helper. Uninstall can still use a tarball from before key rotation.
+  helper_checksum=$(sed -n '/^[0-9a-f]\{64\}  \.\/port80\.sh$/p' "$here/checksums.txt") ||
+    die "port80.sh checksum missing or invalid"
+  [ -n "$helper_checksum" ] && [ "$(printf '%s\n' "$helper_checksum" | wc -l)" -eq 1 ] ||
+    die "port80.sh checksum missing or invalid"
+  (cd "$here" && printf '%s\n' "$helper_checksum" | sha256sum -c >/dev/null) ||
+    die "port80.sh checksum mismatch"
+  # shellcheck source=packaging/port80.sh
+  . "$here/port80.sh"
+}
+
 install() {
   [ "$force" = 1 ] || { check_os; check_arch; }
   check_space
@@ -121,12 +142,25 @@ install() {
   rm -f "$here/.on-disk" "$here/.listed"
   version=$(cat VERSION)
 
+  load_port80
+  if [ -z "$alternate_port" ] && old_travo_enabled; then
+    die "old Travo holds :80; replacing it is not supported yet (see #22)"
+  fi
+  mkdir -p /etc/travo-greenfield-guards
+  recover_port_swap
+  first_install=0
+  [ -e /etc/init.d/$NAME ] || first_install=1
+
   cp -a root/. / || die "copying files to / failed"
   # OpenWrt runs uci-defaults only at boot; run it now. It deletes itself on success.
   defaults=/etc/uci-defaults/90-$NAME
   if [ -e "$defaults" ]; then
     sh "$defaults" || die "$defaults failed"
     rm -f "$defaults"
+  fi
+  if [ "$first_install" = 1 ] && [ ! -e /etc/rc.d/S99$NAME ] &&
+     [ "$(uci -q get "$NAME.main.enabled" || true)" != 0 ]; then
+    /etc/init.d/$NAME enable || die "could not enable $NAME"
   fi
   mkdir -p "$STATE_DIR"
   cp manifest.txt "$STATE_DIR/manifest.txt" || die "cannot save the manifest to $STATE_DIR"
@@ -142,15 +176,17 @@ install() {
     logread -e "$NAME" | tail -20 >&2
     exit 1
   fi
-  echo "$NAME $version installed and healthy on port $port"
+  install_ports "$version"
 }
 
 uninstall() {
   manifest=$STATE_DIR/manifest.txt
   [ -f "$manifest" ] || die "$manifest is missing: nothing to uninstall (or it was purged)"
-  # after a plain uninstall the init script is gone; --purge then only cleans config and state
+  load_port80
+  recover_port_swap
+  uninstall_port80
+  # A subsequent --purge has no init script and only removes retained state.
   if [ -x /etc/init.d/$NAME ]; then
-    /etc/init.d/$NAME stop || true
     /etc/init.d/$NAME disable || true
   fi
   while IFS= read -r path; do
@@ -189,18 +225,28 @@ uninstall() {
 }
 
 force=0 purge=0 insecure=0 rotate=0 new_key=0 mode=install
-for arg in "$@"; do
-  case "$arg" in
+alternate_port=
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --uninstall) mode=uninstall ;;
     --purge) purge=1 ;;
     --force) force=1 ;;
     --insecure) insecure=1 ;;
     --rotate-key) rotate=1 ;;
+    --port)
+      shift
+      [ "$#" -gt 0 ] || usage
+      case "$1" in ""|*[!0-9]*) usage ;; esac
+      alternate_port=$(printf '%s' "$1" | sed 's/^0*//')
+      [ -n "$alternate_port" ] && [ "${#alternate_port}" -le 5 ] &&
+        [ "$alternate_port" -le 65535 ] && [ "$alternate_port" -ne 80 ] || usage
+      ;;
     *) usage ;;
   esac
+  shift
 done
 [ "$purge" = 0 ] || [ "$mode" = uninstall ] || usage
-[ "$mode" = install ] || { [ "$insecure" = 0 ] && [ "$rotate" = 0 ]; } || usage
+[ "$mode" = install ] || { [ "$insecure" = 0 ] && [ "$rotate" = 0 ] && [ -z "$alternate_port" ]; } || usage
 
 [ "$(id -u)" = 0 ] || die "must run as root"
 here=$(cd "$(dirname "$0")" && pwd)
