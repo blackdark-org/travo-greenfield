@@ -16,7 +16,7 @@ sh /tmp/tg/install.sh
 
 The first install trusts the release key inside the tarball and stores it in `/etc/travo-greenfield/minisign.pub`; later installs must match that key, or pass `--rotate-key` once when the release notes announce a new one. Builds you made yourself are unsigned: install them with `--insecure`.
 
-The UI answers on `http://<router>:8090`. Remove it with `sh /tmp/tg/install.sh --uninstall`; add `--purge` to also delete its config and state. Settings live in `/etc/config/travo-greenfield`. Build the tarball yourself with `mise run package`.
+The UI answers on `http://<router>/` by default, and LuCI moves to ports 8080 and 8443. To leave LuCI in place, pass `--port N` during install and open `http://<router>:N`. Remove it with `sh /tmp/tg/install.sh --uninstall`; add `--purge` to also delete its config and state. Settings live in `/etc/config/travo-greenfield`. Build the tarball yourself with `mise run package`.
 
 ## Docs
 

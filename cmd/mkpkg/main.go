@@ -28,9 +28,10 @@ func run() error {
 	web := flag.String("web", "", "built web UI directory")
 	files := flag.String("files", "", "directory copied verbatim into the tarball root/")
 	install := flag.String("install", "", "install.sh")
+	port80 := flag.String("port80", "", "port80.sh")
 	pubkey := flag.String("pubkey", "", "minisign public key, shipped as minisign.pub (optional: unsigned build without it)")
 	flag.Parse()
-	for name, v := range map[string]string{"out": *out, "version": *version, "binary": *binary, "web": *web, "files": *files, "install": *install} {
+	for name, v := range map[string]string{"out": *out, "version": *version, "binary": *binary, "web": *web, "files": *files, "install": *install, "port80": *port80} {
 		if v == "" {
 			return fmt.Errorf("-%s is required", name)
 		}
@@ -44,6 +45,9 @@ func run() error {
 		return err
 	}
 	if in.Install, err = readFile(*install, "install.sh"); err != nil {
+		return err
+	}
+	if in.Port80, err = readFile(*port80, "port80.sh"); err != nil {
 		return err
 	}
 	if *pubkey != "" {

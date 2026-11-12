@@ -121,6 +121,7 @@ func TestAssemble(t *testing.T) {
 		Version: "1.2.3",
 		Binary:  []byte("ELF"),
 		Install: File{Name: "install.sh", Mode: 0o700, Body: []byte("sh\n")},
+		Port80:  File{Body: []byte("helper\n")},
 		Web:     []File{{Name: "index.html", Mode: 0o644, Body: []byte("<html>")}},
 		Files:   []File{{Name: "etc/init.d/svc", Mode: 0o755, Body: []byte("rc\n")}},
 	}
@@ -131,6 +132,9 @@ func TestAssemble(t *testing.T) {
 	}
 	if f := byName["install.sh"]; f.Mode != 0o755 {
 		t.Errorf("install.sh mode %o, want 755", f.Mode)
+	}
+	if f := byName["port80.sh"]; f.Mode != 0o644 || string(f.Body) != "helper\n" {
+		t.Errorf("port80.sh entry %+v", f)
 	}
 	if f := byName["root/usr/bin/travo-greenfield"]; f.Mode != 0o755 || string(f.Body) != "ELF" {
 		t.Errorf("binary entry %+v", f)
@@ -146,6 +150,7 @@ func TestAssemble(t *testing.T) {
 	wantSums := sum("1.2.3\n") + "  ./VERSION\n" +
 		sum("sh\n") + "  ./install.sh\n" +
 		sum(wantManifest) + "  ./manifest.txt\n" +
+		sum("helper\n") + "  ./port80.sh\n" +
 		sum("rc\n") + "  ./root/etc/init.d/svc\n" +
 		sum("ELF") + "  ./root/usr/bin/travo-greenfield\n" +
 		sum("<html>") + "  ./root/www/travo-greenfield/index.html\n"
