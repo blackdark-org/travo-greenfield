@@ -34,7 +34,13 @@ expect_refusal() {
 }
 
 expect_luci() {
-  dx "wget -qO- http://127.0.0.1:$1/" | grep -q cgi-bin/luci || fail "LuCI landing page missing on $1"
+  # dnsmasq can report running before uhttpd and the boot firewall settle.
+  attempts=0
+  until dx "wget -T 2 -qO- http://127.0.0.1:$1/" 2>/dev/null | grep -q cgi-bin/luci; do
+    attempts=$((attempts + 1))
+    [ "$attempts" -lt 15 ] || fail "LuCI landing page missing on $1"
+    sleep 1
+  done
 }
 
 expect_unchanged_uhttpd() {
