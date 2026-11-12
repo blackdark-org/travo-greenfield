@@ -152,32 +152,34 @@ wait_health "alternate port" 8091
 expect_unchanged_uhttpd
 purge
 
-step "9: refuse missing helper checksum and old Travo before writing anything"
+step "9: refuse an unlisted helper and a conflicting port 80 listener"
 dx 'cp /tmp/tg/checksums.txt /tmp/checksums.before; sed -i "/port80\.sh$/d" /tmp/tg/checksums.txt'
 expect_refusal 'sh /tmp/tg/install.sh --insecure' 'port80.sh checksum missing or invalid'
 dx 'mv /tmp/checksums.before /tmp/tg/checksums.txt'
-dx '[ ! -e /usr/bin/travo-greenfield ]'
-dx 'cat >/etc/init.d/travo <<\EOF_STUB
-#!/bin/sh /etc/rc.common
-START=99
-USE_PROCD=1
-start_service() {
-  procd_open_instance
-  procd_set_param command /usr/sbin/uhttpd -f -p 0.0.0.0:9999 -h /tmp
-  procd_close_instance
-}
-EOF_STUB
-chmod +x /etc/init.d/travo
-/etc/init.d/travo enable
-/etc/init.d/travo start'
-expect_refusal 'sh /tmp/tg/install.sh --insecure' 'old Travo holds :80'
-expect_unchanged_uhttpd
 dx '[ ! -e /usr/bin/travo-greenfield ] &&
     [ ! -e /etc/init.d/travo-greenfield ] &&
     [ ! -e /etc/rc.d/S99travo-greenfield ] &&
-    [ ! -e /etc/config/travo-greenfield ] &&
-    . /tmp/tg/port80.sh && ! port_is_listening 8090'
-dx '/etc/init.d/travo stop; /etc/init.d/travo disable; rm /etc/init.d/travo'
+    [ ! -e /etc/config/travo-greenfield ]'
+
+# Move LuCI aside so the standalone process is the only port 80 listener.
+dx 'cp /etc/config/uhttpd /tmp/uhttpd.before
+uci delete uhttpd.main.listen_http
+uci add_list uhttpd.main.listen_http=0.0.0.0:8080
+uci add_list uhttpd.main.listen_http="[::]:8080"
+uci commit uhttpd
+/etc/init.d/uhttpd restart'
+expect_luci 8080
+dx 'uci export uhttpd' >"$tmp/before.export"
+dx 'printf "%s\n" foreign-listener >/tmp/port80-probe'
+start_holder 0.0.0.0:80
+expect_refusal 'sh /tmp/tg/install.sh --insecure' 'port 80 is in use by something other than uhttpd'
+expect_unchanged_uhttpd
+dx 'wget -T 2 -qO- http://127.0.0.1:80/port80-probe' | grep -qxF foreign-listener || fail "foreign listener changed"
+expect_luci 8080
+purge
+stop_holder
+dx 'cp /tmp/uhttpd.before /etc/config/uhttpd; /etc/init.d/uhttpd restart'
+expect_luci 80
 
 step "10: reinstall after a plain uninstall preserves boot support"
 install
