@@ -16,7 +16,7 @@ Travel-router web UI and API that runs ON the router, next to stock LuCI. Clean-
 
 1. **Install and run**: release tarball + install script on fresh OpenWrt; travo-greenfield on `:80` (configurable), LuCI moved to `:8080`/`:8443` reversibly. Mock mode (`--mock`).
 2. **Auth and first-run**: root-password login, cookie session; first-run "set password" reachable from `br-lan` only; password change; SSH keys optional later.
-3. **Dashboard**: online status (real probe vs carrier shown separately), active uplink, CPU/mem/uptime, per-interface throughput by name, quick actions (WiFi connect, VPN toggle). Version visible.
+3. **Dashboard**: online status (real probe vs carrier shown separately), active uplink, CPU/mem/uptime, per-interface RX/TX throughput by kernel name (GET /api/v1/dashboard/throughput), quick actions (WiFi connect, VPN toggle). Version visible.
 4. **Uplink WiFi**: scan (one row per SSID, dual-band badge), join (≤3 taps from dashboard), ordered saved-upstream list, auto-reconnect with failure cap, MAC clone/randomize.
 5. **AP and guest basics**: SSID/key, enable/disable per radio, guest AP with own subnet/zone.
 6. **Safe apply**: snapshot → commit → watchdog → probe → explicit confirm; lockout guard.

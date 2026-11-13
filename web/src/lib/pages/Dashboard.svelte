@@ -1,6 +1,7 @@
 <script lang="ts">
 import { fetchHealth } from '../api/health';
 import { fetchSystemInfo } from '../api/system';
+import { fetchThroughput } from '../api/throughput';
 import { formatBytes, formatLoad, formatUptime } from '../format';
 import { m } from '../paraglide/messages.js';
 import Card from '../ui/Card.svelte';
@@ -10,6 +11,13 @@ import Status from '../ui/Status.svelte';
 
 const health = createLoader(fetchHealth);
 const resources = createLoader(fetchSystemInfo);
+const throughput = createLoader(fetchThroughput, 2000);
+
+function formatRate(rate: number | null): string {
+  if (rate === null) return m.dashboard_rate_unknown();
+  const rounded = rate < 1024 ? Math.round(rate * 10) / 10 : rate;
+  return m.dashboard_bytes_per_second({ bytes: formatBytes(rounded) });
+}
 </script>
 
 <div class="flex flex-col gap-4">
@@ -54,6 +62,32 @@ const resources = createLoader(fetchSystemInfo);
             {m.dashboard_refresh()}
           </button>
         {/if}
+      {/if}
+    </LoadState>
+  </Card>
+  <Card title={m.dashboard_throughput()}>
+    <LoadState status={throughput.status} retry={throughput.retry} stale={throughput.data !== undefined}>
+      {#if throughput.data?.interfaces.length}
+        <table class="w-full table-fixed text-left">
+          <thead class="text-muted">
+            <tr>
+              <th scope="col" class="font-normal">{m.dashboard_interface()}</th>
+              <th scope="col" class="text-right font-normal">{m.dashboard_rx()}</th>
+              <th scope="col" class="text-right font-normal">{m.dashboard_tx()}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each throughput.data.interfaces as row (row.name)}
+              <tr class="border-t border-border">
+                <th scope="row" class="break-all py-2 font-medium">{row.name}</th>
+                <td class="py-2 text-right tabular-nums">{formatRate(row.rx_bytes_per_second)}</td>
+                <td class="py-2 text-right tabular-nums">{formatRate(row.tx_bytes_per_second)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      {:else}
+        <p class="text-muted">{m.dashboard_no_interfaces()}</p>
       {/if}
     </LoadState>
   </Card>

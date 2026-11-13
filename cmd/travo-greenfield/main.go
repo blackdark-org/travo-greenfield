@@ -21,6 +21,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
 	"github.com/blackdark-org/travo-greenfield/internal/static"
+	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
@@ -105,10 +106,15 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir stri
 		}
 	}))
 
+	sampler := throughput.New()
+	if counters, ok := deps.Device.(device.InterfaceCounterReader); ok {
+		workers.Go("interface-throughput", func(ctx context.Context) { sampler.Run(ctx, counters, clock.Now) })
+	}
 	backup, _ := deps.Device.(device.ConfigBackupper)
 	h, _ := api.New(api.Deps{
-		Backup:  backup,
-		Version: version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
+		Backup:     backup,
+		Throughput: sampler,
+		Version:    version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
 		Trusted:   provider.Allowed,
 		RouterIPs: provider.RouterIPs, HostAllow: hostAllow,
