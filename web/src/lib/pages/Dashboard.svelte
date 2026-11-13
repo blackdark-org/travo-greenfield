@@ -1,8 +1,6 @@
 <script lang="ts">
-import { fetchConnectivity } from '../api/connectivity';
 import { fetchHealth } from '../api/health';
-import { fetchSystemInfo } from '../api/system';
-import { fetchThroughput } from '../api/throughput';
+import type { dashboardEvents } from '../dashboard-events.svelte';
 import { formatBytes, formatLoad, formatUptime } from '../format';
 import { m } from '../paraglide/messages.js';
 import Card from '../ui/Card.svelte';
@@ -10,10 +8,14 @@ import LoadState from '../ui/LoadState.svelte';
 import { createLoader } from '../ui/loader.svelte';
 import Status from '../ui/Status.svelte';
 
-const connectivity = createLoader(fetchConnectivity);
+let {
+  events,
+}: { events: Pick<typeof dashboardEvents, 'connectivity' | 'resources' | 'throughput'> } = $props();
+
+const connectivity = $derived(events.connectivity);
 const health = createLoader(fetchHealth);
-const resources = createLoader(fetchSystemInfo);
-const throughput = createLoader(fetchThroughput, 2000);
+const resources = $derived(events.resources);
+const throughput = $derived(events.throughput);
 
 const internetStatus = {
   online: { kind: 'ok', label: m.dashboard_internet_online },

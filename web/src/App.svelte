@@ -10,6 +10,7 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sun from '@lucide/svelte/icons/sun';
 import Wifi from '@lucide/svelte/icons/wifi';
 import X from '@lucide/svelte/icons/x';
+import { dashboardEvents } from './lib/dashboard-events.svelte';
 import { navigate } from './lib/navigate';
 import { pages } from './lib/pages/lazy';
 import PageHost from './lib/pages/PageHost.svelte';
@@ -57,12 +58,24 @@ const nav: { route: Route | null; label: () => string; icon: typeof Wifi }[] = [
 void session.bootstrap();
 
 function logout() {
+  dashboardEvents.clear();
   // Leave the page first so the guard does not remember it as the place to return to.
   navigate('dashboard');
   void session.logout();
 }
 
 const authenticated = $derived(session.state === 'authenticated');
+// The shell, not a page, owns the stream. Navigation does not restart it; login,
+// expiry and a replacement session after password change each key a new owner.
+$effect(() => {
+  const generation = session.generation;
+  if (!authenticated) {
+    dashboardEvents.clear();
+    return;
+  }
+  dashboardEvents.start(generation);
+  return () => dashboardEvents.stop(generation);
+});
 // What is shown: the requested route after the guard. While the state is unknown nothing is shown
 // but the loader (or the bootstrap error), so a reload never flashes the wrong page.
 const shown = $derived(guard(session.state, router.route));
@@ -95,7 +108,10 @@ $effect(() => {
 });
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && closeDrawer()} />
+<svelte:window
+  onkeydown={(e) => e.key === 'Escape' && closeDrawer()}
+  onpagehide={() => dashboardEvents.stop()}
+/>
 
 <div class="flex h-full w-full overflow-hidden">
   {#if drawerOpen}
@@ -202,7 +218,7 @@ $effect(() => {
               <span></span>
             </LoadState>
           {:else if shown === 'dashboard'}
-            <PageHost load={pages.dashboard} />
+            <PageHost load={pages.dashboard} props={{ events: dashboardEvents }} />
           {:else if shown === 'vpn'}
             <PageHost load={pages.vpn} />
           {:else if shown === 'system'}

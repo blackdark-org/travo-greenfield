@@ -1,5 +1,6 @@
 import { session } from '../session.svelte';
 import { csrfInterceptor } from './csrf';
+import { type Client, createClient } from './gen/client';
 import { client } from './gen/client.gen';
 
 // A 401 from these is a wrong password, not an expired session.
@@ -21,3 +22,8 @@ client.interceptors.request.use(csrfInterceptor);
 client.interceptors.response.use(sessionExpiryInterceptor);
 
 export { client };
+
+/** A client with the same transport but none of the global response interceptors. */
+export function scopedAPIClient(): Client {
+  return createClient({ ...client.getConfig(), credentials: 'same-origin' });
+}

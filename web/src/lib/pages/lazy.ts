@@ -1,6 +1,6 @@
 import type { Component } from 'svelte';
 
-export type PageComponent = Component<Record<string, string>>;
+export type PageComponent = Component<Record<string, unknown>>;
 export type PageImport = () => Promise<PageComponent>;
 
 /**

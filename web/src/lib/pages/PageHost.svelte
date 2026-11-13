@@ -4,7 +4,7 @@ import { createLoader } from '../ui/loader.svelte';
 import type { PageImport } from './lazy';
 
 // Keyed by route in App, so each route gets a fresh loader for its chunk.
-let { load, props = {} }: { load: PageImport; props?: Record<string, string> } = $props();
+let { load, props = {} }: { load: PageImport; props?: Record<string, unknown> } = $props();
 
 const page = createLoader(() => load());
 const Page = $derived(page.data);
