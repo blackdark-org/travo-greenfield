@@ -194,6 +194,33 @@ describe('dashboard ownership and seeds', () => {
     expect(paths(active, EVENTS)).toHaveLength(2);
   });
 
+  it('marks retained values stale while a page-cache restart waits for fresh data', async () => {
+    const first = controlledSSE();
+    const restored = controlledSSE();
+    active = harness((request) => {
+      const path = new URL(request.url).pathname;
+      if (path === EVENTS)
+        return paths(current(), EVENTS).length === 1 ? first.response : restored.response;
+      return bodyFor(path);
+    });
+    active.dashboard.start(1);
+    await eventually(() => expect(active?.dashboard.throughput.status.state).toBe('ready'));
+
+    active.dashboard.stop();
+    active.dashboard.start(1);
+
+    expect(active.dashboard.connectivity.data).toEqual(connectivityBody);
+    expect(active.dashboard.resources.data).toEqual(resourcesBody);
+    expect(active.dashboard.throughput.data).toEqual(throughputBody);
+    expect(active.dashboard.connectivity.status).toEqual({ state: 'loading' });
+    expect(active.dashboard.resources.status).toEqual({ state: 'loading' });
+    expect(active.dashboard.throughput.status).toEqual({ state: 'loading' });
+    await eventually(() => expect(active?.dashboard.throughput.status.state).toBe('ready'));
+    expect(active.dashboard.connectivity.status.state).toBe('ready');
+    expect(active.dashboard.resources.status.state).toBe('ready');
+    expect(paths(active, EVENTS)).toHaveLength(2);
+  });
+
   it('a current stream 401 expires once and never reconnects', async () => {
     active = harness((request) => {
       const path = new URL(request.url).pathname;
