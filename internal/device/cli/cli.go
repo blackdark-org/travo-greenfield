@@ -105,6 +105,9 @@ func (d *Device) Call(ctx context.Context, object, method string, args any) (jso
 	}
 	out, err := d.run(ctx, TierRead, "ubus", "call", object, method, string(payload))
 	if err != nil {
+		if strings.Contains(err.Error(), "Not found") {
+			return nil, fmt.Errorf("%w: %v", device.ErrNotFound, err)
+		}
 		return nil, err
 	}
 	if !json.Valid([]byte(out)) {

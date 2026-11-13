@@ -54,3 +54,9 @@ func TestUnscriptedUbusIsNotFound(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestLatestHandshakesIsNotFound(t *testing.T) {
+	if _, err := New().LatestHandshakes(ctx, "wg0"); !errors.Is(err, device.ErrNotFound) {
+		t.Fatal(err)
+	}
+}
