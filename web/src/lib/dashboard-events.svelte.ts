@@ -263,6 +263,8 @@ export function createDashboardEvents(options: DashboardEventsOptions = {}) {
   function start(generation: number): void {
     if (active?.generation === generation && active.active) return;
     stop();
+    // A restarted owner has no fresh data yet; retained values are stale until a seed or event arrives.
+    for (const source of SOURCE_NAMES) states[source].status = { state: 'loading' };
     const owner: Ownership = {
       generation,
       controller: new AbortController(),

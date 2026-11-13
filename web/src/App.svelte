@@ -10,6 +10,7 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sun from '@lucide/svelte/icons/sun';
 import Wifi from '@lucide/svelte/icons/wifi';
 import X from '@lucide/svelte/icons/x';
+import { restoreDashboardEvents } from './lib/app-dashboard-events';
 import { dashboardEvents } from './lib/dashboard-events.svelte';
 import { navigate } from './lib/navigate';
 import { pages } from './lib/pages/lazy';
@@ -111,6 +112,8 @@ $effect(() => {
 <svelte:window
   onkeydown={(e) => e.key === 'Escape' && closeDrawer()}
   onpagehide={() => dashboardEvents.stop()}
+  onpageshow={(e) =>
+    restoreDashboardEvents(e.persisted, authenticated, session.generation, dashboardEvents)}
 />
 
 <div class="flex h-full w-full overflow-hidden">
