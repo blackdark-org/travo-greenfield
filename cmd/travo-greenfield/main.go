@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/updatecheck"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
 )
 
@@ -34,12 +36,13 @@ func main() {
 	firstRun := flag.Bool("mock-firstrun", false, "with --mock: start without a root password")
 	hostAllow := flag.String("host-allow", "", "comma-separated extra Host names accepted (DNS-rebinding guard)")
 	staticDir := flag.String("static-dir", "/www/travo-greenfield", "directory with the built web UI")
+	releaseSource := flag.String("release-source", updatecheck.DefaultSource, "GitHub release source OWNER/REPO or off")
 	flag.Parse()
 	dir := *staticDir
 	if *useMock && !flagGiven("static-dir") {
 		dir = "web/dist"
 	}
-	if err := run(*addr, *useMock, *firstRun, splitList(*hostAllow), dir); err != nil {
+	if err := run(*addr, *useMock, *firstRun, splitList(*hostAllow), dir, *releaseSource); err != nil {
 		slog.Error("startup", "err", err)
 		os.Exit(1)
 	}
@@ -76,7 +79,10 @@ func splitList(s string) []string {
 	return out
 }
 
-func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir string) error {
+func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, releaseSource string) error {
+	if !updatecheck.ValidSource(releaseSource) {
+		return errors.New("invalid release source: expected OWNER/REPO or off")
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	workers := lifecycle.New(context.Background())
@@ -120,8 +126,13 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir stri
 		connection = connectivity.New(ctx, routes, deps.Device, probe, clock.Now)
 	}
 	backup, _ := deps.Device.(device.ConfigBackupper)
+	if useMock {
+		releaseSource = "off"
+	}
+	updates := updatecheck.New(ctx, releaseSource, version.Version, filepath.Join(deps.Paths.State, "update-check.json"), clock.Now, http.DefaultTransport)
 	h, _ := api.New(api.Deps{
 		Backup:       backup,
+		Updates:      updates,
 		Connectivity: connection,
 		Throughput:   sampler,
 		Version:      version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,

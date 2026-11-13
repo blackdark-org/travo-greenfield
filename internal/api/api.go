@@ -36,6 +36,7 @@ type ConnectivityReader interface {
 
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
+	Updates  UpdateChecker
 	Version  string
 	Accounts device.Accounts
 	// Ubus feeds read-only system facts; nil answers 503 device_unavailable.
@@ -112,6 +113,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerSetup(a)
 	s.registerTxn(a)
 	s.registerSystem(a)
+	s.registerUpdateCheck(a)
 	s.registerBackup(a)
 	s.registerThroughput(a)
 	s.registerConnectivity(a)

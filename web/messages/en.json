@@ -84,5 +84,16 @@
   "system_storage": "Storage",
   "system_app_version": "travo-greenfield version",
   "system_build_time": "Build time",
-  "system_used_of": "{used} of {total}"
+  "system_used_of": "{used} of {total}",
+  "update_title": "Software updates",
+  "update_check": "Check for updates",
+  "update_checking": "Checking for updates…",
+  "update_disabled": "Update checks are disabled.",
+  "update_deferred": "An automatic check was attempted within the last 24 hours.",
+  "update_no_release": "No stable release is available.",
+  "update_source_unavailable": "The release source is unavailable.",
+  "update_rate_limited": "The release source is limiting requests.",
+  "update_unavailable": "Could not check for updates.",
+  "update_up_to_date": "You’re up to date.",
+  "update_available": "Version {version} is available."
 }
