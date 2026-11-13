@@ -14,6 +14,10 @@ Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/d
 ## 1. Routes and netifd
 
 - [HW] After WireGuard disable: `network.interface.wwan` status shows a DHCP default route, `ip -4 route show table main` has none, `wget` exits 4. Netifd state ≠ kernel route. Every "route/internet ok" check reads the KERNEL table.
+- [HW greenfield 2026-11-13] Reproduced: `wg0` `disabled=1` + `reload_config` removed `default dev wg0` and left NO default route although `wwan` status listed one (`wget` exit 4). `ifup wwan` restored the kernel default route (also left stale `/32` endpoint host routes via the uplink). Captures: `testdata/device/axt1800-25.12.6/wireguard/`.
+- [HW greenfield] Changing only `wg0_peer0.endpoint_host` + `reload_config` kept the old endpoint live (`wg show wg0 endpoints`); `ifup wg0` applied it. A WireGuard peer edit needs an interface restart.
+- [HW greenfield] Disabled `wg0`: `network.interface.wg0 status` → `Not found`, `wg show` empty. Enabled, no handshake: interface `up:true`, kernel `default dev wg0`, `wg show all dump` peer `latest-handshake` 0. Connected: same plus non-zero handshake epoch. `up:true` does not prove a working tunnel; only a recent handshake does.
+- [HW] `wg show all dump` prints the interface PRIVATE key in column 2 of the interface line; parse `wg show <if> latest-handshakes` or redact.
 - Disable recovery must not assume `wan` is the uplink; internet often arrives via WiFi STA. Recovery needs several bounded waits; some devices need script-level down/up, not only ubus.
 
 ## 2. Wireless liveness (ath11k / netifd)
@@ -29,6 +33,7 @@ Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/d
 - [TRIED] Trusting per-interface `up` (absent on this firmware). [TRIED] A 4 s probe budget against a ~10 s bring-up. Derive budgets from measured latency.
 - [HW greenfield] `uci commit wireless` + `reload_config` (no `wifi`) applied and restored an AP SSID change in ~1 s each; the STA on the other radio stayed associated. Wrong STA SSID: `carrier:false` and no kernel default route; after restore STA carrier in 7.8 s, default route 0.5 s later.
 - [HW] `ubus call iwinfo scan '{"device":"phy0-sta0"}'` on the STA (associated or not) returns one entry per BSSID with `band` (2/5), `channel`, `mhz`, `signal` (dBm), `quality`/`quality_max`, `encryption.{enabled,wpa,authentication,ciphers}`; hidden networks have no `ssid` key. No crash with an AP up on the other radio (testdata `wwan-down/`).
+- [HW greenfield 2026-11-13] With no STA interface, `ubus call iwinfo scan '{"device":"phy0"}'` (or `radio0`) scans that radio read-only: rc 0, ~4.7 s, AP on the other radio stayed `up`/`carrier`, `iw dev` and `uci changes` unchanged. A scan covers only its radio's band; a dual-band list needs one scan per radio (`phy1`/the AP ifname scans 2.4 GHz in ~2 s without dropping the AP). Captures: `testdata/device/axt1800-25.12.6/wifi-scan/`.
 - [HW] Only enabled APs have a `hostapd.<ifname>` ubus object. `iwinfo assoclist` was empty while `hostapd.*` `get_clients` listed the station: use `get_clients`.
 
 ## 3. ath11k crash triggers
