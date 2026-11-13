@@ -32,3 +32,5 @@ When System finds a newer release, **Verify package** checks the signed archive 
 - [Device facts](docs/device-facts.md) · [Testing](docs/testing.md) · [Glossary](GLOSSARY.md) · [ADRs](docs/adr/)
 
 License: [MIT](LICENSE).
+
+On a packaged OpenWrt install, use **System → Software updates** to verify an available release and confirm **Apply update**. The interface briefly disconnects while the service restarts. Sign in again to see the result. If the updater reports that recovery is required, use **Retry recovery**, or use the console command documented in ADR 0007.

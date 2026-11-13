@@ -26,6 +26,12 @@ export type AppBody = {
     version: string;
 };
 
+export type ApplyStatus = {
+    id?: string;
+    state: 'idle' | 'applying' | 'succeeded' | 'rolled_back' | 'aborted' | 'recovery_required';
+    version?: string;
+};
+
 export type GetSetupStateResponse = {
     password_set: boolean;
 };
@@ -510,6 +516,76 @@ export type GetSystemInfoResponses = {
 
 export type GetSystemInfoResponse = GetSystemInfoResponses[keyof GetSystemInfoResponses];
 
+export type GetSystemUpdateApplyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/update/apply';
+};
+
+export type GetSystemUpdateApplyErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetSystemUpdateApplyError = GetSystemUpdateApplyErrors[keyof GetSystemUpdateApplyErrors];
+
+export type GetSystemUpdateApplyResponses = {
+    /**
+     * OK
+     */
+    200: ApplyStatus;
+};
+
+export type GetSystemUpdateApplyResponse = GetSystemUpdateApplyResponses[keyof GetSystemUpdateApplyResponses];
+
+export type PostSystemUpdateApplyData = {
+    body: StageInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/update/apply';
+};
+
+export type PostSystemUpdateApplyErrors = {
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostSystemUpdateApplyError = PostSystemUpdateApplyErrors[keyof PostSystemUpdateApplyErrors];
+
+export type PostSystemUpdateApplyResponses = {
+    /**
+     * Update accepted
+     */
+    202: {
+        id?: string;
+        state: 'idle' | 'applying' | 'succeeded' | 'rolled_back' | 'aborted' | 'recovery_required';
+        version?: string;
+    };
+};
+
+export type PostSystemUpdateApplyResponse = PostSystemUpdateApplyResponses[keyof PostSystemUpdateApplyResponses];
+
 export type PostSystemUpdateCheckData = {
     body: UpdateCheckInputBody;
     path?: never;
@@ -534,6 +610,39 @@ export type PostSystemUpdateCheckResponses = {
 };
 
 export type PostSystemUpdateCheckResponse = PostSystemUpdateCheckResponses[keyof PostSystemUpdateCheckResponses];
+
+export type PostSystemUpdateRecoverData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/update/recover';
+};
+
+export type PostSystemUpdateRecoverErrors = {
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostSystemUpdateRecoverError = PostSystemUpdateRecoverErrors[keyof PostSystemUpdateRecoverErrors];
+
+export type PostSystemUpdateRecoverResponses = {
+    /**
+     * OK
+     */
+    200: ApplyStatus;
+};
+
+export type PostSystemUpdateRecoverResponse = PostSystemUpdateRecoverResponses[keyof PostSystemUpdateRecoverResponses];
 
 export type GetSystemUpdateStageData = {
     body?: never;

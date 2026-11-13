@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetDashboardConnectivityData, GetDashboardConnectivityErrors, GetDashboardConnectivityResponses, GetDashboardThroughputData, GetDashboardThroughputErrors, GetDashboardThroughputResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemBackupData, GetSystemBackupErrors, GetSystemBackupResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetSystemUpdateStageData, GetSystemUpdateStageErrors, GetSystemUpdateStageResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, PostSystemUpdateCheckData, PostSystemUpdateCheckErrors, PostSystemUpdateCheckResponses, PostSystemUpdateStageData, PostSystemUpdateStageErrors, PostSystemUpdateStageResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
+import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetDashboardConnectivityData, GetDashboardConnectivityErrors, GetDashboardConnectivityResponses, GetDashboardThroughputData, GetDashboardThroughputErrors, GetDashboardThroughputResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemBackupData, GetSystemBackupErrors, GetSystemBackupResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetSystemUpdateApplyData, GetSystemUpdateApplyErrors, GetSystemUpdateApplyResponses, GetSystemUpdateStageData, GetSystemUpdateStageErrors, GetSystemUpdateStageResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, PostSystemUpdateApplyData, PostSystemUpdateApplyErrors, PostSystemUpdateApplyResponses, PostSystemUpdateCheckData, PostSystemUpdateCheckErrors, PostSystemUpdateCheckResponses, PostSystemUpdateRecoverData, PostSystemUpdateRecoverErrors, PostSystemUpdateRecoverResponses, PostSystemUpdateStageData, PostSystemUpdateStageErrors, PostSystemUpdateStageResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -148,6 +148,36 @@ export const getSystemInfo = <ThrowOnError extends boolean = false>(options?: Op
 });
 
 /**
+ * Read update operation status
+ */
+export const getSystemUpdateApply = <ThrowOnError extends boolean = false>(options?: Options<GetSystemUpdateApplyData, ThrowOnError>): RequestResult<GetSystemUpdateApplyResponses, GetSystemUpdateApplyErrors, ThrowOnError> => (options?.client ?? client).get<GetSystemUpdateApplyResponses, GetSystemUpdateApplyErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/system/update/apply',
+    ...options
+});
+
+/**
+ * Activate a verified release
+ */
+export const postSystemUpdateApply = <ThrowOnError extends boolean = false>(options: Options<PostSystemUpdateApplyData, ThrowOnError>): RequestResult<PostSystemUpdateApplyResponses, PostSystemUpdateApplyErrors, ThrowOnError> => (options.client ?? client).post<PostSystemUpdateApplyResponses, PostSystemUpdateApplyErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/system/update/apply',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Check for a newer stable release
  */
 export const postSystemUpdateCheck = <ThrowOnError extends boolean = false>(options: Options<PostSystemUpdateCheckData, ThrowOnError>): RequestResult<PostSystemUpdateCheckResponses, PostSystemUpdateCheckErrors, ThrowOnError> => (options.client ?? client).post<PostSystemUpdateCheckResponses, PostSystemUpdateCheckErrors, ThrowOnError>({
@@ -162,6 +192,19 @@ export const postSystemUpdateCheck = <ThrowOnError extends boolean = false>(opti
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Retry update recovery
+ */
+export const postSystemUpdateRecover = <ThrowOnError extends boolean = false>(options?: Options<PostSystemUpdateRecoverData, ThrowOnError>): RequestResult<PostSystemUpdateRecoverResponses, PostSystemUpdateRecoverErrors, ThrowOnError> => (options?.client ?? client).post<PostSystemUpdateRecoverResponses, PostSystemUpdateRecoverErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/system/update/recover',
+    ...options
 });
 
 /**

@@ -152,7 +152,7 @@ install() {
   # OpenWrt runs uci-defaults only at boot; run it now. It deletes itself on success.
   defaults=/etc/uci-defaults/90-$NAME
   if [ -e "$defaults" ]; then
-    sh "$defaults" || die "$defaults failed"
+    sh "$defaults" 9>&- || die "$defaults failed"
     rm -f "$defaults"
   fi
   if [ "$first_install" = 1 ] && [ ! -e /etc/rc.d/S99$NAME ] &&
@@ -167,7 +167,7 @@ install() {
   fi
 
   # restart, not start: an older binary may be running
-  /etc/init.d/$NAME restart || die "/etc/init.d/$NAME restart failed"
+  /etc/init.d/$NAME restart 9>&- || die "/etc/init.d/$NAME restart failed"
   if ! wait_healthy "$version"; then
     echo "install.sh: $NAME $version did not answer on /api/health within 30 s; files stay installed. Last log lines:" >&2
     logread -e "$NAME" | tail -20 >&2
@@ -184,7 +184,7 @@ uninstall() {
   uninstall_port80
   # A subsequent --purge has no init script and only removes retained state.
   if [ -x /etc/init.d/$NAME ]; then
-    /etc/init.d/$NAME disable || true
+    /etc/init.d/$NAME disable 9>&- || true
   fi
   while IFS= read -r path; do
     # Only paths this package can own, and only files: a tampered manifest cannot reach others.
@@ -212,6 +212,7 @@ uninstall() {
       dir=$(dirname "$dir")
     done
   done <"$manifest"
+  rm -rf "$STATE_DIR/update-operation"
   rm -f /etc/rc.d/S99$NAME /etc/rc.d/K10$NAME
   rmdir /www/$NAME 2>/dev/null || true
   if [ "$purge" = 1 ]; then
@@ -246,5 +247,12 @@ done
 [ "$mode" = install ] || { [ "$insecure" = 0 ] && [ "$rotate" = 0 ] && [ -z "$alternate_port" ]; } || usage
 
 [ "$(id -u)" = 0 ] || die "must run as root"
+mkdir -p /var/lock
+exec 9>>/var/lock/travo-greenfield-update.lock
+flock -n -x 9 || die "update or installation already in progress"
+update_guard=/etc/travo-greenfield-guards/update-in-progress
+if [ -e "$update_guard" ] || [ -L "$update_guard" ]; then
+  die "update recovery required: run /usr/bin/travo-greenfield --recover-update (or the saved recovery executable)"
+fi
 here=$(cd "$(dirname "$0")" && pwd)
 "$mode"

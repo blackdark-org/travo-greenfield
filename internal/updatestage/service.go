@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sync"
 	"time"
@@ -180,4 +181,15 @@ func (s *Service) Close() error {
 	err := errors.Join(s.cleanRetired(), s.lock.Close())
 	s.lock = nil
 	return err
+}
+
+// WithVerified holds the stage lease while fn consumes a private copy of its
+// payload. The stage path belongs to this service and cannot outlive fn.
+func (s *Service) WithVerified(version string, fn func(string) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed || s.ctx.Err() != nil || s.active == nil || s.active.version != version || !s.now().Before(s.active.expires) {
+		return ErrChanged
+	}
+	return fn(filepath.Join(s.active.dir, "payload"))
 }

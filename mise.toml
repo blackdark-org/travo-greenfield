@@ -79,6 +79,10 @@ go run ./cmd/mkpkg -out "dist/travo-greenfield-$VERSION-aarch64.tar.gz" -version
   ${PUBKEY:+-pubkey "$PUBKEY"}
 '''
 
+[tasks."test:update"]
+description = "Apply and recover signed update payloads in a booted OpenWrt container"
+run = "scripts/test-update.sh"
+
 [tasks."test:package"]
 description = "Install, reboot, uninstall the release tarball in a booted OpenWrt container (needs Docker)"
 run = "scripts/test-package.sh"

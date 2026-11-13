@@ -22,11 +22,14 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/auth/epochfile"
 	"github.com/blackdark-org/travo-greenfield/internal/connectivity"
 	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device/cli"
+	"github.com/blackdark-org/travo-greenfield/internal/guard"
 	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
 	"github.com/blackdark-org/travo-greenfield/internal/static"
 	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/updateapply"
 	"github.com/blackdark-org/travo-greenfield/internal/updatecheck"
 	"github.com/blackdark-org/travo-greenfield/internal/updatestage"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
@@ -40,7 +43,17 @@ func main() {
 	hostAllow := flag.String("host-allow", "", "comma-separated extra Host names accepted (DNS-rebinding guard)")
 	staticDir := flag.String("static-dir", "/www/travo-greenfield", "directory with the built web UI")
 	releaseSource := flag.String("release-source", updatecheck.DefaultSource, "GitHub release source OWNER/REPO or off")
+	worker := flag.Bool("update-worker", false, "internal detached update worker")
+	awaitAck := flag.Bool("update-await-ack", false, "internal worker activation handshake")
+	recoverUpdate := flag.Bool("recover-update", false, "recover an interrupted update locally")
 	flag.Parse()
+	if *worker || *recoverUpdate {
+		if err := runUpdateCommand(*worker, *awaitAck); err != nil {
+			slog.Error("update recovery", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
 	dir := *staticDir
 	if *useMock && !flagGiven("static-dir") {
 		dir = "web/dist"
@@ -49,6 +62,18 @@ func main() {
 		slog.Error("startup", "err", err)
 		os.Exit(1)
 	}
+}
+
+func runUpdateCommand(worker, awaitAck bool) error {
+	if os.Geteuid() != 0 || runtime.GOOS != "linux" || runtime.GOARCH != "arm64" {
+		return updateapply.ErrUnavailable
+	}
+	paths := app.RealPaths()
+	svc := updateapply.New(guard.Dir{Path: paths.Guards, Now: time.Now}, cli.New(), nil, version.Version)
+	if worker {
+		return svc.Work(awaitAck)
+	}
+	return svc.RecoverLocal()
 }
 
 func flagGiven(name string) bool {
@@ -134,12 +159,14 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 	}
 	updates := updatecheck.New(ctx, releaseSource, version.Version, filepath.Join(deps.Paths.State, "update-check.json"), clock.Now, http.DefaultTransport)
 	var updateStage api.UpdateStager
+	var stageLease updateapply.Stage
 	if verifier, ok := deps.Device.(device.ReleaseVerifier); ok && runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && os.Geteuid() == 0 && releaseSource != "off" {
 		stage, err := updatestage.Open(ctx, updatestage.Root, releaseSource, packaging.UpdatePublicKey, updatestage.ReleaseClient(), verifier, updates.EligibleVersion, clock.Now)
 		if err != nil {
 			slog.Warn("release staging unavailable", "err", err)
 		} else {
 			updateStage = stage
+			stageLease = stage
 			defer func() {
 				if err := stage.Close(); err != nil {
 					slog.Warn("release staging cleanup", "err", err)
@@ -148,7 +175,16 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 			workers.Go("release-stage-expiry", lifecycle.Every(time.Minute, func(context.Context) { stage.Sweep() }))
 		}
 	}
+	var updater api.UpdateApplier
+	if router, ok := deps.Device.(updateapply.Router); ok && !useMock && runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && os.Geteuid() == 0 {
+		svc := updateapply.New(deps.Guards, router, stageLease, version.Version)
+		updater = svc
+		if _, err := svc.Recover(); err != nil && !errors.Is(err, updateapply.ErrBusy) {
+			slog.Warn("update recovery", "err", err)
+		}
+	}
 	h, _ := api.New(api.Deps{
+		UpdateApply:  updater,
 		UpdateStage:  updateStage,
 		Backup:       backup,
 		Updates:      updates,

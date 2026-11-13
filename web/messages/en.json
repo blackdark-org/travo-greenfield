@@ -99,5 +99,15 @@
   "update_verify": "Verify package",
   "update_verifying": "Verifying release package…",
   "update_verified": "Package {version} verified.",
-  "update_verify_failed": "Could not verify the release package."
+  "update_verify_failed": "Could not verify the release package.",
+  "update_apply": "Apply update",
+  "update_cancel": "Cancel",
+  "update_confirm": "Install version {version}? The interface will briefly disconnect.",
+  "update_applying": "Installing update. Sign in again if prompted after restart.",
+  "update_succeeded": "Version {version} installed.",
+  "update_rolled_back": "Update failed. The previous version was restored.",
+  "update_aborted": "Update stopped before installation began.",
+  "update_recovery_required": "The router update needs recovery.",
+  "update_apply_failed": "Could not start the update operation.",
+  "update_retry_recovery": "Retry recovery"
 }
