@@ -6,7 +6,7 @@ import { launchChrome } from './cdp.mjs';
 
 const BASE_URL = process.env.SCREENSHOT_URL ?? `http://localhost:${process.env.WEB_PORT ?? 18092}`;
 // Login and setup are only reachable signed out; the rest needs the session (see main).
-const SIGNED_IN_ROUTES = ['/', '/system'];
+const SIGNED_IN_ROUTES = ['/', '/system', '/vpn'];
 const MOCK_PASSWORD = 'mock-password';
 const VIEWPORTS = [
   { width: 390, height: 844, mobile: true },
@@ -66,6 +66,44 @@ async function signIn(chrome) {
   throw new Error('could not sign in to the mock daemon');
 }
 
+function fakeVpnStatus(state) {
+  const status = {
+    state,
+    stale: false,
+    observed_at: '2026-11-13T22:47:16Z',
+    handshake_age_seconds: state === 'connected' ? 14 : null,
+  };
+  return `(() => {
+    const real = window.fetch;
+    window.fetch = (input, init) => {
+      const url = new URL(typeof input === 'string' ? input : input.url, location.href);
+      if (url.pathname === '/api/v1/vpn/status') {
+        return Promise.resolve(Response.json(${JSON.stringify(status)}));
+      }
+      return real(input, init);
+    };
+  })()`;
+}
+
+// The mock device has no network config and therefore covers disabled through the real daemon.
+// Render the other states locally by stubbing only their status response; no router is involved.
+async function shootVpnStates(chrome) {
+  for (const state of ['configured', 'enabled_not_up', 'no_handshake', 'connected']) {
+    const { identifier } = await chrome.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: fakeVpnStatus(state),
+    });
+    for (const vp of VIEWPORTS) {
+      for (const scheme of SCHEMES) {
+        await chrome.open(`${BASE_URL}/#/vpn`, { ...vp, scheme });
+        const out = `${OUT_DIR}vpn-${state}-${vp.width}-${scheme}.png`;
+        await chrome.screenshot(out);
+        console.log(`wrote ${out}`);
+      }
+    }
+    await chrome.send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
+  }
+}
+
 async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
   const chrome = await launchChrome();
@@ -78,6 +116,7 @@ async function main() {
     await chrome.send('Page.removeScriptToEvaluateOnNewDocument', { identifier });
     await signIn(chrome);
     await shootAll(chrome, SIGNED_IN_ROUTES);
+    await shootVpnStates(chrome);
   } finally {
     chrome.close();
   }

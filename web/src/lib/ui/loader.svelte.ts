@@ -4,9 +4,10 @@ export type LoadStatus =
   | { state: 'ready' };
 
 /** Runs `fn`, tracking loading/error/data. A rejection is an error state, never "no data". */
-export function createLoader<T>(fn: (signal?: AbortSignal) => Promise<T>) {
+export function createLoader<T>(fn: (signal?: AbortSignal) => Promise<T>, interval?: number) {
   let status = $state<LoadStatus>({ state: 'loading' });
   let data = $state<T>();
+  const timer = interval === undefined ? undefined : setInterval(() => void run(), interval);
 
   // Only the latest run may write state: a slow earlier attempt must not overwrite a retry.
   let latest = 0;
@@ -35,5 +36,6 @@ export function createLoader<T>(fn: (signal?: AbortSignal) => Promise<T>) {
       return data;
     },
     retry: () => run(),
+    stop: () => clearInterval(timer),
   };
 }

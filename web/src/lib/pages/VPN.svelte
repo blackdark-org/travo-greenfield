@@ -2,12 +2,16 @@
 import { onDestroy } from 'svelte';
 import '../api/client';
 import { deleteVpnProfile, getVpnProfiles, postVpnProfile, selectVpnProfile } from '../api/gen';
+import { fetchVpnStatus } from '../api/vpn-status';
+import { formatUptime } from '../format';
 import { m } from '../paraglide/messages.js';
 import Card from '../ui/Card.svelte';
 import LoadState from '../ui/LoadState.svelte';
 import { createLoader } from '../ui/loader.svelte';
+import Status from '../ui/Status.svelte';
 
 const request = new AbortController();
+const status = createLoader(fetchVpnStatus, 10000);
 const profiles = createLoader(async () => {
   const result = await getVpnProfiles({ signal: request.signal });
   if (!result.data) throw new Error(m.vpn_unavailable());
@@ -19,6 +23,7 @@ let pending = $state(false);
 let error = $state('');
 let removing = $state<string>();
 onDestroy(() => {
+  status.stop();
   request.abort();
   config = '';
 });
@@ -58,9 +63,33 @@ async function change(action: 'import' | 'select' | 'delete', id = '') {
     if (!request.signal.aborted) pending = false;
   }
 }
+
+const tunnelStates = {
+  disabled: { kind: 'neutral', label: m.vpn_state_disabled },
+  configured: { kind: 'info', label: m.vpn_state_configured },
+  enabled_not_up: { kind: 'warn', label: m.vpn_state_enabled_not_up },
+  no_handshake: { kind: 'warn', label: m.vpn_state_no_handshake },
+  connected: { kind: 'ok', label: m.vpn_state_connected },
+} as const;
 </script>
 
 <div class="grid gap-4">
+  <Card title={m.vpn_tunnel()}>
+    <LoadState status={status.status} retry={status.retry} stale={status.data !== undefined}>
+      {#if status.data}
+        {@const snapshot = status.data}
+        {@const badge = tunnelStates[snapshot.state]}
+        <div class="flex flex-wrap items-center gap-2">
+          <Status kind={badge.kind}>{badge.label()}</Status>
+          {#if snapshot.stale}<Status kind="stale">{m.load_stale()}</Status>{/if}
+        </div>
+        {#if snapshot.handshake_age_seconds !== null}
+          <p class="mt-2 text-muted">{m.vpn_handshake_age({ age: formatUptime(snapshot.handshake_age_seconds) })}</p>
+        {/if}
+      {/if}
+    </LoadState>
+  </Card>
+
   <Card title={m.vpn_saved_profiles()}>
     <LoadState status={profiles.status} retry={profiles.retry}>
       {#if profiles.data}
