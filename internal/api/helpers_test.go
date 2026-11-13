@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/blackdark-org/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
@@ -105,13 +106,18 @@ const pendingTxn = "0123456789abcdef"
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
+	return newEnvWithBackup(t, nil)
+}
+
+func newEnvWithBackup(t *testing.T, backup device.ConfigBackupper) *env {
+	t.Helper()
 	dev := mock.New()
 	dev.SetPassword(rootPW)
 	e := &env{t: t, dev: dev, acc: &accounts{Device: dev}, clock: &fakeClock{t: time.Now()}}
 	e.store = auth.NewStore(zeroEntropy())
 	lan := []netip.Prefix{netip.MustParsePrefix("192.168.1.0/24")}
 	e.h, e.api = New(Deps{
-		Version: "1.2.3", Accounts: e.acc, Ubus: dev,
+		Version: "1.2.3", Accounts: e.acc, Ubus: dev, Backup: backup,
 		Txns: fakeTxns{map[string]txn.Status{
 			pendingTxn:         {Meta: txn.Meta{ID: pendingTxn, Summary: "wifi", WindowSeconds: 60}, State: txn.Pending},
 			"fedcba9876543210": {Meta: txn.Meta{ID: "fedcba9876543210"}, State: txn.Confirmed},

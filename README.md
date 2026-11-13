@@ -20,6 +20,8 @@ The UI answers on `http://<router>/` by default, and LuCI moves to ports 8080 an
 
 The dashboard shows one-minute CPU load, memory use, uptime, and the running version. Use **Refresh** to update the resource summary.
 
+Use **System → Download backup** to save the router configuration as `travo-config.tar.gz`.
+
 ## Docs
 
 - [Spec](docs/spec.md) · [Invariants](docs/invariants.md) · Plan: [milestone 0.1.0](https://github.com/blackdark-org/travo-greenfield/milestone/1) and [project board](https://github.com/orgs/blackdark-org/projects/1)

@@ -28,6 +28,7 @@ type Deps struct {
 	Accounts device.Accounts
 	// Ubus feeds read-only system facts; nil answers 503 device_unavailable.
 	Ubus     device.Ubus
+	Backup   device.ConfigBackupper
 	Txns     Txns
 	Sessions *auth.Store
 	Limiter  *auth.RateLimiter
@@ -97,6 +98,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerSetup(a)
 	s.registerTxn(a)
 	s.registerSystem(a)
+	s.registerBackup(a)
 	if d.UI != nil {
 		mux.Handle("/", d.UI)
 	}

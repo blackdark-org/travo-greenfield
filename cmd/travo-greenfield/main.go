@@ -18,6 +18,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/app"
 	"github.com/blackdark-org/travo-greenfield/internal/auth"
 	"github.com/blackdark-org/travo-greenfield/internal/auth/epochfile"
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
 	"github.com/blackdark-org/travo-greenfield/internal/static"
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
@@ -104,7 +105,9 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir stri
 		}
 	}))
 
+	backup, _ := deps.Device.(device.ConfigBackupper)
 	h, _ := api.New(api.Deps{
+		Backup:  backup,
 		Version: version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
 		Trusted:   provider.Allowed,
