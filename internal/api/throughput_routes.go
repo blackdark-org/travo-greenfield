@@ -9,10 +9,12 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 )
 
+type throughputBody struct {
+	Interfaces []throughput.Rate `json:"interfaces" nullable:"false"`
+}
+
 type throughputOutput struct {
-	Body struct {
-		Interfaces []throughput.Rate `json:"interfaces" nullable:"false"`
-	}
+	Body throughputBody
 }
 
 func (s *server) registerThroughput(a huma.API) {
