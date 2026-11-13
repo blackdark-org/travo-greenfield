@@ -54,6 +54,12 @@ type WireGuardReader interface {
 	LatestHandshakes(ctx context.Context, iface string) ([]PeerHandshake, error)
 }
 
+// WirelessScanner runs `ubus call iwinfo scan {"device":name}` under its own timeout tier.
+// name is a netdev ("phy1-ap0") or a radio name ("radio0"). Read-only (device-facts §2).
+type WirelessScanner interface {
+	ScanWireless(ctx context.Context, name string) (json.RawMessage, error)
+}
+
 // Routes reads the KERNEL table. netifd status is not a source for route truth.
 type IPv4DefaultRoute struct {
 	Device  string

@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/netip"
+	"reflect"
 	"sync"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -18,6 +19,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnstatus"
+	"github.com/blackdark-org/travo-greenfield/internal/wifi"
 )
 
 // Txns is the slice of txn.Manager the API needs.
@@ -40,6 +42,12 @@ type VPNStatusReader interface {
 	Status(context.Context) (vpnstatus.TunnelStatus, error)
 }
 
+// WiFiService is the read-only wireless summary and site-survey service.
+type WiFiService interface {
+	Summary(context.Context) (wifi.Summary, error)
+	Scan(context.Context) (wifi.ScanResult, error)
+}
+
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
 	VPNProfiles *vpnprofiles.Service
@@ -56,6 +64,7 @@ type Deps struct {
 	Backup       device.ConfigBackupper
 	Throughput   ThroughputReader
 	Connectivity ConnectivityReader
+	WiFi         WiFiService
 	Txns         Txns
 	Sessions     *auth.Store
 	Limiter      *auth.RateLimiter
@@ -107,6 +116,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	cfg.DocsPath = ""
 	cfg.SchemasPath = ""
 	cfg.CreateHooks = nil // no  links: that route does not exist
+	cfg.Components.Schemas = huma.NewMapRegistry("#/components/schemas/", schemaNamer)
 	cfg.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
 		"cookieAuth": {Type: "apiKey", In: "cookie", Name: cookieName},
 	}
@@ -134,11 +144,24 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerBackup(a)
 	s.registerThroughput(a)
 	s.registerConnectivity(a)
+	s.registerWiFi(a)
 	s.registerDashboardEvents(a)
 	if d.UI != nil {
 		mux.Handle("/", d.UI)
 	}
 	return s.outer(mux), a
+}
+
+// schemaNamer disambiguates the WiFi summary from the VPN profile Summary model.
+func schemaNamer(t reflect.Type, hint string) string {
+	name := huma.DefaultSchemaNamer(t, hint)
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	if t.PkgPath() == "github.com/blackdark-org/travo-greenfield/internal/wifi" && t.Name() == "Summary" {
+		return "WiFi" + name
+	}
+	return name
 }
 
 // op builds an Operation with the documented extra error statuses.

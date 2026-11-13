@@ -23,6 +23,7 @@ type Device struct {
 	committed    map[string]*config
 	staged       map[string]*config
 	ubus         map[string]json.RawMessage
+	scanReplies  map[string]json.RawMessage
 	DefaultRoute bool
 	// AccountsErr makes every Accounts call fail (shadow unreadable).
 	AccountsErr  error
@@ -31,7 +32,7 @@ type Device struct {
 }
 
 func New() *Device {
-	return &Device{committed: map[string]*config{}, staged: map[string]*config{}, ubus: map[string]json.RawMessage{}}
+	return &Device{committed: map[string]*config{}, staged: map[string]*config{}, ubus: map[string]json.RawMessage{}, scanReplies: map[string]json.RawMessage{}}
 }
 
 // SetUbusReply scripts the reply for object.method (use verbatim captured payloads).

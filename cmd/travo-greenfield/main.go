@@ -35,6 +35,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/version"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnstatus"
+	"github.com/blackdark-org/travo-greenfield/internal/wifi"
 	"github.com/blackdark-org/travo-greenfield/packaging"
 )
 
@@ -164,6 +165,10 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 			return time.Since(statusStart)
 		})
 	}
+	var wireless api.WiFiService
+	if scanner, ok := deps.Device.(device.WirelessScanner); ok {
+		wireless = wifi.New(ctx, deps.Device, scanner)
+	}
 	if useMock {
 		releaseSource = "off"
 	}
@@ -202,6 +207,7 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 		Backup:        backup,
 		Updates:       updates,
 		Connectivity:  connection,
+		WiFi:          wireless,
 		Throughput:    sampler,
 		Version:       version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
