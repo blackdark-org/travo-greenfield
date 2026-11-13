@@ -1,4 +1,5 @@
 <script lang="ts">
+import { fetchConnectivity } from '../api/connectivity';
 import { fetchHealth } from '../api/health';
 import { fetchSystemInfo } from '../api/system';
 import { fetchThroughput } from '../api/throughput';
@@ -9,9 +10,17 @@ import LoadState from '../ui/LoadState.svelte';
 import { createLoader } from '../ui/loader.svelte';
 import Status from '../ui/Status.svelte';
 
+const connectivity = createLoader(fetchConnectivity);
 const health = createLoader(fetchHealth);
 const resources = createLoader(fetchSystemInfo);
 const throughput = createLoader(fetchThroughput, 2000);
+
+const internetStatus = {
+  online: { kind: 'ok', label: m.dashboard_internet_online },
+  offline: { kind: 'danger', label: m.dashboard_internet_offline },
+  captive: { kind: 'warn', label: m.dashboard_internet_captive },
+  unknown: { kind: 'neutral', label: m.dashboard_connectivity_unknown },
+} as const;
 
 function formatRate(rate: number | null): string {
   if (rate === null) return m.dashboard_rate_unknown();
@@ -21,6 +30,39 @@ function formatRate(rate: number | null): string {
 </script>
 
 <div class="flex flex-col gap-4">
+  <Card title={m.dashboard_connectivity()}>
+    <LoadState status={connectivity.status} retry={connectivity.retry} stale={connectivity.data !== undefined}>
+      {#if connectivity.data}
+        {@const info = connectivity.data}
+        {@const internet = internetStatus[info.internet]}
+        <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+          <dt class="text-muted">{m.dashboard_active_uplink()}</dt>
+          <dd class="break-all">{info.active_interface ?? m.dashboard_connectivity_unknown()}</dd>
+          <dt class="text-muted">{m.dashboard_carrier()}</dt>
+          <dd>
+            {#if info.carrier === null}
+              <Status kind="neutral">{m.dashboard_connectivity_unknown()}</Status>
+            {:else if info.carrier}
+              <Status kind="ok">{m.dashboard_carrier_up()}</Status>
+            {:else}
+              <Status kind="danger">{m.dashboard_carrier_down()}</Status>
+            {/if}
+          </dd>
+          <dt class="text-muted">{m.dashboard_internet()}</dt>
+          <dd><Status kind={internet.kind}>{internet.label()}</Status></dd>
+        </dl>
+        {#if connectivity.status.state === 'ready'}
+          <button
+            type="button"
+            class="mt-3 rounded-md border border-border px-3 py-1 text-sm hover:bg-bg"
+            onclick={connectivity.retry}
+          >
+            {m.dashboard_refresh()}
+          </button>
+        {/if}
+      {/if}
+    </LoadState>
+  </Card>
   <Card title={m.dashboard_daemon()}>
     <LoadState status={health.status} retry={health.retry}>
       <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">

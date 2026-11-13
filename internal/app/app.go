@@ -68,6 +68,7 @@ func New(o Options) (Deps, error) {
 	if o.Mock {
 		dev := mock.New()
 		mock.SeedSystem(dev)
+		mock.SeedConnectivity(dev)
 		if o.FirstRun {
 			dev.SetPassword("")
 		}

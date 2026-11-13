@@ -130,7 +130,7 @@ dnsmasq on :53 is the single DNS authority. Features that change DNS push/pop a 
 ## 12. Captive portal
 
 - Detection: HTTP probe to a known 204 endpoint + redirect inspection.
-- Probe skipped when no default route (instant offline). Concurrent callers share one probe; cache ~2 s; a DNS change invalidates the cache.
+- Probe skipped when no default route (instant offline). Concurrent callers share one probe; cache ~2 s; a DNS change invalidates the cache. DNS-layer composition wires `dnslayer.Service.AfterApply` to the shared connectivity service's `Invalidate`, including when an apply fails after changing live DNS.
 - Auto-accept (post-0.1) walks portal steps. Only step 0 may renew the wwan DHCP lease, only when wwan is the active uplink, guarded, bounded waits.
 - Warning card only when an action exists (login, DNS bypass active, connected-but-no-internet).
 

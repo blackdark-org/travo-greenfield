@@ -89,6 +89,12 @@ export type SetupInputBody = {
     password: string;
 };
 
+export type Status = {
+    active_interface: string | null;
+    carrier: boolean | null;
+    internet: 'online' | 'offline' | 'captive' | 'unknown';
+};
+
 export type SystemInfoBody = {
     app: AppBody;
     board_name: string;
@@ -297,6 +303,31 @@ export type GetSessionResponses = {
 };
 
 export type GetSessionResponse = GetSessionResponses[keyof GetSessionResponses];
+
+export type GetDashboardConnectivityData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dashboard/connectivity';
+};
+
+export type GetDashboardConnectivityErrors = {
+    /**
+     * Error
+     */
+    default: ApiError;
+};
+
+export type GetDashboardConnectivityError = GetDashboardConnectivityErrors[keyof GetDashboardConnectivityErrors];
+
+export type GetDashboardConnectivityResponses = {
+    /**
+     * OK
+     */
+    200: Status;
+};
+
+export type GetDashboardConnectivityResponse = GetDashboardConnectivityResponses[keyof GetDashboardConnectivityResponses];
 
 export type GetDashboardThroughputData = {
     body?: never;

@@ -42,6 +42,18 @@ type Ubus interface {
 }
 
 // Routes reads the KERNEL table. netifd status is not a source for route truth.
+type IPv4DefaultRoute struct {
+	Device  string
+	Gateway string
+	Source  string
+	Metric  uint64
+}
+
+// DefaultRouteReader returns found=false only when the kernel has no default route.
+type DefaultRouteReader interface {
+	DefaultIPv4Route(context.Context) (route IPv4DefaultRoute, found bool, err error)
+}
+
 type Routes interface {
 	HasDefaultRoute(ctx context.Context) (bool, error)
 }

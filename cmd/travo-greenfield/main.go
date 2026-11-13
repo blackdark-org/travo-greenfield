@@ -18,6 +18,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/app"
 	"github.com/blackdark-org/travo-greenfield/internal/auth"
 	"github.com/blackdark-org/travo-greenfield/internal/auth/epochfile"
+	"github.com/blackdark-org/travo-greenfield/internal/connectivity"
 	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
 	"github.com/blackdark-org/travo-greenfield/internal/static"
@@ -110,11 +111,20 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir stri
 	if counters, ok := deps.Device.(device.InterfaceCounterReader); ok {
 		workers.Go("interface-throughput", func(ctx context.Context) { sampler.Run(ctx, counters, clock.Now) })
 	}
+	var connection api.ConnectivityReader
+	if routes, ok := deps.Device.(device.DefaultRouteReader); ok {
+		probe := connectivity.NewHTTPProbe(connectivity.ProbeURL, 3*time.Second)
+		if deps.Mock {
+			probe = func(context.Context) connectivity.Internet { return connectivity.Online }
+		}
+		connection = connectivity.New(ctx, routes, deps.Device, probe, clock.Now)
+	}
 	backup, _ := deps.Device.(device.ConfigBackupper)
 	h, _ := api.New(api.Deps{
-		Backup:     backup,
-		Throughput: sampler,
-		Version:    version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
+		Backup:       backup,
+		Connectivity: connection,
+		Throughput:   sampler,
+		Version:      version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
 		Trusted:   provider.Allowed,
 		RouterIPs: provider.RouterIPs, HostAllow: hostAllow,
