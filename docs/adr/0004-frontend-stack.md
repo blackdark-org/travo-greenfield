@@ -2,7 +2,7 @@
 
 Status: accepted
 
-Svelte 5 + plain Vite static SPA, shadcn-svelte (only used components), hash routing, pre-gzipped assets, `size-limit` budget 50 KB gzip, system font stack, own SVG charts. Follows agent-presets `stack/embedded-ui.md`.
+Svelte 5 + plain Vite static SPA, shadcn-svelte (only used components), hash routing, pre-gzipped assets, split gzip size budgets, system font stack, own SVG charts. Follows agent-presets `stack/embedded-ui.md`.
 
 Deviation from the preset: Paraglide is used with `en` as the only locale for now (preset default kept; English-only is a locale list, not a rewrite). Record in `AGENTS.md`.
 
@@ -14,5 +14,5 @@ Implementation (`web/`):
 - Below `md` the sidebar is a drawer: `inert` when closed, Escape closes, focus moves to Close and back to Menu.
 - Biome overrides for `.svelte` files switch off `noUnusedImports`, `noUnusedVariables`, `useConst` and `useImportType`: Biome only parses the `<script>` block, so it cannot see template usage or runes (`$state`, `$props`) and would flag or rewrite code that is in fact used.
 - Nav groups with collapse state and `GroupHeading` usage arrive with the first real grouped pages; the sidebar is flat until then.
-- Pages are code-split per route (`web/src/lib/pages/lazy.ts`): each chunk loads on first visit behind the `LoadState` skeleton, a failed import shows the error with retry. The size-limit glob covers every emitted chunk.
-- `mise run check` enforces the 50 KB gzip budget after the build.
+- Pages are code-split per route (`web/src/lib/pages/lazy.ts`): each chunk loads on first visit behind the `LoadState` skeleton, a failed import shows the error with retry. The size budget counts `index.html`, its direct references and their transitive static JS imports as the shell; every other JS chunk is checked separately.
+- `mise run check` enforces three budgets on the gzip level 9 `.gz` files written by `web/scripts/gzip-dist.mjs`: shell ≤ 40 KB, each other `.js` chunk ≤ 8 KB, and total `.html/.js/.css/.svg` ≤ 100 KB. The shell limit protects first load over slow hotel WiFi, while the separate route-chunk limit and larger total leave room for page growth. Extra flash for those pages is negligible next to the ~12.8 MB Go binary.

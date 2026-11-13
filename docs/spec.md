@@ -24,7 +24,7 @@ Travel-router web UI and API that runs ON the router, next to stock LuCI. Clean-
 8. **WireGuard**: profile import/list/select/delete through authenticated `/api/v1/vpn/profiles` routes, on/off (≤3 taps), kill switch, split tunnel, 5-state status, DNS verify.
 9. **AdGuard Home (default on)**: installed after the first uplink; dnsmasq `:53` → AGH `127.0.0.1:5353`; on/off and "default DNS" toggle in Travo; full UI via the Travo-gated port `:3001`. See [adr/0006](adr/0006-adguard-package-and-topology.md).
 10. **System**: info, reboot, authenticated config tarball download (`GET /api/v1/system/backup`), and signed self-update from GitHub releases. System checks the configured release source on demand and at most once per 24 hours on page entry. The running version is shown even when checks are disabled. System can verify and temporarily stage a signed release, apply it after confirmation, and report the outcome after restart. A failed activation restores the previous installation.
-11. **UI**: Svelte 5 SPA, dark mode without flash, English via Paraglide, ≤50 KB gzip.
+11. **UI**: Svelte 5 SPA, dark mode without flash, English via Paraglide, shell ≤ 40 KB gzip, route chunk ≤ 8 KB, total ≤ 100 KB.
 
 ## Out of 0.1 (do not break when adding)
 
