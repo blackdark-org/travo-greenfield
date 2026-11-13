@@ -90,6 +90,77 @@ func TestDashboardEventServiceSharesProducersAndStops(t *testing.T) {
 	}
 }
 
+func TestDashboardEventServiceRestartWaitsForPreviousRead(t *testing.T) {
+	firstStarted := make(chan struct{})
+	releaseFirst := make(chan struct{}, 1)
+	defer close(releaseFirst)
+	secondStarted := make(chan struct{})
+	var calls atomic.Int32
+	svc := newDashboardEventService(context.Background(), 8, []dashboardEventSource{{
+		name: "connectivity", interval: time.Hour,
+		read: func(context.Context) (any, error) {
+			if calls.Add(1) == 1 {
+				close(firstStarted)
+				<-releaseFirst // Simulate a source that unwinds slowly after cancellation.
+				return nil, context.Canceled
+			}
+			close(secondStarted)
+			return "ok", nil
+		},
+	}})
+	first, err := svc.subscribe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-firstStarted:
+	case <-time.After(time.Second):
+		t.Fatal("first producer did not start")
+	}
+	firstRun := svc.currentRun()
+	first.close()
+
+	type subscriptionResult struct {
+		sub *dashboardSubscription
+		err error
+	}
+	subscribed := make(chan subscriptionResult, 1)
+	go func() {
+		sub, err := svc.subscribe()
+		subscribed <- subscriptionResult{sub: sub, err: err}
+	}()
+	var second *dashboardSubscription
+	select {
+	case result := <-subscribed:
+		if result.err != nil {
+			t.Fatal(result.err)
+		}
+		second = result.sub
+	case <-time.After(time.Second):
+		t.Fatal("resubscribe blocked on the previous read")
+	}
+	defer second.close()
+	secondRun := svc.currentRun()
+	select {
+	case <-secondStarted:
+		t.Fatal("replacement producer overlapped the previous read")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	releaseFirst <- struct{}{}
+	waitProducers(t, firstRun)
+	select {
+	case <-secondStarted:
+	case <-time.After(time.Second):
+		t.Fatal("replacement producer did not start after the previous read drained")
+	}
+	if got := calls.Load(); got != 2 {
+		t.Fatalf("read calls = %d, want 2", got)
+	}
+	second.close()
+	waitProducers(t, secondRun)
+}
+
 func TestDashboardEventServicePublishesWithoutSlowSubscriber(t *testing.T) {
 	svc := newDashboardEventService(context.Background(), 8, []dashboardEventSource{{
 		name: "throughput", interval: time.Hour,
