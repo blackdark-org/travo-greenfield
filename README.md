@@ -26,7 +26,7 @@ System can check GitHub for a newer stable release. An automatic attempt occurs 
 
 When System finds a newer release, **Verify package** checks the signed archive and stages it for up to 30 minutes. Verification leaves the installed version running.
 
-Use **VPN** to import a WireGuard configuration, select a saved profile, or delete a profile.
+Use **VPN** to import a WireGuard configuration, select a saved profile, or delete a profile; the page also shows the WireGuard tunnel state.
 
 ## Docs
 

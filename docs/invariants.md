@@ -74,7 +74,14 @@ Paths: guards in `/etc/travo-greenfield-guards/`, state in `/etc/travo-greenfiel
 - Candidate uplinks: `wan`, `wwan` (STA), `usbtether`. Omitting one yields a false "No Internet".
 - "Internet reachable" is a real probe; carrier-only is a separate signal and must not be labelled "Internet". Route checks read the KERNEL table, never netifd status (see device-facts §1).
 - Throughput charts select interfaces by NAME, never index 0 (`br-lan`).
-- Tunnel state has 5 values: disabled / configured / enabled-not-up / no-handshake / connected.
+- Tunnel state has exactly 5 JSON values: `disabled` / `configured` / `enabled_not_up` / `no_handshake` / `connected`. Evaluate these rules in order:
+  1. An absent `network.wg0` WireGuard interface or `disabled=1` means `disabled` without a selected profile, otherwise `configured`. Absent, empty or `0` enables the interface; any other `disabled` value is a read failure.
+  2. For an enabled interface, an absent netifd object or `up=false` means `enabled_not_up`. An absent netifd object is expected for a disabled interface and is not an error.
+  3. If netifd is up but the WireGuard device vanished, the state is `enabled_not_up`.
+  4. With netifd up, no handshake or newest handshake age ≥180 s means `no_handshake`; `0 ≤ age < 180 s` means `connected`. The 180 s threshold is WireGuard's `REJECT_AFTER_TIME` from `drivers/net/wireguard/messages.h`. Negative age is a read failure.
+  - The newest handshake across peers is the evidence; `up:true` alone is not. The kernel default route and `allowed_ips` are not state inputs (split tunnel may omit a default route).
+  - A read failure never becomes `disabled`, `enabled_not_up` or `no_handshake`: keep the last good observation with its original timestamp marked stale for at most 10 minutes, then return 503 `vpn_status_unavailable`.
+  - An idle tunnel without keepalive can legitimately read `no_handshake` even when its configuration is otherwise healthy.
 - WAN zone is resolved by name, never by index.
 - A new zone/forward/interface gets the full firewall surface (zone, masq, forwarding, input/output/forward policy) matching the `wan` pattern.
 - Direct firewall commits outside the apply flow are named exceptions, each with guard + rollback.
