@@ -71,20 +71,28 @@ func (s *dashboardEventService) subscribe() (*dashboardSubscription, error) {
 	}
 	sub := &dashboardSubscription{service: s, wake: make(chan struct{}, 1), slots: make([]pendingDashboardEvent, len(s.sources))}
 	s.subs[sub] = struct{}{}
-	if s.run == nil && len(s.sources) > 0 {
+	if (s.run == nil || s.run.ctx.Err() != nil) && len(s.sources) > 0 {
+		previous := s.run
 		run := &dashboardProducerRun{}
 		run.ctx, run.cancel = context.WithCancel(s.daemon)
 		s.run = run
 		for i, source := range s.sources {
 			run.wg.Add(1)
-			go s.produce(run, i, source)
+			go s.produce(run, previous, i, source)
 		}
 	}
 	return sub, nil
 }
 
-func (s *dashboardEventService) produce(run *dashboardProducerRun, index int, source dashboardEventSource) {
+func (s *dashboardEventService) produce(run, previous *dashboardProducerRun, index int, source dashboardEventSource) {
 	defer run.wg.Done()
+	if previous != nil {
+		// Wait outside the service lock so cancellation and publication stay non-blocking.
+		previous.wg.Wait()
+	}
+	if run.ctx.Err() != nil {
+		return
+	}
 	ticker := time.NewTicker(source.interval)
 	defer ticker.Stop()
 	for {
@@ -131,8 +139,8 @@ func (s *dashboardEventService) unsubscribe(sub *dashboardSubscription) {
 	sub.closed = true
 	delete(s.subs, sub)
 	if len(s.subs) == 0 && s.run != nil {
+		// Keep the canceled run as the drain barrier for the next first subscriber.
 		s.run.cancel()
-		s.run = nil
 	}
 }
 
