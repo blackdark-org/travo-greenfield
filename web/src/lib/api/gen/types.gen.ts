@@ -96,6 +96,15 @@ export type SetupInputBody = {
     password: string;
 };
 
+export type StageInputBody = {
+    version: string;
+};
+
+export type StageStatus = {
+    status: 'idle' | 'verifying' | 'verified';
+    version: string | null;
+};
+
 export type Status = {
     active_interface: string | null;
     carrier: boolean | null;
@@ -525,6 +534,76 @@ export type PostSystemUpdateCheckResponses = {
 };
 
 export type PostSystemUpdateCheckResponse = PostSystemUpdateCheckResponses[keyof PostSystemUpdateCheckResponses];
+
+export type GetSystemUpdateStageData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/update/stage';
+};
+
+export type GetSystemUpdateStageErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetSystemUpdateStageError = GetSystemUpdateStageErrors[keyof GetSystemUpdateStageErrors];
+
+export type GetSystemUpdateStageResponses = {
+    /**
+     * OK
+     */
+    200: StageStatus;
+};
+
+export type GetSystemUpdateStageResponse = GetSystemUpdateStageResponses[keyof GetSystemUpdateStageResponses];
+
+export type PostSystemUpdateStageData = {
+    body: StageInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/update/stage';
+};
+
+export type PostSystemUpdateStageErrors = {
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Bad Gateway
+     */
+    502: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostSystemUpdateStageError = PostSystemUpdateStageErrors[keyof PostSystemUpdateStageErrors];
+
+export type PostSystemUpdateStageResponses = {
+    /**
+     * OK
+     */
+    200: StageStatus;
+};
+
+export type PostSystemUpdateStageResponse = PostSystemUpdateStageResponses[keyof PostSystemUpdateStageResponses];
 
 export type GetTransactionData = {
     body?: never;

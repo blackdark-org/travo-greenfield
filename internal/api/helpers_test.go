@@ -119,14 +119,14 @@ func newEnvWithDevices(t *testing.T, backup device.ConfigBackupper, throughput T
 	return newEnvWithDashboard(t, backup, throughput, nil)
 }
 
-func newEnvWithDashboard(t *testing.T, backup device.ConfigBackupper, throughput ThroughputReader, connectivity ConnectivityReader) *env {
+func newEnvWithDashboard(t *testing.T, backup device.ConfigBackupper, throughput ThroughputReader, connectivity ConnectivityReader, configure ...func(*Deps)) *env {
 	t.Helper()
 	dev := mock.New()
 	dev.SetPassword(rootPW)
 	e := &env{t: t, dev: dev, acc: &accounts{Device: dev}, clock: &fakeClock{t: time.Now()}}
 	e.store = auth.NewStore(zeroEntropy())
 	lan := []netip.Prefix{netip.MustParsePrefix("192.168.1.0/24")}
-	e.h, e.api = New(Deps{
+	deps := Deps{
 		Version: "1.2.3", Accounts: e.acc, Ubus: dev, Backup: backup, Throughput: throughput, Connectivity: connectivity,
 		Txns: fakeTxns{map[string]txn.Status{
 			pendingTxn:         {Meta: txn.Meta{ID: pendingTxn, Summary: "wifi", WindowSeconds: 60}, State: txn.Pending},
@@ -142,7 +142,11 @@ func newEnvWithDashboard(t *testing.T, backup device.ConfigBackupper, throughput
 			e.epoch = append(e.epoch, n)
 			return nil
 		},
-	})
+	}
+	for _, fn := range configure {
+		fn(&deps)
+	}
+	e.h, e.api = New(deps)
 	return e
 }
 

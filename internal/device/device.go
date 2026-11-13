@@ -97,3 +97,8 @@ type InterfaceCounters struct {
 type InterfaceCounterReader interface {
 	ReadInterfaceCounters(context.Context) (map[string]InterfaceCounters, error)
 }
+
+// ReleaseVerifier verifies a detached release manifest with the given public key.
+type ReleaseVerifier interface {
+	VerifyRelease(ctx context.Context, manifest, signature, key string) error
+}

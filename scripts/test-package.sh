@@ -76,6 +76,19 @@ for d in tg:pkg tg-nosig:pkg-nosig tg-tampered:pkg-tampered tg-wrongsig:pkg-wron
   docker cp "$tmp/${d##*:}/." "$NAME:/tmp/${d%%:*}/"
 done
 
+step "verify the release package through the updater adapter"
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go test -tags integration -c -o "$tmp/stage.test" ./internal/updatestage
+dx 'mkdir /tmp/stage-fixture'
+docker cp "$tmp/stage.test" "$NAME:/tmp/stage.test"
+docker cp "$tarball" "$NAME:/tmp/stage-fixture/release.tar.gz"
+for f in checksums.txt checksums.txt.sig minisign.pub; do
+  docker cp "$tmp/pkg/$f" "$NAME:/tmp/stage-fixture/$f"
+done
+docker cp "$tmp/pkg-wrongsig/checksums.txt.sig" "$NAME:/tmp/stage-fixture/bad.sig"
+docker exec -e TRAVO_STAGE_PACKAGE_FIXTURE=/tmp/stage-fixture -e TRAVO_STAGE_PACKAGE_VERSION="$VERSION" \
+  "$NAME" /tmp/stage.test -test.run '^TestRealReleasePackage$' -test.v
+dx 'rm -r /tmp/stage-fixture /tmp/stage.test'
+
 step "refusals before the real install"
 dx 'cp /etc/openwrt_release /tmp/openwrt_release.real'
 out=$(dx "sed -i \"s/^DISTRIB_RELEASE=.*/DISTRIB_RELEASE='24.10.8'/\" /etc/openwrt_release; sh /tmp/tg/install.sh 2>&1; echo rc=\$?")

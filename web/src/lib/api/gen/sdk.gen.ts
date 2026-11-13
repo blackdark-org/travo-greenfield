@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetDashboardConnectivityData, GetDashboardConnectivityErrors, GetDashboardConnectivityResponses, GetDashboardThroughputData, GetDashboardThroughputErrors, GetDashboardThroughputResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemBackupData, GetSystemBackupErrors, GetSystemBackupResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, PostSystemUpdateCheckData, PostSystemUpdateCheckErrors, PostSystemUpdateCheckResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
+import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, GetDashboardConnectivityData, GetDashboardConnectivityErrors, GetDashboardConnectivityResponses, GetDashboardThroughputData, GetDashboardThroughputErrors, GetDashboardThroughputResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemBackupData, GetSystemBackupErrors, GetSystemBackupResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetSystemUpdateStageData, GetSystemUpdateStageErrors, GetSystemUpdateStageResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, PostSystemUpdateCheckData, PostSystemUpdateCheckErrors, PostSystemUpdateCheckResponses, PostSystemUpdateStageData, PostSystemUpdateStageErrors, PostSystemUpdateStageResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -157,6 +157,36 @@ export const postSystemUpdateCheck = <ThrowOnError extends boolean = false>(opti
             type: 'apiKey'
         }],
     url: '/api/v1/system/update/check',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Read release verification status
+ */
+export const getSystemUpdateStage = <ThrowOnError extends boolean = false>(options?: Options<GetSystemUpdateStageData, ThrowOnError>): RequestResult<GetSystemUpdateStageResponses, GetSystemUpdateStageErrors, ThrowOnError> => (options?.client ?? client).get<GetSystemUpdateStageResponses, GetSystemUpdateStageErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/system/update/stage',
+    ...options
+});
+
+/**
+ * Verify and stage a release
+ */
+export const postSystemUpdateStage = <ThrowOnError extends boolean = false>(options: Options<PostSystemUpdateStageData, ThrowOnError>): RequestResult<PostSystemUpdateStageResponses, PostSystemUpdateStageErrors, ThrowOnError> => (options.client ?? client).post<PostSystemUpdateStageResponses, PostSystemUpdateStageErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/system/update/stage',
     ...options,
     headers: {
         'Content-Type': 'application/json',
