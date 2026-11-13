@@ -36,7 +36,6 @@ type Ownership = {
   generation: number;
   controller: AbortController;
   client: Client;
-  active: boolean;
   connected: boolean;
   fallback?: ReturnType<typeof setInterval>;
   retry?: ReturnType<typeof setTimeout>;
@@ -86,7 +85,7 @@ export function createDashboardEvents(options: DashboardEventsOptions = {}) {
   let active: Ownership | undefined;
 
   function isCurrent(owner: Ownership): boolean {
-    return active === owner && owner.active && currentGeneration() === owner.generation;
+    return active === owner && currentGeneration() === owner.generation;
   }
 
   function stopFallback(owner: Ownership): void {
@@ -98,8 +97,6 @@ export function createDashboardEvents(options: DashboardEventsOptions = {}) {
     const owner = active;
     if (!owner || (generation !== undefined && owner.generation !== generation)) return;
     active = undefined;
-    owner.active = false;
-    owner.connected = false;
     owner.controller.abort();
     stopFallback(owner);
     clearTimeout(owner.retry);
@@ -261,7 +258,7 @@ export function createDashboardEvents(options: DashboardEventsOptions = {}) {
   }
 
   function start(generation: number): void {
-    if (active?.generation === generation && active.active) return;
+    if (active?.generation === generation) return;
     stop();
     // A restarted owner has no fresh data yet; retained values are stale until a seed or event arrives.
     for (const source of SOURCE_NAMES) states[source].status = { state: 'loading' };
@@ -269,7 +266,6 @@ export function createDashboardEvents(options: DashboardEventsOptions = {}) {
       generation,
       controller: new AbortController(),
       client: clientFactory(),
-      active: true,
       connected: false,
       inFlight: { connectivity: false, resources: false, throughput: false },
       versions: { connectivity: 0, resources: 0, throughput: 0 },
@@ -295,7 +291,6 @@ export function createDashboardEvents(options: DashboardEventsOptions = {}) {
         states[source].data = undefined;
         states[source].status = { state: 'loading' };
       }
-      streaming = false;
     },
   };
 }

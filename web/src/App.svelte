@@ -10,7 +10,7 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sun from '@lucide/svelte/icons/sun';
 import Wifi from '@lucide/svelte/icons/wifi';
 import X from '@lucide/svelte/icons/x';
-import { restoreDashboardEvents } from './lib/app-dashboard-events';
+import { ownDashboardEvents, restoreDashboardEvents } from './lib/app-dashboard-events';
 import { dashboardEvents } from './lib/dashboard-events.svelte';
 import { navigate } from './lib/navigate';
 import { pages } from './lib/pages/lazy';
@@ -68,15 +68,7 @@ function logout() {
 const authenticated = $derived(session.state === 'authenticated');
 // The shell, not a page, owns the stream. Navigation does not restart it; login,
 // expiry and a replacement session after password change each key a new owner.
-$effect(() => {
-  const generation = session.generation;
-  if (!authenticated) {
-    dashboardEvents.clear();
-    return;
-  }
-  dashboardEvents.start(generation);
-  return () => dashboardEvents.stop(generation);
-});
+$effect(() => ownDashboardEvents(authenticated, session.generation, dashboardEvents));
 // What is shown: the requested route after the guard. While the state is unknown nothing is shown
 // but the loader (or the bootstrap error), so a reload never flashes the wrong page.
 const shown = $derived(guard(session.state, router.route));
