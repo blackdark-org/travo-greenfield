@@ -111,13 +111,18 @@ func newEnv(t *testing.T) *env {
 
 func newEnvWithBackup(t *testing.T, backup device.ConfigBackupper) *env {
 	t.Helper()
+	return newEnvWithDevices(t, backup, nil)
+}
+
+func newEnvWithDevices(t *testing.T, backup device.ConfigBackupper, throughput ThroughputReader) *env {
+	t.Helper()
 	dev := mock.New()
 	dev.SetPassword(rootPW)
 	e := &env{t: t, dev: dev, acc: &accounts{Device: dev}, clock: &fakeClock{t: time.Now()}}
 	e.store = auth.NewStore(zeroEntropy())
 	lan := []netip.Prefix{netip.MustParsePrefix("192.168.1.0/24")}
 	e.h, e.api = New(Deps{
-		Version: "1.2.3", Accounts: e.acc, Ubus: dev, Backup: backup,
+		Version: "1.2.3", Accounts: e.acc, Ubus: dev, Backup: backup, Throughput: throughput,
 		Txns: fakeTxns{map[string]txn.Status{
 			pendingTxn:         {Meta: txn.Meta{ID: pendingTxn, Summary: "wifi", WindowSeconds: 60}, State: txn.Pending},
 			"fedcba9876543210": {Meta: txn.Meta{ID: "fedcba9876543210"}, State: txn.Confirmed},

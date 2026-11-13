@@ -65,6 +65,12 @@ export type PasswordInputBody = {
     new: string;
 };
 
+export type Rate = {
+    name: string;
+    rx_bytes_per_second: number | null;
+    tx_bytes_per_second: number | null;
+};
+
 export type SessionBody = {
     /**
      * Send as X-CSRF-Token on POST/PUT/PATCH/DELETE
@@ -109,6 +115,10 @@ export type SystemInfoBody = {
     storage: MemoryBody;
     target: string;
     uptime_seconds: number;
+};
+
+export type ThroughputOutputBody = {
+    interfaces: Array<Rate>;
 };
 
 export type TxnBody = {
@@ -287,6 +297,35 @@ export type GetSessionResponses = {
 };
 
 export type GetSessionResponse = GetSessionResponses[keyof GetSessionResponses];
+
+export type GetDashboardThroughputData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dashboard/throughput';
+};
+
+export type GetDashboardThroughputErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetDashboardThroughputError = GetDashboardThroughputErrors[keyof GetDashboardThroughputErrors];
+
+export type GetDashboardThroughputResponses = {
+    /**
+     * OK
+     */
+    200: ThroughputOutputBody;
+};
+
+export type GetDashboardThroughputResponse = GetDashboardThroughputResponses[keyof GetDashboardThroughputResponses];
 
 export type GetSetupStateData = {
     body?: never;

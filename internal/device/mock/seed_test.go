@@ -9,8 +9,12 @@ import (
 
 // The embed cannot reach outside the package, so the copies must not drift from the captures.
 func TestSeedCopiesMatchCaptures(t *testing.T) {
-	for _, name := range []string{"system-board.json", "system-info.json"} {
-		orig, err := os.ReadFile("../../../testdata/device/axt1800-25.12.6/" + name)
+	for name, capture := range map[string]string{
+		"system-board.json": "system-board.json",
+		"system-info.json":  "system-info.json",
+		"net-counters.txt":  "wwan-down/net-counters.txt",
+	} {
+		orig, err := os.ReadFile("../../../testdata/device/axt1800-25.12.6/" + capture)
 		if err != nil {
 			t.Fatal(err)
 		}

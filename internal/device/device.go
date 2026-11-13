@@ -74,3 +74,14 @@ type Device interface {
 	Reloader
 	Accounts
 }
+
+// InterfaceCounters is a kernel interface's cumulative byte count.
+type InterfaceCounters struct {
+	RXBytes uint64
+	TXBytes uint64
+}
+
+// InterfaceCounterReader reads a snapshot of the kernel's interface counters.
+type InterfaceCounterReader interface {
+	ReadInterfaceCounters(context.Context) (map[string]InterfaceCounters, error)
+}
