@@ -34,6 +34,7 @@ Greenfield captures and spike results (2026-11-09, AXT1800 25.12.6): `testdata/d
 - [HW greenfield] `uci commit wireless` + `reload_config` (no `wifi`) applied and restored an AP SSID change in ~1 s each; the STA on the other radio stayed associated. Wrong STA SSID: `carrier:false` and no kernel default route; after restore STA carrier in 7.8 s, default route 0.5 s later.
 - [HW] `ubus call iwinfo scan '{"device":"phy0-sta0"}'` on the STA (associated or not) returns one entry per BSSID with `band` (2/5), `channel`, `mhz`, `signal` (dBm), `quality`/`quality_max`, `encryption.{enabled,wpa,authentication,ciphers}`; hidden networks have no `ssid` key. No crash with an AP up on the other radio (testdata `wwan-down/`).
 - [HW greenfield 2026-11-13] With no STA interface, `ubus call iwinfo scan '{"device":"phy0"}'` (or `radio0`) scans that radio read-only: rc 0, ~4.7 s, AP on the other radio stayed `up`/`carrier`, `iw dev` and `uci changes` unchanged. A scan covers only its radio's band; a dual-band list needs one scan per radio (`phy1`/the AP ifname scans 2.4 GHz in ~2 s without dropping the AP). Captures: `testdata/device/axt1800-25.12.6/wifi-scan/`.
+- [HW greenfield] `iwinfo scan` can exceed `TierRead` (about 4.7 s on 5 GHz), so scan replies use `TierScan`.
 - [HW] Only enabled APs have a `hostapd.<ifname>` ubus object. `iwinfo assoclist` was empty while `hostapd.*` `get_clients` listed the station: use `get_clients`.
 
 ## 3. ath11k crash triggers

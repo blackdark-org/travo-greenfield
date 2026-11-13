@@ -23,6 +23,7 @@ export function lazyPage(importer: () => Promise<{ default: unknown }>): PageImp
 
 export const pages = {
   dashboard: lazyPage(() => import('./Dashboard.svelte')),
+  wifi: lazyPage(() => import('./WiFi.svelte')),
   vpn: lazyPage(() => import('./VPN.svelte')),
   system: lazyPage(() => import('./System.svelte')),
   login: lazyPage(() => import('./Login.svelte')),
