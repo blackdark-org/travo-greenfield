@@ -92,4 +92,21 @@ describe('LoadState', () => {
     expect(loader.status.state).toBe('ready');
     expect(loader.data).toBe('B');
   });
+
+  it('polls at the requested interval until stopped', async () => {
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn().mockResolvedValue('up');
+      const loader = createLoader(fn, 10000);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fn).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(fn).toHaveBeenCalledTimes(2);
+      loader.stop();
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(fn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

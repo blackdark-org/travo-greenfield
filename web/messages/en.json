@@ -123,5 +123,13 @@
   "vpn_unavailable": "WireGuard profiles are unavailable.",
   "vpn_invalid": "Check the profile name and WireGuard configuration.",
   "vpn_limit": "You can save up to 32 profiles.",
-  "vpn_save_failed": "Could not save the profile change. Try again."
+  "vpn_save_failed": "Could not save the profile change. Try again.",
+  "vpn_tunnel": "Tunnel",
+  "vpn_status_unavailable": "Tunnel status unavailable",
+  "vpn_state_disabled": "Off",
+  "vpn_state_configured": "Profile ready",
+  "vpn_state_enabled_not_up": "Interface down",
+  "vpn_state_no_handshake": "No handshake",
+  "vpn_state_connected": "Connected",
+  "vpn_handshake_age": "Last handshake {age} ago"
 }
