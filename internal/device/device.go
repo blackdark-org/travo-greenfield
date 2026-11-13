@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 // Section is one UCI section. Options hold strings, lists hold list options.
@@ -39,6 +40,18 @@ type UCI interface {
 // Ubus calls an object method and returns the raw JSON reply.
 type Ubus interface {
 	Call(ctx context.Context, object, method string, args any) (json.RawMessage, error)
+}
+
+// PeerHandshake is one peer's latest handshake. At is the zero time when none happened.
+type PeerHandshake struct {
+	PublicKey string
+	At        time.Time // UTC
+}
+
+// WireGuardReader reads handshake evidence only. It never returns key material.
+// ErrNotFound means the interface device does not exist.
+type WireGuardReader interface {
+	LatestHandshakes(ctx context.Context, iface string) ([]PeerHandshake, error)
 }
 
 // Routes reads the KERNEL table. netifd status is not a source for route truth.
