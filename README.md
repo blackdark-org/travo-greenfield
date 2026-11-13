@@ -18,7 +18,7 @@ Start with a fresh OpenWrt installation. The first install trusts the release ke
 
 The UI answers on `http://<router>/` by default, and LuCI moves to ports 8080 and 8443. To leave LuCI in place, pass `--port N` during install and open `http://<router>:N`. Remove it with `sh /tmp/tg/install.sh --uninstall`; add `--purge` to also delete its config and state. Settings live in `/etc/config/travo-greenfield`. Build the tarball yourself with `mise run package`.
 
-The dashboard shows one-minute CPU load, memory use, uptime, and the running version. Use **Refresh** to update the resource summary. The interface throughput table updates every two seconds.
+The dashboard shows the active uplink, carrier, and internet reachability separately. It also shows one-minute CPU load, memory use, uptime, and the running version. Use **Refresh** to update the resource summary. The interface throughput table updates every two seconds.
 
 Use **System → Download backup** to save the router configuration as `travo-config.tar.gz`.
 

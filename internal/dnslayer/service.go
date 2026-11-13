@@ -27,6 +27,8 @@ type Service struct {
 	Guards     guard.Dir
 	RecordPath string
 	Apply      Applier
+	// AfterApply invalidates connectivity observations, including after a partial apply.
+	AfterApply func()
 	mu         sync.Mutex
 }
 
@@ -204,6 +206,9 @@ func (s *Service) applyAndFinish(ctx context.Context, target State, restoreBase 
 		}
 		return Stage(lctx, s.Device, sec, target)
 	})
+	if s.AfterApply != nil {
+		s.AfterApply()
+	}
 	if err != nil {
 		return fmt.Errorf("dns layers: apply: %w (guard kept)", err)
 	}

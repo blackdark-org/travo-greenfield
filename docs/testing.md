@@ -48,6 +48,8 @@ Per release, each from Ethernet unless stated (issues with label `needs-hardware
 5. DNS: captive bypass over AdGuard restores base exactly; AdGuard stopped → fail-open within seconds.
 6. Configuration backup (#64): sign in on the AXT1800, download the archive from System and verify it locally with `gzip -t travo-config.tar.gz` and `tar -tzf travo-config.tar.gz`. Confirm it contains router config entries. Keep the archive and its contents private.
 
+7. Dashboard connectivity (#58): from Ethernet, verify the active interface and carrier against the kernel route and device status on a connected AXT1800. Verify the no-default-route state shows Offline and unknown uplink and carrier. Record each result without changing the router just to produce a fixture.
+
 ## Web
 
 `pnpm -C web check`: Biome, svelte-check, Vitest (pure logic and server-rendered components), build, size-limit. Visual and keyboard behaviour (theme, drawer, focus) is checked in headless Chrome at 390 px and 1280 px before a UI PR; attach screenshots to the PR.

@@ -12,6 +12,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 
 	"github.com/blackdark-org/travo-greenfield/internal/auth"
+	"github.com/blackdark-org/travo-greenfield/internal/connectivity"
 	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
@@ -29,18 +30,23 @@ type ThroughputReader interface {
 	Latest() ([]throughput.Rate, bool)
 }
 
+type ConnectivityReader interface {
+	Status(context.Context) connectivity.Status
+}
+
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
 	Version  string
 	Accounts device.Accounts
 	// Ubus feeds read-only system facts; nil answers 503 device_unavailable.
-	Ubus       device.Ubus
-	Backup     device.ConfigBackupper
-	Throughput ThroughputReader
-	Txns       Txns
-	Sessions   *auth.Store
-	Limiter    *auth.RateLimiter
-	Clock      auth.Clock
+	Ubus         device.Ubus
+	Backup       device.ConfigBackupper
+	Throughput   ThroughputReader
+	Connectivity ConnectivityReader
+	Txns         Txns
+	Sessions     *auth.Store
+	Limiter      *auth.RateLimiter
+	Clock        auth.Clock
 	// Trusted reports whether a source address may reach the admin API (internal/trust).
 	Trusted func(netip.Addr) bool
 	// RouterIPs are the router's own lan addresses (internal/trust); nil before the first read.
@@ -108,6 +114,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerSystem(a)
 	s.registerBackup(a)
 	s.registerThroughput(a)
+	s.registerConnectivity(a)
 	if d.UI != nil {
 		mux.Handle("/", d.UI)
 	}

@@ -310,3 +310,20 @@ func TestDeviceSingleElementListRestoresAsList(t *testing.T) {
 		t.Fatalf("restored as option: dnsmasq would ignore it: %+v", secs[0])
 	}
 }
+
+func TestAfterApplyRunsBeforeGuardCleanup(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		s, _, applier := setup(t, listFixture)
+		applier.fail = fail
+		calls := 0
+		s.AfterApply = func() {
+			calls++
+			if applier.n != 1 || !guarded(t, s) {
+				t.Error("expected callback after apply while guard is held")
+			}
+		}
+		if err := s.Push(ctx, layers[AdGuard]); (err != nil) != fail || calls != 1 {
+			t.Fatalf("failure=%v: apply error %v, callbacks %d", fail, err, calls)
+		}
+	}
+}
