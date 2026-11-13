@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -27,7 +28,9 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/trust"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/blackdark-org/travo-greenfield/internal/updatecheck"
+	"github.com/blackdark-org/travo-greenfield/internal/updatestage"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
+	"github.com/blackdark-org/travo-greenfield/packaging"
 )
 
 func main() {
@@ -130,7 +133,23 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 		releaseSource = "off"
 	}
 	updates := updatecheck.New(ctx, releaseSource, version.Version, filepath.Join(deps.Paths.State, "update-check.json"), clock.Now, http.DefaultTransport)
+	var updateStage api.UpdateStager
+	if verifier, ok := deps.Device.(device.ReleaseVerifier); ok && runtime.GOOS == "linux" && runtime.GOARCH == "arm64" && os.Geteuid() == 0 && releaseSource != "off" {
+		stage, err := updatestage.Open(ctx, updatestage.Root, releaseSource, packaging.UpdatePublicKey, updatestage.ReleaseClient(), verifier, updates.EligibleVersion, clock.Now)
+		if err != nil {
+			slog.Warn("release staging unavailable", "err", err)
+		} else {
+			updateStage = stage
+			defer func() {
+				if err := stage.Close(); err != nil {
+					slog.Warn("release staging cleanup", "err", err)
+				}
+			}()
+			workers.Go("release-stage-expiry", lifecycle.Every(time.Minute, func(context.Context) { stage.Sweep() }))
+		}
+	}
 	h, _ := api.New(api.Deps{
+		UpdateStage:  updateStage,
 		Backup:       backup,
 		Updates:      updates,
 		Connectivity: connection,

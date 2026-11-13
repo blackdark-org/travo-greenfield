@@ -121,3 +121,13 @@ func (s *Service) attempt(manual bool) (Result, bool) {
 	}
 	return result, true
 }
+
+// EligibleVersion reads the latest completed outbound check without initiating one.
+func (s *Service) EligibleVersion() (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.last == nil || s.last.Status != "available" || s.last.LatestVersion == nil {
+		return "", false
+	}
+	return *s.last.LatestVersion, true
+}

@@ -95,5 +95,9 @@
   "update_rate_limited": "The release source is limiting requests.",
   "update_unavailable": "Could not check for updates.",
   "update_up_to_date": "You’re up to date.",
-  "update_available": "Version {version} is available."
+  "update_available": "Version {version} is available.",
+  "update_verify": "Verify package",
+  "update_verifying": "Verifying release package…",
+  "update_verified": "Package {version} verified.",
+  "update_verify_failed": "Could not verify the release package."
 }

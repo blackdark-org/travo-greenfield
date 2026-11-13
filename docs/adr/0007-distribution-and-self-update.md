@@ -13,3 +13,8 @@ Update: GitHub release assets `<name>-<arch>.tar.gz`, `checksums.txt`, minisign 
 - Trust model: a key inside the tarball proves integrity only. `install.sh` verifies against `/etc/travo-greenfield/minisign.pub` when it exists (kept by sysupgrade through the `/etc/travo-greenfield/` keep.d entry). On the first install (no key on the router) it verifies against the tarball's key: trust on first use, the operator fetched both over HTTPS from the GitHub release. A tarball with a different key is refused unless `--rotate-key` is given. `--insecure` installs without a signature check and never writes the key. Self-update embeds the key in the binary instead.
 - Rotation: generate a new key pair, commit the new `packaging/minisign.pub`, update the secrets; the release notes tell users to pass `--rotate-key` once.
 
+
+
+## Release staging
+
+Verification allows one active attempt and one verified stage per daemon. A stage lasts 30 minutes and lives under a private, exclusively locked directory in /tmp. Downloads and extraction share a 120-second budget. Download caps are 16 MiB for the archive, 64 KiB for the checksum manifest and 1 KiB for its signature. Extraction is limited to 24 MiB, 13 MiB per member and 256 members. The verifier checks the detached signature with the embedded public key, then checks the exact archive members and release version against the signed manifest. Verification leaves the running installation untouched.
