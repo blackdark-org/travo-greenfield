@@ -23,6 +23,13 @@ func fail(status int, code, msg string) error {
 }
 
 func init() {
+	huma.NewErrorWithContext = func(ctx huma.Context, status int, msg string, errs ...error) huma.StatusError {
+		// JSON validation details can contain arbitrary property names from the import body.
+		if ctx.Operation().OperationID == vpnImportOperation {
+			return huma.NewError(status, "invalid profile request")
+		}
+		return huma.NewError(status, msg, errs...)
+	}
 	// JSON keys are case-sensitive: `{"Password":...}` must not bind to `password`.
 	huma.ValidateStrictCasing = true
 	// Huma's own errors (validation, bad JSON) use the same shape. Only location and

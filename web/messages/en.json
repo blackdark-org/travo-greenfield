@@ -109,5 +109,19 @@
   "update_aborted": "Update stopped before installation began.",
   "update_recovery_required": "The router update needs recovery.",
   "update_apply_failed": "Could not start the update operation.",
-  "update_retry_recovery": "Retry recovery"
+  "update_retry_recovery": "Retry recovery",
+  "vpn_saved_profiles": "Saved WireGuard profiles",
+  "vpn_no_profiles": "No saved profiles.",
+  "vpn_selected": "Selected",
+  "vpn_select": "Select",
+  "vpn_delete": "Delete",
+  "vpn_confirm_delete": "Confirm delete",
+  "vpn_cancel": "Cancel",
+  "vpn_import": "Import profile",
+  "vpn_name": "Profile name",
+  "vpn_config": "WireGuard configuration",
+  "vpn_unavailable": "WireGuard profiles are unavailable.",
+  "vpn_invalid": "Check the profile name and WireGuard configuration.",
+  "vpn_limit": "You can save up to 32 profiles.",
+  "vpn_save_failed": "Could not save the profile change. Try again."
 }

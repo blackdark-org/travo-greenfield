@@ -16,6 +16,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 )
 
 // Txns is the slice of txn.Manager the API needs.
@@ -36,6 +37,7 @@ type ConnectivityReader interface {
 
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
+	VPNProfiles *vpnprofiles.Service
 	UpdateStage UpdateStager
 	UpdateApply UpdateApplier
 	Updates     UpdateChecker
@@ -115,6 +117,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerSetup(a)
 	s.registerTxn(a)
 	s.registerSystem(a)
+	s.registerVPNProfiles(a)
 	s.registerUpdateCheck(a)
 	s.registerUpdateStage(a)
 	s.registerUpdateApply(a)

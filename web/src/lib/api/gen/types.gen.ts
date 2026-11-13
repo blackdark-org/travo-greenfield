@@ -47,6 +47,11 @@ export type HealthOutputBody = {
     version: string;
 };
 
+export type List = {
+    profiles: Array<Summary>;
+    selected_id: string | null;
+};
+
 export type LoginInputBody = {
     /**
      * Root password
@@ -117,6 +122,11 @@ export type Status = {
     internet: 'online' | 'offline' | 'captive' | 'unknown';
 };
 
+export type Summary = {
+    id: string;
+    name: string;
+};
+
 export type SystemInfoBody = {
     app: AppBody;
     board_name: string;
@@ -163,6 +173,11 @@ export type TxnBody = {
 
 export type UpdateCheckInputBody = {
     mode: 'automatic' | 'manual';
+};
+
+export type VpnImportInputBody = {
+    config: string;
+    name: string;
 };
 
 export type GetHealthData = {
@@ -835,3 +850,163 @@ export type RollbackTransactionResponses = {
 };
 
 export type RollbackTransactionResponse = RollbackTransactionResponses[keyof RollbackTransactionResponses];
+
+export type GetVpnProfilesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/vpn/profiles';
+};
+
+export type GetVpnProfilesErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetVpnProfilesError = GetVpnProfilesErrors[keyof GetVpnProfilesErrors];
+
+export type GetVpnProfilesResponses = {
+    /**
+     * OK
+     */
+    200: List;
+};
+
+export type GetVpnProfilesResponse = GetVpnProfilesResponses[keyof GetVpnProfilesResponses];
+
+export type PostVpnProfileData = {
+    body: VpnImportInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/vpn/profiles';
+};
+
+export type PostVpnProfileErrors = {
+    /**
+     * Bad Request
+     */
+    400: ApiError;
+    /**
+     * Conflict
+     */
+    409: ApiError;
+    /**
+     * Request Entity Too Large
+     */
+    413: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type PostVpnProfileError = PostVpnProfileErrors[keyof PostVpnProfileErrors];
+
+export type PostVpnProfileResponses = {
+    /**
+     * Created
+     */
+    201: Summary;
+};
+
+export type PostVpnProfileResponse = PostVpnProfileResponses[keyof PostVpnProfileResponses];
+
+export type DeleteVpnProfileData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/vpn/profiles/{id}';
+};
+
+export type DeleteVpnProfileErrors = {
+    /**
+     * Bad Request
+     */
+    400: ApiError;
+    /**
+     * Not Found
+     */
+    404: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type DeleteVpnProfileError = DeleteVpnProfileErrors[keyof DeleteVpnProfileErrors];
+
+export type DeleteVpnProfileResponses = {
+    /**
+     * OK
+     */
+    200: List;
+};
+
+export type DeleteVpnProfileResponse = DeleteVpnProfileResponses[keyof DeleteVpnProfileResponses];
+
+export type SelectVpnProfileData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/vpn/profiles/{id}/select';
+};
+
+export type SelectVpnProfileErrors = {
+    /**
+     * Bad Request
+     */
+    400: ApiError;
+    /**
+     * Not Found
+     */
+    404: ApiError;
+    /**
+     * Unprocessable Entity
+     */
+    422: ApiError;
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type SelectVpnProfileError = SelectVpnProfileErrors[keyof SelectVpnProfileErrors];
+
+export type SelectVpnProfileResponses = {
+    /**
+     * OK
+     */
+    200: List;
+};
+
+export type SelectVpnProfileResponse = SelectVpnProfileResponses[keyof SelectVpnProfileResponses];
