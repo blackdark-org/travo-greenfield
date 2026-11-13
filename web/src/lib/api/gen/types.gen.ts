@@ -175,6 +175,19 @@ export type UpdateCheckInputBody = {
     mode: 'automatic' | 'manual';
 };
 
+export type VpnStatus = {
+    handshake_age_seconds: number | null;
+    /**
+     * When State was read (router clock)
+     */
+    observed_at: string;
+    /**
+     * true: last good observation, the latest read failed
+     */
+    stale: boolean;
+    state: 'disabled' | 'configured' | 'enabled_not_up' | 'no_handshake' | 'connected';
+};
+
 export type VpnImportInputBody = {
     config: string;
     name: string;
@@ -1039,3 +1052,32 @@ export type SelectVpnProfileResponses = {
 };
 
 export type SelectVpnProfileResponse = SelectVpnProfileResponses[keyof SelectVpnProfileResponses];
+
+export type GetVpnStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/vpn/status';
+};
+
+export type GetVpnStatusErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetVpnStatusError = GetVpnStatusErrors[keyof GetVpnStatusErrors];
+
+export type GetVpnStatusResponses = {
+    /**
+     * OK
+     */
+    200: VpnStatus;
+};
+
+export type GetVpnStatusResponse = GetVpnStatusResponses[keyof GetVpnStatusResponses];

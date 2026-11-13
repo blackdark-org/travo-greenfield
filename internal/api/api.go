@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/netip"
+	"reflect"
 	"sync"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -17,6 +18,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/throughput"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
+	"github.com/blackdark-org/travo-greenfield/internal/vpnstatus"
 )
 
 // Txns is the slice of txn.Manager the API needs.
@@ -35,9 +37,14 @@ type ConnectivityReader interface {
 	Status(context.Context) connectivity.Status
 }
 
+type VPNStatusReader interface {
+	Status(context.Context) (vpnstatus.Status, error)
+}
+
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
 	VPNProfiles *vpnprofiles.Service
+	VPNStatus   VPNStatusReader
 	// DaemonContext stops live streams and their producers before HTTP shutdown drains.
 	DaemonContext context.Context
 	UpdateStage   UpdateStager
@@ -97,6 +104,12 @@ func New(d Deps) (http.Handler, huma.API) {
 	s := &server{Deps: d, sessions: d.Sessions, clock: d.Clock, trusted: d.Trusted}
 	mux := http.NewServeMux()
 	cfg := huma.DefaultConfig("travo-greenfield", d.Version)
+	cfg.Components.Schemas = huma.NewMapRegistry("#/components/schemas/", func(t reflect.Type, hint string) string {
+		if t == reflect.TypeOf(vpnstatus.Status{}) {
+			return "VPNStatus"
+		}
+		return huma.DefaultSchemaNamer(t, hint)
+	})
 	cfg.OpenAPIPath = "/api/openapi"
 	cfg.DocsPath = ""
 	cfg.SchemasPath = ""
@@ -121,6 +134,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerTxn(a)
 	s.registerSystem(a)
 	s.registerVPNProfiles(a)
+	s.registerVPNStatus(a)
 	s.registerUpdateCheck(a)
 	s.registerUpdateStage(a)
 	s.registerUpdateApply(a)

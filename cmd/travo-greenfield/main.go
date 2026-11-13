@@ -34,6 +34,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/updatestage"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
+	"github.com/blackdark-org/travo-greenfield/internal/vpnstatus"
 	"github.com/blackdark-org/travo-greenfield/packaging"
 )
 
@@ -155,6 +156,11 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 		connection = connectivity.New(ctx, routes, deps.Device, probe, clock.Now)
 	}
 	backup, _ := deps.Device.(device.ConfigBackupper)
+	profiles := vpnprofiles.New(filepath.Join(deps.Paths.State, "vpn-profiles.json"))
+	var vpnStatus api.VPNStatusReader
+	if wg, ok := deps.Device.(device.WireGuardReader); ok {
+		vpnStatus = vpnstatus.New(deps.Device, deps.Device, wg, profiles, clock.Now)
+	}
 	if useMock {
 		releaseSource = "off"
 	}
@@ -186,7 +192,8 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 	}
 	h, _ := api.New(api.Deps{
 		DaemonContext: ctx,
-		VPNProfiles:   vpnprofiles.New(filepath.Join(deps.Paths.State, "vpn-profiles.json")),
+		VPNProfiles:   profiles,
+		VPNStatus:     vpnStatus,
 		UpdateApply:   updater,
 		UpdateStage:   updateStage,
 		Backup:        backup,
