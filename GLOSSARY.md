@@ -6,6 +6,7 @@
 - **Caller**: the client making an API request. Classified as ethernet / wifi-ap / wifi-client / unknown.
 - **Lockout**: a change that would leave the caller without a way to reach the router.
 - **Device port**: the interface through which all `uci`/`ubus`/netifd access happens. Adapters: CLI (real), mock.
+- **Tunnel state**: the five WireGuard states `disabled`, `configured`, `enabled_not_up`, `no_handshake`, `connected`; only a recent handshake means connected.
 - **PackageManager port**: `update`/`install`/`remove`/`list-installed`; adapters apk and opkg.
 - **Transaction**: snapshot → commit/apply → watchdog → probe → user confirm. The only way to change live state.
 - **Watchdog**: out-of-process procd-run script that restores the snapshot unless the confirm file appears in time.

@@ -50,6 +50,12 @@ Per release, each from Ethernet unless stated (issues with label `needs-hardware
 
 7. Dashboard connectivity (#58): from Ethernet, verify the active interface and carrier against the kernel route and device status on a connected AXT1800. Verify the no-default-route state shows Offline and unknown uplink and carrier. Record each result without changing the router just to produce a fixture.
 
+8. WireGuard tunnel status (#86): from Ethernet, configure `wg0` as in `testdata/device/axt1800-25.12.6/wireguard/PROVENANCE.md` and request `GET /api/v1/vpn/status` with a session cookie.
+   - With `disabled=1`, expect `disabled`, or `configured` when a profile is selected.
+   - With `disabled=0` and an unreachable endpoint, expect `no_handshake` with a null handshake age.
+   - With a real endpoint after `ifup wg0`, expect `connected` with a handshake age under 180 seconds.
+   Compare each result with `wg show wg0 latest-handshakes`. After disabling, run `ifup wwan` if the kernel default route is gone (device-facts §1).
+
 ## Web
 
 `pnpm -C web check`: Biome, svelte-check, Vitest (pure logic and server-rendered components), build, UI size budget. Visual and keyboard behaviour (theme, drawer, focus) is checked in headless Chrome at 390 px and 1280 px before a UI PR; attach screenshots to the PR.
