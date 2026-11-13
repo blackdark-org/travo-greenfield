@@ -18,6 +18,8 @@ Start with a fresh OpenWrt installation. The first install trusts the release ke
 
 The UI answers on `http://<router>/` by default, and LuCI moves to ports 8080 and 8443. To leave LuCI in place, pass `--port N` during install and open `http://<router>:N`. Remove it with `sh /tmp/tg/install.sh --uninstall`; add `--purge` to also delete its config and state. Settings live in `/etc/config/travo-greenfield`. Build the tarball yourself with `mise run package`.
 
+The dashboard shows one-minute CPU load, memory use, uptime, and the running version. Use **Refresh** to update the resource summary.
+
 ## Docs
 
 - [Spec](docs/spec.md) · [Invariants](docs/invariants.md) · Plan: [milestone 0.1.0](https://github.com/blackdark-org/travo-greenfield/milestone/1) and [project board](https://github.com/orgs/blackdark-org/projects/1)
