@@ -20,6 +20,8 @@ The UI answers on `http://<router>/` by default, and LuCI moves to ports 8080 an
 
 The dashboard shows the active uplink, carrier, and internet reachability separately. It also shows one-minute CPU load, memory use, uptime, and the running version. Connectivity and resource snapshots refresh every five seconds, and interface throughput every two seconds, over one shared live stream. If the stream disconnects, the UI keeps the last known values marked stale while it reconnects and polls every five seconds.
 
+The **WiFi** page summarizes configured radios, uplink STA and access points, and its **Scan** button lists nearby networks without changing live state.
+
 Use **System → Download backup** to save the router configuration as `travo-config.tar.gz`.
 
 System can check GitHub for a newer stable release. An automatic attempt occurs only when opening System, at most once per 24 hours. Use **Check for updates** to check manually. Set `travo-greenfield.main.release_source` to an alternate GitHub `OWNER/REPO` or `off`, then restart the daemon. The default is `blackdark-org/travo-greenfield`.

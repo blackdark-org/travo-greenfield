@@ -214,6 +214,8 @@ $effect(() => {
             </LoadState>
           {:else if shown === 'dashboard'}
             <PageHost load={pages.dashboard} props={{ events: dashboardEvents }} />
+          {:else if shown === 'wifi'}
+            <PageHost load={pages.wifi} />
           {:else if shown === 'vpn'}
             <PageHost load={pages.vpn} />
           {:else if shown === 'system'}

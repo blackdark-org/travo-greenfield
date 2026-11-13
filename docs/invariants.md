@@ -123,6 +123,8 @@ dnsmasq on :53 is the single DNS authority. Features that change DNS push/pop a 
 - Auto-reconnect has a failure counter so bad credentials are not retried forever; the counter is not a guard and is not cleared by redeploy.
 - Band switching: persisted choice, guarded, a refused tick leaves no guard behind.
 - Scan: one row per SSID, dual-band badge, per-AP disclosure. Scan must not commit the uplink onto an AP radio.
+- Scan is read-only, one radio at a time, target = first interface ifname else radio name, concurrent requests join the in-flight scan.
+- Wireless scan replies use `TierScan`, not `TierRead`.
 - MAC clone/randomize; per-client MAC policies.
 - Radio hardware status is CONFIGURED state, labelled as such.
 - Post-apply probe proves each enabled AP/STA interface individually (see device-facts §2). Failure → rollback. "Could not read netifd" is distinct from "AP not up".
