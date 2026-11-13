@@ -37,6 +37,7 @@ type ConnectivityReader interface {
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
 	UpdateStage UpdateStager
+	UpdateApply UpdateApplier
 	Updates     UpdateChecker
 	Version     string
 	Accounts    device.Accounts
@@ -116,6 +117,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerSystem(a)
 	s.registerUpdateCheck(a)
 	s.registerUpdateStage(a)
+	s.registerUpdateApply(a)
 	s.registerBackup(a)
 	s.registerThroughput(a)
 	s.registerConnectivity(a)

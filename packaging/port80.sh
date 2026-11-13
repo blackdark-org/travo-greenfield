@@ -46,7 +46,7 @@ uhttpd_set_listen() (
       uci add_list "uhttpd.$section.listen_https=0.0.0.0:$2" &&
       uci add_list "uhttpd.$section.listen_https=[::]:$2" || exit 1
   done
-  uci commit uhttpd && /etc/init.d/uhttpd restart
+  uci commit uhttpd && /etc/init.d/uhttpd restart 9>&-
 )
 
 uhttpd_restore_lines() (
@@ -71,7 +71,7 @@ EOF_LINE
       *) exit 1 ;;
     esac
   done <"$1"
-  uci commit uhttpd && /etc/init.d/uhttpd restart
+  uci commit uhttpd && /etc/init.d/uhttpd restart 9>&-
 )
 
 port_is_listening() {
@@ -96,17 +96,17 @@ clear_port_swap() {
 }
 
 port_swap_restore() {
-  /etc/init.d/travo-greenfield stop || true
+  /etc/init.d/travo-greenfield stop 9>&- || true
   # A failed uci operation can leave staged writes that would mask the snapshot.
   if ! uci revert uhttpd ||
      ! cp "$PORT_SWAP_GUARD.uhttpd" /etc/config/uhttpd ||
-     ! /etc/init.d/uhttpd restart; then
+     ! /etc/init.d/uhttpd restart 9>&-; then
     echo "recovery: cp $PORT_SWAP_GUARD.uhttpd /etc/config/uhttpd && /etc/init.d/uhttpd restart" >&2
     return 1
   fi
   wait_restored_uhttpd "$PORT_SWAP_GUARD.uhttpd" &&
     set_greenfield_listen 0.0.0.0:8090 &&
-    /etc/init.d/travo-greenfield start &&
+    /etc/init.d/travo-greenfield start 9>&- &&
     wait_healthy "${1:-}" &&
     clear_port_swap
 }
@@ -161,7 +161,7 @@ write_port_swap_guard() {
 }
 
 stop_greenfield() {
-  [ ! -x /etc/init.d/travo-greenfield ] || /etc/init.d/travo-greenfield stop
+  [ ! -x /etc/init.d/travo-greenfield ] || /etc/init.d/travo-greenfield stop 9>&-
 }
 
 reset_saved_port() {
@@ -235,7 +235,7 @@ install_ports() {
   lan_ip=$(uci -q get network.lan.ipaddr || echo 192.168.1.1)
   if [ -n "$alternate_port" ]; then
     if ! set_greenfield_listen "0.0.0.0:$alternate_port" ||
-       ! /etc/init.d/travo-greenfield restart || ! wait_healthy "$1"; then
+       ! /etc/init.d/travo-greenfield restart 9>&- || ! wait_healthy "$1"; then
       die "greenfield did not answer on :$alternate_port"
     fi
     echo "$NAME $1 installed and healthy on http://${lan_ip%%/*}:$alternate_port/"
@@ -260,7 +260,7 @@ install_ports() {
     fi
   fi
   if ! set_greenfield_listen :80 ||
-     ! /etc/init.d/travo-greenfield restart ||
+     ! /etc/init.d/travo-greenfield restart 9>&- ||
      ! wait_healthy "$1"; then
     stop_test_holder
     if [ "$holder" = uhttpd ]; then
@@ -268,7 +268,7 @@ install_ports() {
       die "greenfield did not answer on :80; uhttpd restored"
     fi
     if ! set_greenfield_listen 0.0.0.0:8090 ||
-       ! /etc/init.d/travo-greenfield restart || ! wait_healthy "$1"; then
+       ! /etc/init.d/travo-greenfield restart 9>&- || ! wait_healthy "$1"; then
       die "greenfield did not answer on :80; could not restore :8090"
     fi
     die "greenfield did not answer on :80; left on :8090"

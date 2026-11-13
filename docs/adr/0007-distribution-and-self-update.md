@@ -18,3 +18,11 @@ Update: GitHub release assets `<name>-<arch>.tar.gz`, `checksums.txt`, minisign 
 ## Release staging
 
 Verification allows one active attempt and one verified stage per daemon. A stage lasts 30 minutes and lives under a private, exclusively locked directory in /tmp. Downloads and extraction share a 120-second budget. Download caps are 16 MiB for the archive, 64 KiB for the checksum manifest and 1 KiB for its signature. Extraction is limited to 24 MiB, 13 MiB per member and 256 members. The verifier checks the detached signature with the embedded public key, then checks the exact archive members and release version against the signed manifest. Verification leaves the running installation untouched.
+
+## Activation and recovery
+
+The update worker owns the daemon binary, packaged UI tree and their installed manifest entries. The installer owns the init script, defaults, keep list, configuration and trust key. An update refuses a custom static directory.
+
+The worker copies verified staged inputs into private durable state before releasing the stage lease. It holds the same operation lock as install and uninstall, writes the guard before activation, and retains a complete rollback snapshot. Recovery verifies the running executable identity and configured health endpoint. Install and uninstall also honor the durable guard after an interrupted worker releases the process lock.
+
+Successful activation retains one previous generation under `/etc/travo-greenfield/update-operation/.old`. The updater accounts for simultaneous copies and reserves 20 MiB of free space on each affected filesystem. For a failed recovery use `/usr/bin/travo-greenfield --recover-update` at the local console. If the installed executable cannot start, use `/etc/travo-greenfield/update-operation/recovery --recover-update`.

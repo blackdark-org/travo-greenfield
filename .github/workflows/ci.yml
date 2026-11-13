@@ -154,6 +154,7 @@ jobs:
         run: |
           mise run test:package
           mise run test:port80
+          mise run test:update
 
   actionlint:
     needs: changes

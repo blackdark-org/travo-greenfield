@@ -1,6 +1,13 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { getSystemUpdateStage, postSystemUpdateCheck, postSystemUpdateStage } from '../api/gen';
+import {
+  getSystemUpdateApply,
+  getSystemUpdateStage,
+  postSystemUpdateApply,
+  postSystemUpdateCheck,
+  postSystemUpdateRecover,
+  postSystemUpdateStage,
+} from '../api/gen';
 import '../api/client';
 import { m } from '../paraglide/messages.js';
 import Card from '../ui/Card.svelte';
@@ -12,6 +19,53 @@ let stage = $state<Stage>();
 let verifying = $state(false);
 let verifyFailed = $state(false);
 let stageRequest = 0;
+type Operation = NonNullable<Awaited<ReturnType<typeof getSystemUpdateApply>>['data']>;
+let operation = $state<Operation>();
+let confirming = $state(false);
+let updating = $state(false);
+let applyFailed = $state(false);
+let operationRequest = 0;
+let readingOperation = false;
+
+async function readOperation(request: AbortController) {
+  if (readingOperation) return;
+  readingOperation = true;
+  const generation = ++operationRequest;
+  try {
+    const response = await getSystemUpdateApply({ signal: request.signal });
+    if (!request.signal.aborted && generation === operationRequest && response.data) {
+      operation = response.data;
+    }
+  } catch {
+    // The listener can be briefly absent during procd restart.
+  } finally {
+    readingOperation = false;
+  }
+}
+
+async function changeOperation(request: AbortController, version?: string) {
+  updating = true;
+  confirming = false;
+  applyFailed = false;
+  operationRequest++;
+  try {
+    const options = { signal: request.signal };
+    const response = version
+      ? await postSystemUpdateApply({ ...options, body: { version } })
+      : await postSystemUpdateRecover(options);
+    if (!request.signal.aborted) {
+      if (response.data) operation = response.data;
+      else applyFailed = true;
+    }
+  } catch {
+    if (!request.signal.aborted) applyFailed = true;
+  } finally {
+    if (!request.signal.aborted) {
+      updating = false;
+      void readOperation(request);
+    }
+  }
+}
 let pending = $state(true);
 let controller: AbortController | undefined;
 const labels = {
@@ -73,8 +127,16 @@ onMount(() => {
   controller = request;
   void check('automatic', request);
   void readStage(request);
+  void readOperation(request);
   const timer = setInterval(() => {
     if (!verifying && stage?.status === 'verifying') void readStage(request);
+    // A recovery worker can be active while the durable journal still reports recovery_required.
+    if (
+      !updating &&
+      (operation?.state === 'applying' || operation?.state === 'recovery_required' || applyFailed)
+    ) {
+      void readOperation(request);
+    }
   }, 2000);
   return () => {
     clearInterval(timer);
@@ -125,4 +187,46 @@ onMount(() => {
       <p class="mt-2 text-danger">{m.update_verify_failed()}</p>
     {/if}
   </div>
+  <div aria-live="polite">
+    {#if operation?.state === 'applying'}
+      <p class="mt-2">{m.update_applying()}</p>
+    {:else if operation?.state === 'succeeded'}
+      <p class="mt-2">{m.update_succeeded({ version: operation.version ?? '' })}</p>
+    {:else if operation?.state === 'rolled_back'}
+      <p class="mt-2 text-danger">{m.update_rolled_back()}</p>
+    {:else if operation?.state === 'aborted'}
+      <p class="mt-2">{m.update_aborted()}</p>
+    {:else if operation?.state === 'recovery_required'}
+      <p class="mt-2 text-danger">{m.update_recovery_required()}</p>
+    {/if}
+    {#if applyFailed}
+      <p class="mt-2 text-danger">{m.update_apply_failed()}</p>
+    {/if}
+  </div>
+  {#if operation?.state === 'recovery_required'}
+    <button type="button" class="mt-2 rounded-md border border-border px-3 py-2"
+      disabled={updating} onclick={() => { if (controller) void changeOperation(controller); }}>
+      {m.update_retry_recovery()}
+    </button>
+  {:else if operation && operation.state !== 'applying' && stage?.status === 'verified' && stage.version}
+    {#if confirming}
+      <p class="mt-2">{m.update_confirm({ version: stage.version })}</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <button type="button" class="rounded-md border border-border px-3 py-2"
+          disabled={updating}
+          onclick={() => { if (controller && stage?.version) void changeOperation(controller, stage.version); }}>
+          {m.update_apply()}
+        </button>
+        <button type="button" class="rounded-md border border-border px-3 py-2"
+          onclick={() => { confirming = false; }}>
+          {m.update_cancel()}
+        </button>
+      </div>
+    {:else}
+      <button type="button" class="mt-2 rounded-md border border-border px-3 py-2"
+        disabled={updating} onclick={() => { confirming = true; }}>
+        {m.update_apply()}
+      </button>
+    {/if}
+  {/if}
 </Card>
