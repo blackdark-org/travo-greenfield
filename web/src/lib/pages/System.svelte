@@ -12,6 +12,7 @@ import FormMessage from '../ui/FormMessage.svelte';
 import LoadState from '../ui/LoadState.svelte';
 import { createLoader } from '../ui/loader.svelte';
 import PasswordField from '../ui/PasswordField.svelte';
+import SystemUpdate from './SystemUpdate.svelte';
 
 const info = createLoader(fetchSystemInfo);
 let backupPending = $state(false);
@@ -108,6 +109,8 @@ async function logout() {
       {/if}
     </LoadState>
   </Card>
+
+  <SystemUpdate />
 
   <Card title={m.system_backup()}>
     <div>

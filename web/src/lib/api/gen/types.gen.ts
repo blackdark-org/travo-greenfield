@@ -71,6 +71,13 @@ export type Rate = {
     tx_bytes_per_second: number | null;
 };
 
+export type Result = {
+    checked_at: string | null;
+    latest_version: string | null;
+    running_version: string;
+    status: 'disabled' | 'deferred' | 'no_release' | 'source_unavailable' | 'rate_limited' | 'unavailable' | 'available' | 'up_to_date';
+};
+
 export type SessionBody = {
     /**
      * Send as X-CSRF-Token on POST/PUT/PATCH/DELETE
@@ -137,6 +144,10 @@ export type TxnBody = {
      * Confirm window, counted from when the change was armed
      */
     window_seconds: number;
+};
+
+export type UpdateCheckInputBody = {
+    mode: 'automatic' | 'manual';
 };
 
 export type GetHealthData = {
@@ -489,6 +500,31 @@ export type GetSystemInfoResponses = {
 };
 
 export type GetSystemInfoResponse = GetSystemInfoResponses[keyof GetSystemInfoResponses];
+
+export type PostSystemUpdateCheckData = {
+    body: UpdateCheckInputBody;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/update/check';
+};
+
+export type PostSystemUpdateCheckErrors = {
+    /**
+     * Error
+     */
+    default: ApiError;
+};
+
+export type PostSystemUpdateCheckError = PostSystemUpdateCheckErrors[keyof PostSystemUpdateCheckErrors];
+
+export type PostSystemUpdateCheckResponses = {
+    /**
+     * OK
+     */
+    200: Result;
+};
+
+export type PostSystemUpdateCheckResponse = PostSystemUpdateCheckResponses[keyof PostSystemUpdateCheckResponses];
 
 export type GetTransactionData = {
     body?: never;
