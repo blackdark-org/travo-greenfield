@@ -26,6 +26,8 @@ System can check GitHub for a newer stable release. An automatic attempt occurs 
 
 When System finds a newer release, **Verify package** checks the signed archive and stages it for up to 30 minutes. Verification leaves the installed version running.
 
+Use **VPN** to import a WireGuard configuration, select a saved profile, or delete a profile.
+
 ## Docs
 
 - [Spec](docs/spec.md) · [Invariants](docs/invariants.md) · Plan: [milestone 0.1.0](https://github.com/blackdark-org/travo-greenfield/milestone/1) and [project board](https://github.com/orgs/blackdark-org/projects/1)

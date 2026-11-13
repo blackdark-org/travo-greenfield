@@ -1,10 +1,11 @@
-export type Route = 'dashboard' | 'login' | 'setup' | 'wifi' | 'system';
+export type Route = 'dashboard' | 'login' | 'setup' | 'wifi' | 'vpn' | 'system';
 
 const ROUTES: Record<string, Route> = {
   '/': 'dashboard',
   '/login': 'login',
   '/setup': 'setup',
   '/wifi': 'wifi',
+  '/vpn': 'vpn',
   '/system': 'system',
 };
 

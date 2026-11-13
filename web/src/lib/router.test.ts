@@ -8,6 +8,7 @@ describe('router', () => {
     ['#/login', 'login'],
     ['#/setup', 'setup'],
     ['#/wifi', 'wifi'],
+    ['#/vpn', 'vpn'],
     ['#/system', 'system'],
     ['#/system?tab=x', 'system'],
   ])('maps %j to %s', (hash, route) => {
@@ -20,20 +21,21 @@ describe('router', () => {
   });
 
   it('builds hrefs that parse back to the same route', () => {
-    for (const r of ['dashboard', 'login', 'setup', 'wifi', 'system'] as const) {
+    for (const r of ['dashboard', 'login', 'setup', 'wifi', 'vpn', 'system'] as const) {
       expect(parseHash(href(r))).toBe(r);
     }
   });
 });
 
 describe('guard', () => {
-  const routes: Route[] = ['dashboard', 'login', 'setup', 'wifi', 'system'];
+  const routes: Route[] = ['dashboard', 'login', 'setup', 'wifi', 'vpn', 'system'];
   const expected: Record<AuthState, Record<Route, Route>> = {
     unknown: {
       dashboard: 'dashboard',
       login: 'login',
       setup: 'setup',
       wifi: 'wifi',
+      vpn: 'vpn',
       system: 'system',
     },
     setup_required: {
@@ -41,6 +43,7 @@ describe('guard', () => {
       login: 'setup',
       setup: 'setup',
       wifi: 'setup',
+      vpn: 'setup',
       system: 'setup',
     },
     anonymous: {
@@ -48,6 +51,7 @@ describe('guard', () => {
       login: 'login',
       setup: 'login',
       wifi: 'login',
+      vpn: 'login',
       system: 'login',
     },
     authenticated: {
@@ -55,6 +59,7 @@ describe('guard', () => {
       login: 'dashboard',
       setup: 'dashboard',
       wifi: 'wifi',
+      vpn: 'vpn',
       system: 'system',
     },
   };

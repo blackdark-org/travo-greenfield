@@ -33,6 +33,7 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/updatecheck"
 	"github.com/blackdark-org/travo-greenfield/internal/updatestage"
 	"github.com/blackdark-org/travo-greenfield/internal/version"
+	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 	"github.com/blackdark-org/travo-greenfield/packaging"
 )
 
@@ -184,6 +185,7 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 		}
 	}
 	h, _ := api.New(api.Deps{
+		VPNProfiles:  vpnprofiles.New(filepath.Join(deps.Paths.State, "vpn-profiles.json")),
 		UpdateApply:  updater,
 		UpdateStage:  updateStage,
 		Backup:       backup,

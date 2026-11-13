@@ -44,12 +44,12 @@ function closeDrawer() {
   queueMicrotask(() => menuButton?.focus());
 }
 
-// Groups per spec. Only Dashboard and System have routes yet; the rest render the "not yet" card.
+// Groups per spec. Sections without a route; the rest render the "not yet" card.
 const nav: { route: Route | null; label: () => string; icon: typeof Wifi }[] = [
   { route: 'dashboard', label: () => m.nav_dashboard(), icon: LayoutDashboard },
   { route: 'wifi', label: () => m.nav_wifi(), icon: Wifi },
   { route: null, label: () => m.nav_network(), icon: Network },
-  { route: null, label: () => m.nav_vpn(), icon: Shield },
+  { route: 'vpn', label: () => m.nav_vpn(), icon: Shield },
   { route: null, label: () => m.nav_services(), icon: Server },
   { route: 'system', label: () => m.nav_system(), icon: Settings },
 ];
@@ -203,6 +203,8 @@ $effect(() => {
             </LoadState>
           {:else if shown === 'dashboard'}
             <PageHost load={pages.dashboard} />
+          {:else if shown === 'vpn'}
+            <PageHost load={pages.vpn} />
           {:else if shown === 'system'}
             <PageHost load={pages.system} />
           {:else if shown === 'login'}
