@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, ServerSentEventsResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, DeleteVpnProfileData, DeleteVpnProfileErrors, DeleteVpnProfileResponses, GetDashboardConnectivityData, GetDashboardConnectivityErrors, GetDashboardConnectivityResponses, GetDashboardEventsData, GetDashboardEventsErrors, GetDashboardEventsResponse, GetDashboardEventsResponses, GetDashboardThroughputData, GetDashboardThroughputErrors, GetDashboardThroughputResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemBackupData, GetSystemBackupErrors, GetSystemBackupResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetSystemUpdateApplyData, GetSystemUpdateApplyErrors, GetSystemUpdateApplyResponses, GetSystemUpdateStageData, GetSystemUpdateStageErrors, GetSystemUpdateStageResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, GetVpnProfilesData, GetVpnProfilesErrors, GetVpnProfilesResponses, GetVpnStatusData, GetVpnStatusErrors, GetVpnStatusResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, PostSystemUpdateApplyData, PostSystemUpdateApplyErrors, PostSystemUpdateApplyResponses, PostSystemUpdateCheckData, PostSystemUpdateCheckErrors, PostSystemUpdateCheckResponses, PostSystemUpdateRecoverData, PostSystemUpdateRecoverErrors, PostSystemUpdateRecoverResponses, PostSystemUpdateStageData, PostSystemUpdateStageErrors, PostSystemUpdateStageResponses, PostVpnProfileData, PostVpnProfileErrors, PostVpnProfileResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses, SelectVpnProfileData, SelectVpnProfileErrors, SelectVpnProfileResponses } from './types.gen';
+import type { ConfirmTransactionData, ConfirmTransactionErrors, ConfirmTransactionResponses, DeleteVpnProfileData, DeleteVpnProfileErrors, DeleteVpnProfileResponses, GetDashboardConnectivityData, GetDashboardConnectivityErrors, GetDashboardConnectivityResponses, GetDashboardEventsData, GetDashboardEventsErrors, GetDashboardEventsResponse, GetDashboardEventsResponses, GetDashboardThroughputData, GetDashboardThroughputErrors, GetDashboardThroughputResponses, GetHealthData, GetHealthErrors, GetHealthResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSetupStateData, GetSetupStateErrors, GetSetupStateResponses, GetSystemBackupData, GetSystemBackupErrors, GetSystemBackupResponses, GetSystemInfoData, GetSystemInfoErrors, GetSystemInfoResponses, GetSystemUpdateApplyData, GetSystemUpdateApplyErrors, GetSystemUpdateApplyResponses, GetSystemUpdateStageData, GetSystemUpdateStageErrors, GetSystemUpdateStageResponses, GetTransactionData, GetTransactionErrors, GetTransactionResponses, GetVpnProfilesData, GetVpnProfilesErrors, GetVpnProfilesResponses, GetVpnStatusData, GetVpnStatusErrors, GetVpnStatusResponses, GetWiFiData, GetWiFiErrors, GetWiFiResponses, GetWiFiScanData, GetWiFiScanErrors, GetWiFiScanResponses, PostLoginData, PostLoginErrors, PostLoginResponses, PostLogoutData, PostLogoutErrors, PostLogoutResponses, PostPasswordData, PostPasswordErrors, PostPasswordResponses, PostSetupPasswordData, PostSetupPasswordErrors, PostSetupPasswordResponses, PostSystemUpdateApplyData, PostSystemUpdateApplyErrors, PostSystemUpdateApplyResponses, PostSystemUpdateCheckData, PostSystemUpdateCheckErrors, PostSystemUpdateCheckResponses, PostSystemUpdateRecoverData, PostSystemUpdateRecoverErrors, PostSystemUpdateRecoverResponses, PostSystemUpdateStageData, PostSystemUpdateStageErrors, PostSystemUpdateStageResponses, PostVpnProfileData, PostVpnProfileErrors, PostVpnProfileResponses, RollbackTransactionData, RollbackTransactionErrors, RollbackTransactionResponses, SelectVpnProfileData, SelectVpnProfileErrors, SelectVpnProfileResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -357,5 +357,31 @@ export const getVpnStatus = <ThrowOnError extends boolean = false>(options?: Opt
             type: 'apiKey'
         }],
     url: '/api/v1/vpn/status',
+    ...options
+});
+
+/**
+ * WiFi radios, uplink and access points
+ */
+export const getWiFi = <ThrowOnError extends boolean = false>(options?: Options<GetWiFiData, ThrowOnError>): RequestResult<GetWiFiResponses, GetWiFiErrors, ThrowOnError> => (options?.client ?? client).get<GetWiFiResponses, GetWiFiErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/wifi',
+    ...options
+});
+
+/**
+ * Scan nearby networks (read-only)
+ */
+export const getWiFiScan = <ThrowOnError extends boolean = false>(options?: Options<GetWiFiScanData, ThrowOnError>): RequestResult<GetWiFiScanResponses, GetWiFiScanErrors, ThrowOnError> => (options?.client ?? client).get<GetWiFiScanResponses, GetWiFiScanErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'tg_session',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/wifi/scan',
     ...options
 });

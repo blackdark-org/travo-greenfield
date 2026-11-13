@@ -1,0 +1,47 @@
+package mock
+
+import (
+	"context"
+	_ "embed"
+	"encoding/json"
+	"fmt"
+
+	"github.com/blackdark-org/travo-greenfield/internal/device"
+)
+
+//go:embed testdata/wireless-status.json
+var wirelessStatus []byte
+
+//go:embed testdata/iwinfo-scan-phy0-sta0.json
+var scanPHY0STA []byte
+
+//go:embed testdata/iwinfo-scan-phy1-ap0.json
+var scanPHY1AP []byte
+
+// SetScanReply scripts a scan for one exact interface or radio name.
+func (d *Device) SetScanReply(name string, reply json.RawMessage) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.scanReplies[name] = reply
+}
+
+// ScanWireless returns only the reply seeded for name; ignoring the target would be a false pass.
+func (d *Device) ScanWireless(ctx context.Context, name string) (json.RawMessage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	reply, ok := d.scanReplies[name]
+	if !ok {
+		return nil, fmt.Errorf("iwinfo scan %s: %w", name, device.ErrNotFound)
+	}
+	return reply, nil
+}
+
+// SeedWiFi scripts the connected radio summary and one scan for each radio.
+func SeedWiFi(d *Device) {
+	d.SetUbusReply("network.wireless", "status", wirelessStatus)
+	d.SetScanReply("phy0-sta0", scanPHY0STA)
+	d.SetScanReply("phy1-ap0", scanPHY1AP)
+}

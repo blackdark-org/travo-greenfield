@@ -69,6 +69,7 @@ func New(o Options) (Deps, error) {
 		dev := mock.New()
 		mock.SeedSystem(dev)
 		mock.SeedConnectivity(dev)
+		mock.SeedWiFi(dev)
 		if o.FirstRun {
 			dev.SetPassword("")
 		}

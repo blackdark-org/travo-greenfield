@@ -4,6 +4,28 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type Ap = {
+    ifname: string;
+    radio: string;
+    section: string;
+    ssid: string;
+    /**
+     * present && up; null = could not read
+     */
+    up: boolean | null;
+};
+
+export type AccessPoint = {
+    band: '2g' | '5g' | '6g';
+    bssid: string;
+    channel: number;
+    frequency_mhz: number;
+    quality: number;
+    quality_max: number;
+    security: 'open' | 'wpa2' | 'wpa2_wpa3' | 'other';
+    signal_dbm: number;
+};
+
 export type ApiError = {
     /**
      * Stable error code
@@ -64,6 +86,14 @@ export type MemoryBody = {
     total_bytes: number;
 };
 
+export type Network = {
+    access_points: Array<AccessPoint>;
+    bands: Array<'2g' | '5g' | '6g'>;
+    best_signal_dbm: number;
+    security: 'open' | 'wpa2' | 'wpa2_wpa3' | 'other';
+    ssid: string;
+};
+
 export type OkBody = {
     status: 'ok';
 };
@@ -74,6 +104,21 @@ export type PasswordInputBody = {
      * 8 to 128 bytes, no NUL or line breaks
      */
     new: string;
+};
+
+export type RadioInfo = {
+    band: '2g' | '5g' | '6g' | 'unknown';
+    disabled: boolean;
+    name: string;
+    up: boolean;
+};
+
+export type RadioScan = {
+    ap_count: number;
+    band: '2g' | '5g' | '6g' | 'unknown';
+    code?: 'scan_failed' | 'scan_timeout' | 'bad_payload';
+    radio: string;
+    status: 'ok' | 'error' | 'skipped';
 };
 
 export type Rate = {
@@ -87,6 +132,32 @@ export type Result = {
     latest_version: string | null;
     running_version: string;
     status: 'disabled' | 'deferred' | 'no_release' | 'source_unavailable' | 'rate_limited' | 'unavailable' | 'available' | 'up_to_date';
+};
+
+export type Sta = {
+    /**
+     * Device carrier; null = could not read
+     */
+    associated: boolean | null;
+    /**
+     * Empty when netifd reports no device
+     */
+    ifname: string;
+    radio: string;
+    section: string;
+    /**
+     * Configured SSID
+     */
+    ssid: string;
+};
+
+export type ScanResult = {
+    /**
+     * Access points that broadcast no SSID
+     */
+    hidden: Array<AccessPoint>;
+    networks: Array<Network>;
+    radios: Array<RadioScan>;
 };
 
 export type SessionBody = {
@@ -191,6 +262,12 @@ export type UpdateCheckInputBody = {
 export type VpnImportInputBody = {
     config: string;
     name: string;
+};
+
+export type WiFiSummary = {
+    aps: Array<Ap>;
+    radios: Array<RadioInfo>;
+    stas: Array<Sta>;
 };
 
 export type GetHealthData = {
@@ -1081,3 +1158,61 @@ export type GetVpnStatusResponses = {
 };
 
 export type GetVpnStatusResponse = GetVpnStatusResponses[keyof GetVpnStatusResponses];
+
+export type GetWiFiData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/wifi';
+};
+
+export type GetWiFiErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetWiFiError = GetWiFiErrors[keyof GetWiFiErrors];
+
+export type GetWiFiResponses = {
+    /**
+     * OK
+     */
+    200: WiFiSummary;
+};
+
+export type GetWiFiResponse = GetWiFiResponses[keyof GetWiFiResponses];
+
+export type GetWiFiScanData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/wifi/scan';
+};
+
+export type GetWiFiScanErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetWiFiScanError = GetWiFiScanErrors[keyof GetWiFiScanErrors];
+
+export type GetWiFiScanResponses = {
+    /**
+     * OK
+     */
+    200: ScanResult;
+};
+
+export type GetWiFiScanResponse = GetWiFiScanResponses[keyof GetWiFiScanResponses];
