@@ -1,20 +1,26 @@
 import { render } from 'svelte/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Rate } from '../api/gen';
-import { fetchThroughput } from '../api/throughput';
+import { fetchHealth } from '../api/health';
 import type { LoadStatus } from '../ui/loader.svelte';
 import Dashboard from './Dashboard.svelte';
 
-const { createLoader } = vi.hoisted(() => ({ createLoader: vi.fn() }));
+const { createLoader, dashboardEvents } = vi.hoisted(() => ({
+  createLoader: vi.fn(),
+  dashboardEvents: {
+    connectivity: { status: { state: 'ready' }, data: undefined, retry: vi.fn() },
+    resources: { status: { state: 'ready' }, data: undefined, retry: vi.fn() },
+    throughput: { status: { state: 'ready' }, data: undefined as unknown, retry: vi.fn() },
+  },
+}));
 vi.mock('../ui/loader.svelte', () => ({ createLoader }));
+vi.mock('../dashboard-events.svelte', () => ({ dashboardEvents }));
 
 function dashboard(status: LoadStatus, interfaces?: Rate[]) {
-  createLoader.mockImplementation((fetch: unknown) => ({
-    status: fetch === fetchThroughput ? status : { state: 'ready' },
-    data: fetch === fetchThroughput && interfaces ? { interfaces } : undefined,
-    retry: vi.fn(),
-  }));
-  return render(Dashboard).body;
+  createLoader.mockReturnValue({ status: { state: 'ready' }, data: undefined, retry: vi.fn() });
+  dashboardEvents.throughput.status = status;
+  dashboardEvents.throughput.data = interfaces ? { interfaces } : undefined;
+  return render(Dashboard, { props: { events: dashboardEvents as never } }).body;
 }
 
 const interfaces = [
@@ -36,7 +42,7 @@ describe('Dashboard throughput', () => {
     expect(body).toContain('Unknown');
     expect(body).toContain('1.0 KB/s');
     expect(body).toContain('256 B/s');
-    expect(createLoader).toHaveBeenCalledWith(fetchThroughput, 2000);
+    expect(createLoader).toHaveBeenCalledWith(fetchHealth);
   });
 
   it('keeps last values visible when refresh fails', () => {

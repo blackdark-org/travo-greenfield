@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchSystemInfo } from '../api/system';
+import type { fetchSystemInfo } from '../api/system';
 import type { LoadStatus } from '../ui/loader.svelte';
 import Dashboard from './Dashboard.svelte';
 
@@ -21,16 +21,22 @@ const fixture = {
   app: { version: 'dev', build_time: '' },
 } satisfies SystemInfo;
 
-const { createLoader } = vi.hoisted(() => ({ createLoader: vi.fn() }));
+const { createLoader, dashboardEvents } = vi.hoisted(() => ({
+  createLoader: vi.fn(),
+  dashboardEvents: {
+    connectivity: { status: { state: 'ready' }, data: undefined, retry: vi.fn() },
+    resources: { status: { state: 'ready' }, data: undefined as unknown, retry: vi.fn() },
+    throughput: { status: { state: 'ready' }, data: undefined, retry: vi.fn() },
+  },
+}));
 vi.mock('../ui/loader.svelte', () => ({ createLoader }));
+vi.mock('../dashboard-events.svelte', () => ({ dashboardEvents }));
 
 function dashboard(status: LoadStatus, data?: SystemInfo) {
-  createLoader.mockImplementation((fetch: unknown) => ({
-    status: fetch === fetchSystemInfo ? status : { state: 'ready' },
-    data: fetch === fetchSystemInfo ? data : undefined,
-    retry: vi.fn(),
-  }));
-  return render(Dashboard).body;
+  createLoader.mockReturnValue({ status: { state: 'ready' }, data: undefined, retry: vi.fn() });
+  dashboardEvents.resources.status = status;
+  dashboardEvents.resources.data = data;
+  return render(Dashboard, { props: { events: dashboardEvents as never } }).body;
 }
 
 describe('Dashboard resources', () => {

@@ -1,20 +1,26 @@
 import { render } from 'svelte/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchConnectivity } from '../api/connectivity';
 import type { Status } from '../api/gen';
+import { fetchHealth } from '../api/health';
 import type { LoadStatus } from '../ui/loader.svelte';
 import Dashboard from './Dashboard.svelte';
 
-const { createLoader } = vi.hoisted(() => ({ createLoader: vi.fn() }));
+const { createLoader, dashboardEvents } = vi.hoisted(() => ({
+  createLoader: vi.fn(),
+  dashboardEvents: {
+    connectivity: { status: { state: 'ready' }, data: undefined as unknown, retry: vi.fn() },
+    resources: { status: { state: 'ready' }, data: undefined, retry: vi.fn() },
+    throughput: { status: { state: 'ready' }, data: undefined, retry: vi.fn() },
+  },
+}));
 vi.mock('../ui/loader.svelte', () => ({ createLoader }));
+vi.mock('../dashboard-events.svelte', () => ({ dashboardEvents }));
 
 function dashboard(status: LoadStatus, data: Status) {
-  createLoader.mockImplementation((fetch: unknown) => ({
-    status: fetch === fetchConnectivity ? status : { state: 'ready' },
-    data: fetch === fetchConnectivity ? data : undefined,
-    retry: vi.fn(),
-  }));
-  return render(Dashboard).body;
+  createLoader.mockReturnValue({ status: { state: 'ready' }, data: undefined, retry: vi.fn() });
+  dashboardEvents.connectivity.status = status;
+  dashboardEvents.connectivity.data = data;
+  return render(Dashboard, { props: { events: dashboardEvents as never } }).body;
 }
 
 describe('Dashboard connectivity', () => {
@@ -31,7 +37,7 @@ describe('Dashboard connectivity', () => {
     expect(body).toContain('phy0-sta0');
     expect(body).toContain('Link up');
     expect(body).toContain('Offline');
-    expect(createLoader).toHaveBeenCalledWith(fetchConnectivity);
+    expect(createLoader).toHaveBeenCalledWith(fetchHealth);
   });
 
   it('distinguishes unknown and down carrier', () => {

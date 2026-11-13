@@ -17,6 +17,7 @@ export type AuthResult = { ok: true } | { ok: false; code: string };
 const MAX_TIMER_MS = 2 ** 31 - 1;
 
 let state = $state<AuthState>('unknown');
+let generation = $state(0);
 let error = $state<string | null>(null);
 let timer: ReturnType<typeof setTimeout> | undefined;
 let returnTo: Route | null = null;
@@ -42,6 +43,7 @@ function clearTimer() {
 
 /** Keeps the CSRF token and arms the expiry timer from the relative `expires_in` (never a server timestamp). */
 function start(body: SessionBody) {
+  generation += 1;
   csrf.set(body.csrf_token);
   clearTimer();
   timer = setTimeout(expire, Math.min(body.expires_in * 1000, MAX_TIMER_MS));
@@ -50,6 +52,7 @@ function start(body: SessionBody) {
 }
 
 function expire() {
+  generation += 1;
   clearTimer();
   csrf.set(null);
   state = 'anonymous';
@@ -76,6 +79,9 @@ export const session = {
   },
   get error(): string | null {
     return error;
+  },
+  get generation(): number {
+    return generation;
   },
   /** Where the user was headed before the guard sent them to login; cleared by whoever uses it. */
   get returnTo(): Route | null {
@@ -113,8 +119,9 @@ export const session = {
 
   /** Ends the session locally whatever the daemon answered: the cookie is gone or useless either way. */
   async logout(): Promise<void> {
-    await postLogout();
+    const request = postLogout({ headers: { 'X-CSRF-Token': csrf.get() ?? '' } });
     expire();
+    await request;
   },
 
   expire,

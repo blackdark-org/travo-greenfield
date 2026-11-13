@@ -1,13 +1,16 @@
+import { client } from './client';
 import { getSystemBackup, getSystemInfo } from './gen';
-import './client';
+import type { Client } from './gen/client';
+import { APIRequestError } from './request';
 
 /** Resolves with the system body; rejects on transport, HTTP or shape errors so callers never see "absent". */
-export async function fetchSystemInfo() {
-  const { data, error, response } = await getSystemInfo();
+export async function fetchSystemInfo(signal?: AbortSignal, requestClient: Client = client) {
+  const { data, error, response } = await getSystemInfo({ signal, client: requestClient });
   if (data) return data;
   const detail = (error as { error?: string; detail?: string; title?: string } | undefined) ?? {};
-  throw new Error(
+  throw new APIRequestError(
     detail.error ?? detail.detail ?? detail.title ?? `HTTP ${response?.status ?? 'error'}`,
+    response?.status,
   );
 }
 

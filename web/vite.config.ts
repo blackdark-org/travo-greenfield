@@ -13,6 +13,22 @@ export default defineConfig(({ mode }) => {
       // Flat output: the device server serves dist/ as-is, with the *.gz written by scripts/gzip-dist.mjs.
       assetsDir: '',
       cssCodeSplit: false,
+      modulePreload: { polyfill: false },
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            // Keep the eager shell runtime together. Route chunks stay lazy, while
+            // extra shared entry chunks cost over 1 KB in aggregate gzip overhead.
+            if (
+              id.endsWith('/src/main.ts') ||
+              id.includes('/node_modules/svelte/') ||
+              id.endsWith('/src/lib/session.svelte.ts')
+            ) {
+              return 'index';
+            }
+          },
+        },
+      },
     },
     server: { proxy },
     preview: { proxy },

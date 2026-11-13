@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { deferred } from './deferred.test-utils';
 
 // Fresh module graph per test: the session is module state and must start `unknown`.
 let session: typeof import('./session.svelte').session;
@@ -88,6 +89,17 @@ describe('session.bootstrap', () => {
 });
 
 describe('session expiry', () => {
+  it('start and expire advance the reactive session generation', async () => {
+    expect(session.generation).toBe(0);
+    serve({ '/api/v1/auth/login': json(200, body) });
+    await session.login('pw');
+    expect(session.generation).toBe(1);
+    session.expire();
+    expect(session.generation).toBe(2);
+    await session.login('pw');
+    expect(session.generation).toBe(3);
+  });
+
   it('expires after expires_in seconds: anonymous and CSRF cleared', async () => {
     vi.useFakeTimers();
     serve({ '/api/v1/auth/login': json(200, body) });
@@ -154,6 +166,26 @@ describe('session mutations', () => {
     await session.logout();
     expect(session.state).toBe('anonymous');
     expect(csrf.get()).toBeNull();
+  });
+
+  it('logout expires immediately and sends the pre-expiry CSRF token', async () => {
+    serve({ '/api/v1/auth/login': json(200, body) });
+    await session.login('pw');
+    const generation = session.generation;
+    const pending = deferred<Response>();
+    const fetchFn = vi.fn(async (request: Request) => {
+      expect(new URL(request.url).pathname).toBe('/api/v1/auth/logout');
+      expect(request.headers.get('X-CSRF-Token')).toBe('tok');
+      return pending.promise;
+    });
+    client.setConfig({ baseUrl: 'http://daemon.test', fetch: fetchFn as unknown as typeof fetch });
+    const loggingOut = session.logout();
+    expect(session.state).toBe('anonymous');
+    expect(session.generation).toBe(generation + 1);
+    expect(csrf.get()).toBeNull();
+    pending.resolve(json(200, { status: 'ok' }));
+    await loggingOut;
+    expect(fetchFn).toHaveBeenCalledOnce();
   });
 
   // A stale setup state must not trap the user: the guard would bounce login <-> setup.
