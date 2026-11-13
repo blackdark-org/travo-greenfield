@@ -155,7 +155,7 @@ export type SystemInfoBody = {
     uptime_seconds: number;
 };
 
-export type ThroughputOutputBody = {
+export type ThroughputBody = {
     interfaces: Array<Rate>;
 };
 
@@ -370,6 +370,35 @@ export type GetDashboardConnectivityResponses = {
 
 export type GetDashboardConnectivityResponse = GetDashboardConnectivityResponses[keyof GetDashboardConnectivityResponses];
 
+export type GetDashboardEventsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dashboard/events';
+};
+
+export type GetDashboardEventsErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetDashboardEventsError = GetDashboardEventsErrors[keyof GetDashboardEventsErrors];
+
+export type GetDashboardEventsResponses = {
+    /**
+     * Named Server-Sent Events with UTF-8 JSON data. No event IDs or replay are provided.
+     */
+    200: string;
+};
+
+export type GetDashboardEventsResponse = GetDashboardEventsResponses[keyof GetDashboardEventsResponses];
+
 export type GetDashboardThroughputData = {
     body?: never;
     path?: never;
@@ -394,7 +423,7 @@ export type GetDashboardThroughputResponses = {
     /**
      * OK
      */
-    200: ThroughputOutputBody;
+    200: ThroughputBody;
 };
 
 export type GetDashboardThroughputResponse = GetDashboardThroughputResponses[keyof GetDashboardThroughputResponses];

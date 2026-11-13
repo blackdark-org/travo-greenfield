@@ -38,11 +38,13 @@ type ConnectivityReader interface {
 // Deps are everything the routes need; the daemon builds them, tests fake them.
 type Deps struct {
 	VPNProfiles *vpnprofiles.Service
-	UpdateStage UpdateStager
-	UpdateApply UpdateApplier
-	Updates     UpdateChecker
-	Version     string
-	Accounts    device.Accounts
+	// DaemonContext stops live streams and their producers before HTTP shutdown drains.
+	DaemonContext context.Context
+	UpdateStage   UpdateStager
+	UpdateApply   UpdateApplier
+	Updates       UpdateChecker
+	Version       string
+	Accounts      device.Accounts
 	// Ubus feeds read-only system facts; nil answers 503 device_unavailable.
 	Ubus         device.Ubus
 	Backup       device.ConfigBackupper
@@ -69,6 +71,7 @@ type server struct {
 	sessions *auth.Store
 	clock    auth.Clock
 	trusted  func(netip.Addr) bool
+	events   *dashboardEventService
 	// accountMu serialises setup and password change: "is it set?" and "set it" are one step.
 	accountMu sync.Mutex
 }
@@ -124,6 +127,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerBackup(a)
 	s.registerThroughput(a)
 	s.registerConnectivity(a)
+	s.registerDashboardEvents(a)
 	if d.UI != nil {
 		mux.Handle("/", d.UI)
 	}

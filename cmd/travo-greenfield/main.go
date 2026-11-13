@@ -185,14 +185,15 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 		}
 	}
 	h, _ := api.New(api.Deps{
-		VPNProfiles:  vpnprofiles.New(filepath.Join(deps.Paths.State, "vpn-profiles.json")),
-		UpdateApply:  updater,
-		UpdateStage:  updateStage,
-		Backup:       backup,
-		Updates:      updates,
-		Connectivity: connection,
-		Throughput:   sampler,
-		Version:      version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
+		DaemonContext: ctx,
+		VPNProfiles:   vpnprofiles.New(filepath.Join(deps.Paths.State, "vpn-profiles.json")),
+		UpdateApply:   updater,
+		UpdateStage:   updateStage,
+		Backup:        backup,
+		Updates:       updates,
+		Connectivity:  connection,
+		Throughput:    sampler,
+		Version:       version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
 		Trusted:   provider.Allowed,
 		RouterIPs: provider.RouterIPs, HostAllow: hostAllow,
