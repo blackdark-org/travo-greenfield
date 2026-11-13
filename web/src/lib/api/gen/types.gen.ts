@@ -362,6 +362,35 @@ export type PostSetupPasswordResponses = {
 
 export type PostSetupPasswordResponse = PostSetupPasswordResponses[keyof PostSetupPasswordResponses];
 
+export type GetSystemBackupData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/system/backup';
+};
+
+export type GetSystemBackupErrors = {
+    /**
+     * Internal Server Error
+     */
+    500: ApiError;
+    /**
+     * Service Unavailable
+     */
+    503: ApiError;
+};
+
+export type GetSystemBackupError = GetSystemBackupErrors[keyof GetSystemBackupErrors];
+
+export type GetSystemBackupResponses = {
+    /**
+     * OK
+     */
+    200: Blob | File;
+};
+
+export type GetSystemBackupResponse = GetSystemBackupResponses[keyof GetSystemBackupResponses];
+
 export type GetSystemInfoData = {
     body?: never;
     path?: never;

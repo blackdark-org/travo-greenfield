@@ -23,7 +23,7 @@ Travel-router web UI and API that runs ON the router, next to stock LuCI. Clean-
 7. **Captive portal assist**: detection and status card, "Open hotel login", DNS-bypass toggle with 5-min auto-restore, conditional DHCP renew.
 8. **WireGuard**: profile import/list/activate/delete, on/off (≤3 taps), kill switch, split tunnel, 5-state status, DNS verify.
 9. **AdGuard Home (default on)**: installed after the first uplink; dnsmasq `:53` → AGH `127.0.0.1:5353`; on/off and "default DNS" toggle in Travo; full UI via the Travo-gated port `:3001`. See [adr/0006](adr/0006-adguard-package-and-topology.md).
-10. **System**: info, reboot, backup (config tarball), self-update from GitHub releases (built, disabled while the repo is private).
+10. **System**: info, reboot, authenticated config tarball download (`GET /api/v1/system/backup`), self-update from GitHub releases (built, disabled while the repo is private).
 11. **UI**: Svelte 5 SPA, dark mode without flash, English via Paraglide, ≤50 KB gzip.
 
 ## Out of 0.1 (do not break when adding)

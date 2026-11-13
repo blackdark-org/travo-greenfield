@@ -1,5 +1,5 @@
 <script lang="ts">
-import { fetchSystemInfo } from '../api/system';
+import { downloadSystemBackup, fetchSystemInfo } from '../api/system';
 import { type AuthMessage, passwordMessage } from '../auth-messages';
 import { formatBytes, formatLoad, formatUptime } from '../format';
 import { navigate } from '../navigate';
@@ -14,6 +14,20 @@ import { createLoader } from '../ui/loader.svelte';
 import PasswordField from '../ui/PasswordField.svelte';
 
 const info = createLoader(fetchSystemInfo);
+let backupPending = $state(false);
+let backupError = $state(false);
+
+async function downloadBackup() {
+  backupPending = true;
+  backupError = false;
+  try {
+    await downloadSystemBackup();
+  } catch {
+    backupError = true;
+  } finally {
+    backupPending = false;
+  }
+}
 
 let current = $state('');
 let next = $state('');
@@ -93,6 +107,22 @@ async function logout() {
         </dl>
       {/if}
     </LoadState>
+  </Card>
+
+  <Card title={m.system_backup()}>
+    <div>
+      <button
+        type="button"
+        class="rounded-md border border-border px-3 py-2 hover:bg-bg disabled:opacity-60"
+        disabled={backupPending}
+        onclick={downloadBackup}
+      >
+        {backupPending ? m.system_backup_pending() : m.system_backup_download()}
+      </button>
+    </div>
+    {#if backupError}
+      <p role="alert" class="status status-danger self-start">{m.system_backup_failed()}</p>
+    {/if}
   </Card>
 
   <Card title={m.system_about()}>

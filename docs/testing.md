@@ -46,6 +46,7 @@ Per release, each from Ethernet unless stated (issues with label `needs-hardware
 3. From a phone on the AP, switch to client mode: refused with 409 `wifi_lockout_risk`.
 4. Wrong uplink password: carrier stays false, rollback happens, UI says "rolled back" only after restore.
 5. DNS: captive bypass over AdGuard restores base exactly; AdGuard stopped → fail-open within seconds.
+6. Configuration backup (#64): sign in on the AXT1800, download the archive from System and verify it locally with `gzip -t travo-config.tar.gz` and `tar -tzf travo-config.tar.gz`. Confirm it contains router config entries. Keep the archive and its contents private.
 
 ## Web
 

@@ -61,6 +61,11 @@ type Accounts interface {
 	SetRootPassword(ctx context.Context, password string) error
 }
 
+// ConfigBackupper creates a configuration archive at a caller-owned destination.
+type ConfigBackupper interface {
+	BackupConfig(ctx context.Context, destination string) error
+}
+
 // Device is the full port.
 type Device interface {
 	UCI
