@@ -70,16 +70,20 @@ func TestLatestHandshakesDoesNotMapDifferentDiagnosticContainingNoSuchDevice(t *
 }
 
 func TestLatestHandshakesRejectsInvalidInterfaceWithoutRunning(t *testing.T) {
-	runs := 0
-	d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
-		runs++
-		return "", 0, nil
-	}}
-	if _, err := d.LatestHandshakes(context.Background(), "wg0 --x"); err == nil {
-		t.Fatal("accepted invalid interface")
-	}
-	if runs != 0 {
-		t.Fatalf("ran %d commands", runs)
+	for _, iface := range []string{"wg0 --x", "all", "interfaces"} {
+		t.Run(iface, func(t *testing.T) {
+			runs := 0
+			d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
+				runs++
+				return "", 0, nil
+			}}
+			if _, err := d.LatestHandshakes(context.Background(), iface); err == nil {
+				t.Fatal("accepted invalid interface")
+			}
+			if runs != 0 {
+				t.Fatalf("ran %d commands", runs)
+			}
+		})
 	}
 }
 
