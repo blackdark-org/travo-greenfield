@@ -15,7 +15,7 @@ var wireGuardInterface = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,14}$`)
 
 // LatestHandshakes reads only peer public keys and handshake times, never private keys.
 func (d *Device) LatestHandshakes(ctx context.Context, iface string) ([]device.PeerHandshake, error) {
-	if !wireGuardInterface.MatchString(iface) {
+	if iface == "all" || iface == "interfaces" || !wireGuardInterface.MatchString(iface) {
 		return nil, fmt.Errorf("invalid WireGuard interface %q", iface)
 	}
 	out, err := d.run(ctx, TierRead, "wg", "show", iface, "latest-handshakes")
