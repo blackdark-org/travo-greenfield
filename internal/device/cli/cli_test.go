@@ -27,6 +27,53 @@ func fake(calls *[]call, reply map[string]string, failCmd string) runner.Runner 
 	}
 }
 
+func TestUCIExitOneNotFoundClassification(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		args         []string
+		commandError string
+		wantNotFound bool
+	}{
+		{
+			name:         "export entry not found diagnostic",
+			args:         []string{"export", "nosuch"},
+			commandError: "uci export nosuch: exit status 1: uci: Entry not found",
+			wantNotFound: true,
+		},
+		{
+			name:         "export transient failure",
+			args:         []string{"export", "network"},
+			commandError: "uci export network: exit status 1: uci: I/O error",
+			wantNotFound: false,
+		},
+		{
+			name:         "quiet get suppresses not found diagnostic",
+			args:         []string{"-q", "get", "network.nosuch"},
+			commandError: "uci -q get network.nosuch: exit status 1: ",
+			wantNotFound: true,
+		},
+		{
+			name:         "quiet delete suppresses not found diagnostic",
+			args:         []string{"-q", "delete", "dhcp.nosuch.server"},
+			commandError: "uci -q delete dhcp.nosuch.server: exit status 1: ",
+			wantNotFound: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
+				return "", 1, errors.New(tc.commandError)
+			}}
+			_, err := d.run(context.Background(), TierRead, "uci", tc.args...)
+			if err == nil {
+				t.Fatal("exit 1 returned no error")
+			}
+			if got := errors.Is(err, device.ErrNotFound); got != tc.wantNotFound {
+				t.Fatalf("errors.Is(ErrNotFound) = %v, want %v: %v", got, tc.wantNotFound, err)
+			}
+		})
+	}
+}
+
 func TestSetRefusesMissingSection(t *testing.T) {
 	var calls []call
 	d := &Device{Run: fake(&calls, nil, "-q get")}
