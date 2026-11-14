@@ -2,14 +2,14 @@
 import type { AccessPoint, ScanResult } from '../api/gen';
 import { m } from '../paraglide/messages.js';
 import Status from '../ui/Status.svelte';
-import { bandLabel, bandsBadge, securityLabel, signalLabel } from '../wifi';
+import { accessPointKey, bandLabel, bandsBadge, securityLabel, signalLabel } from '../wifi';
 
 let { result }: { result: ScanResult } = $props();
 </script>
 
 {#snippet accessPoints(aps: AccessPoint[])}
   <ul class="mb-3 space-y-1 pl-4 text-sm text-muted">
-    {#each aps as ap (ap.bssid)}
+    {#each aps as ap, index (accessPointKey(ap, index))}
       <li>
         <span class="break-all">{ap.bssid}</span> · {bandLabel(ap.band)} · {m.wifi_channel({ channel: ap.channel })} · {signalLabel(ap.signal_dbm)} · {securityLabel(ap.security)}
       </li>
