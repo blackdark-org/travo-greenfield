@@ -1,6 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
 import type { AccessPoint, Network, ScanResult } from '../api/gen';
+import { accessPointKey } from '../wifi';
 import WiFiScanList from './WiFiScanList.svelte';
 
 function ap(band: AccessPoint['band'], bssid: string, signal = -50): AccessPoint {
@@ -50,6 +51,19 @@ describe('WiFi scan list', () => {
     expect(body).toContain('60:22:32:2f:05:2b');
     expect(body).toContain('a4:ce:da:51:f2:cf');
     expect(body).toContain('WPA2');
+  });
+
+  it('keys duplicate BSSIDs by band and list index', () => {
+    const duplicate = '60:22:32:2f:05:2b';
+    const accessPoints = [ap('2g', duplicate), ap('2g', duplicate), ap('5g', duplicate)];
+    const keys = accessPoints.map((accessPoint, index) => accessPointKey(accessPoint, index));
+    expect(new Set(keys).size).toBe(accessPoints.length);
+    expect(() =>
+      view({
+        networks: [network('Duplicate', ['2g', '5g'], accessPoints)],
+        hidden: [ap('5g', duplicate)],
+      }),
+    ).not.toThrow();
   });
 
   it('shows the hidden row only when hidden APs exist', () => {

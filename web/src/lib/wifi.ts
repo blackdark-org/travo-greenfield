@@ -23,6 +23,10 @@ export function signalLabel(signal: number): string {
   return `${signal} dBm`;
 }
 
+export function accessPointKey(accessPoint: AccessPoint, index: number): string {
+  return `${accessPoint.band}:${index}:${accessPoint.bssid}`;
+}
+
 export function securityLabel(security: AccessPoint['security']): string {
   switch (security) {
     case 'open':
