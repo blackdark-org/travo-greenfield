@@ -33,7 +33,12 @@ func (d *Device) run(ctx context.Context, tier time.Duration, name string, args 
 	defer cancel()
 	out, code, err := d.Run(ctx, name, args...)
 	if err != nil && name == "uci" && code == 1 {
-		return out, fmt.Errorf("%w: %v", device.ErrNotFound, err)
+		// Exec includes stderr in err. Quiet commands suppress the not-found diagnostic,
+		// so their historical exit-1 mapping is the only evidence available to callers.
+		quiet := len(args) > 0 && args[0] == "-q"
+		if quiet || strings.Contains(err.Error(), "uci: Entry not found") {
+			return out, fmt.Errorf("%w: %v", device.ErrNotFound, err)
+		}
 	}
 	return out, err
 }

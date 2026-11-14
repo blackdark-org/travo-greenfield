@@ -12,6 +12,12 @@ import (
 )
 
 // Runs against the real uci inside an OpenWrt container (see mise task test:integration).
+func TestRealUCIMissingConfig(t *testing.T) {
+	if _, err := New().Show(context.Background(), "nosuch"); !errors.Is(err, device.ErrNotFound) {
+		t.Fatalf("Show on missing config: %v", err)
+	}
+}
+
 func TestRealUCIRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	d := New()

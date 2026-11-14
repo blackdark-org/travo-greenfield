@@ -202,6 +202,20 @@ func TestServiceMissingNetworkConfig(t *testing.T) {
 	}
 }
 
+func TestServiceConfigReadFailureIsUnavailable(t *testing.T) {
+	d := &cli.Device{Run: func(_ context.Context, name string, args ...string) (string, int, error) {
+		if name != "uci" || strings.Join(args, " ") != "export network" {
+			t.Fatalf("unexpected command: %s %s", name, strings.Join(args, " "))
+		}
+		return "", 1, errors.New("uci export network: exit status 1: uci: I/O error")
+	}}
+	service := New(d, d, d, selectionResult{}, func() time.Time { return fixtureTime(t, "connected") })
+	got, err := service.Status(context.Background())
+	if !errors.Is(err, ErrUnavailable) || got.State != "" {
+		t.Fatalf("transient config failure produced %+v, %v", got, err)
+	}
+}
+
 func TestServiceMissingNetifdObject(t *testing.T) {
 	cfg := &configResult{sections: fixtureSections(t, "no-handshake")}
 	ubus := ubusFunc(func(context.Context, string, string, any) (json.RawMessage, error) {
