@@ -51,11 +51,21 @@ func TestLatestHandshakesFromFixtures(t *testing.T) {
 func TestLatestHandshakesMapsMissingDevice(t *testing.T) {
 	message := strings.TrimSpace(wireGuardFixture(t, "disabled", "wg-latest-handshakes.txt"))
 	d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
-		return "", 1, errors.New(message)
+		return "", 1, failedCommand("wg", message)
 	}}
 	_, err := d.LatestHandshakes(context.Background(), "wg0")
 	if !errors.Is(err, device.ErrNotFound) {
 		t.Fatalf("got %v", err)
+	}
+}
+
+func TestLatestHandshakesDoesNotMapDifferentDiagnosticContainingNoSuchDevice(t *testing.T) {
+	d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
+		return "", 1, failedCommand("wg", "Unable to access interface: No such device or address")
+	}}
+	_, err := d.LatestHandshakes(context.Background(), "wg0")
+	if errors.Is(err, device.ErrNotFound) {
+		t.Fatalf("unrecognized diagnostic mapped to ErrNotFound: %v", err)
 	}
 }
 
@@ -86,7 +96,7 @@ func TestLatestHandshakesRejectsMalformedLine(t *testing.T) {
 func TestCallMapsMissingUbusObject(t *testing.T) {
 	message := strings.TrimSpace(wireGuardFixture(t, "disabled", "interface-wg0-status.json"))
 	d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
-		return "", 1, errors.New(message)
+		return "", 1, failedCommand("ubus", message)
 	}}
 	_, err := d.Call(context.Background(), "network.interface.wg0", "status", nil)
 	if !errors.Is(err, device.ErrNotFound) {

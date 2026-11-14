@@ -12,6 +12,7 @@ import (
 
 	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/device/cli"
+	"github.com/blackdark-org/travo-greenfield/internal/runner"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 )
 
@@ -94,6 +95,10 @@ func fixtureSection(t *testing.T, state string) *device.Section {
 	return nil
 }
 
+func commandFailure(name string, args []string, diagnostic string) error {
+	return &runner.CommandError{Name: name, Args: args, Err: errors.New("exit status 1"), Stderr: diagnostic}
+}
+
 func fixtureCLI(t *testing.T, state string) (*cli.Device, *[]commandCall) {
 	t.Helper()
 	calls := &[]commandCall{}
@@ -105,12 +110,14 @@ func fixtureCLI(t *testing.T, state string) (*cli.Device, *[]commandCall) {
 		switch name + " " + strings.Join(args, " ") {
 		case "ubus call network.interface.wg0 status {}":
 			if state == "disabled" {
-				return "", 1, errors.New(strings.TrimSpace(string(readFixture(t, state, "interface-wg0-status.json"))))
+				diagnostic := strings.TrimSpace(string(readFixture(t, state, "interface-wg0-status.json")))
+				return "", 1, commandFailure(name, args, diagnostic)
 			}
 			return string(readFixture(t, state, "interface-wg0-status.json")), 0, nil
 		case "wg show wg0 latest-handshakes":
 			if state == "disabled" {
-				return "", 1, errors.New(strings.TrimSpace(string(readFixture(t, state, "wg-latest-handshakes.txt"))))
+				diagnostic := strings.TrimSpace(string(readFixture(t, state, "wg-latest-handshakes.txt")))
+				return "", 1, commandFailure(name, args, diagnostic)
 			}
 			return string(readFixture(t, state, "wg-latest-handshakes.txt")), 0, nil
 		default:
