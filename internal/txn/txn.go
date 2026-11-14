@@ -93,7 +93,7 @@ type Manager struct {
 	// ArmLimit bounds commit+reload+probe; past it the watchdog restores (daemon died mid-apply).
 	// Must exceed ApplyBudget, or a slow commit could land after the restore.
 	ArmLimit time.Duration
-	// ApplyBudget is the worst case for commit + reload + probe (reload tier plus probe timeout).
+	// ApplyBudget is the shared deadline for the live apply phase.
 	ApplyBudget time.Duration
 	// Settle bounds how long Rollback/Recover wait for an already-claimed restore to report.
 	Settle time.Duration
@@ -160,7 +160,7 @@ func (m *Manager) Begin(ctx context.Context, summary string, configs []string, s
 		return Status{}, m.release(fmt.Errorf("txn: bad id %q", id))
 	}
 	abort := func(err error) (Status, error) { // nothing committed yet
-		return Status{}, m.release(errors.Join(err, m.revertAll(lctx, cs), os.RemoveAll(m.path(id))))
+		return Status{}, m.release(errors.Join(err, m.revertAll(context.WithoutCancel(lctx), cs), os.RemoveAll(m.path(id))))
 	}
 	meta, err := m.snapshot(id, cs, summary)
 	if err != nil {
@@ -178,6 +178,11 @@ func (m *Manager) Begin(ctx context.Context, summary string, configs []string, s
 		return abort(ErrStopped)
 	}
 
+	applyCtx, cancel := context.WithTimeout(lctx, m.ApplyBudget)
+	defer cancel()
+	if err := applyCtx.Err(); err != nil {
+		return abort(err)
+	}
 	// Arm the watchdog BEFORE the first commit: from here on, any crash ends in a restore.
 	pid, err := m.Spawner.Start(m.path(id, "watchdog.sh"), m.watchdogArgs(id, m.Window, m.ArmLimit)...)
 	if err != nil {
@@ -186,33 +191,56 @@ func (m *Manager) Begin(ctx context.Context, summary string, configs []string, s
 	if err := atomicfile.Write(m.path(id, "pid"), []byte(strconv.Itoa(pid)+"\n"), 0o600); err != nil {
 		return m.rollbackNow(id, meta, fmt.Errorf("txn: record watchdog pid: %w", err))
 	}
-	for _, c := range cs {
+	return m.applyLive(applyCtx, meta, probe)
+}
+
+func (m *Manager) applyLive(ctx context.Context, meta Meta, probe Probe) (Status, error) {
+	id := meta.ID
+	for _, c := range meta.Configs {
 		if err := m.stillOurs(id); err != nil {
-			return m.settledAfterRace(id, meta, err)
+			return m.settledAfterRace(id, meta, errors.Join(ctx.Err(), err))
 		}
 		if m.stopped() {
-			return m.rollbackNow(id, meta, ErrStopped)
+			return m.rollbackNow(id, meta, errors.Join(ctx.Err(), ErrStopped))
 		}
-		if err := m.Device.Commit(lctx, c); err != nil {
+		if err := runBeforeDeadline(ctx, func() error { return m.Device.Commit(ctx, c) }); err != nil {
 			return m.rollbackNow(id, meta, fmt.Errorf("txn: commit %s: %w", c, err))
 		}
 	}
-	if err := m.Device.Reload(lctx); err != nil {
+	if err := m.stillOurs(id); err != nil {
+		return m.settledAfterRace(id, meta, errors.Join(ctx.Err(), err))
+	}
+	if m.stopped() {
+		return m.rollbackNow(id, meta, errors.Join(ctx.Err(), ErrStopped))
+	}
+	if err := runBeforeDeadline(ctx, func() error { return m.Device.Reload(ctx) }); err != nil {
 		return m.rollbackNow(id, meta, fmt.Errorf("txn: reload: %w", err))
 	}
 	if probe != nil {
-		if err := probe(ctx); err != nil {
-			return m.rollbackNow(id, meta, fmt.Errorf("%w: %v", ErrProbeFailed, err))
+		if err := runBeforeDeadline(ctx, func() error { return probe(ctx) }); err != nil {
+			return m.rollbackNow(id, meta, fmt.Errorf("%w: %w", ErrProbeFailed, err))
 		}
 	}
 	if err := m.stillOurs(id); err != nil {
-		return m.settledAfterRace(id, meta, err)
+		return m.settledAfterRace(id, meta, errors.Join(ctx.Err(), err))
+	}
+	if err := ctx.Err(); err != nil {
+		return m.rollbackNow(id, meta, err)
 	}
 	// Start the user's window only now: they get all of it.
 	if err := atomicfile.Write(m.path(id, "armed"), []byte("1\n"), 0o600); err != nil {
 		return m.rollbackNow(id, meta, fmt.Errorf("txn: arm: %w", err))
 	}
 	return Status{Meta: meta, State: Pending}, nil
+}
+
+// runBeforeDeadline observes cancellation even if a live operation returns nil.
+func runBeforeDeadline(ctx context.Context, run func() error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	err := run()
+	return errors.Join(err, ctx.Err())
 }
 
 func (m *Manager) watchdogArgs(id string, window, armLimit time.Duration) []string {
