@@ -159,7 +159,10 @@ func run(addr string, useMock, firstRun bool, hostAllow []string, staticDir, rel
 	profiles := vpnprofiles.New(filepath.Join(deps.Paths.State, "vpn-profiles.json"))
 	var vpnStatus api.VPNStatusReader
 	if wg, ok := deps.Device.(device.WireGuardReader); ok {
-		vpnStatus = vpnstatus.New(deps.Device, deps.Device, wg, profiles, clock.Now)
+		statusStart := time.Now()
+		vpnStatus = vpnstatus.New(deps.Device, deps.Device, wg, profiles, clock.Now, func() time.Duration {
+			return time.Since(statusStart)
+		})
 	}
 	if useMock {
 		releaseSource = "off"

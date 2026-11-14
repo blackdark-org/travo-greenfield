@@ -20,19 +20,22 @@ type Selection interface {
 }
 
 type Service struct {
-	cfg  Config
-	ubus device.Ubus
-	wg   device.WireGuardReader
-	sel  Selection
-	now  func() time.Time
+	cfg     Config
+	ubus    device.Ubus
+	wg      device.WireGuardReader
+	sel     Selection
+	now     func() time.Time
+	elapsed func() time.Duration
 
-	mu       sync.Mutex
-	lastGood TunnelStatus
-	hasGood  bool
+	mu              sync.Mutex
+	lastGood        TunnelStatus
+	lastGoodElapsed time.Duration
+	hasGood         bool
 }
 
-func New(cfg Config, ubus device.Ubus, wg device.WireGuardReader, sel Selection, now func() time.Time) *Service {
-	return &Service{cfg: cfg, ubus: ubus, wg: wg, sel: sel, now: now}
+// New keeps router wall time for observations and uses elapsed for monotonic cache expiry.
+func New(cfg Config, ubus device.Ubus, wg device.WireGuardReader, sel Selection, now func() time.Time, elapsed func() time.Duration) *Service {
+	return &Service{cfg: cfg, ubus: ubus, wg: wg, sel: sel, now: now, elapsed: elapsed}
 }
 
 // Status reads without changing device state; only its in-memory last-good cache mutates.
@@ -42,11 +45,13 @@ func (s *Service) Status(ctx context.Context) (TunnelStatus, error) {
 
 	observation := s.observe(ctx)
 	now := s.now().UTC()
+	elapsed := s.elapsed()
 	status, err := Classify(observation, now)
 	if err != nil {
-		return s.readFailure(now)
+		return s.readFailure(elapsed)
 	}
 	s.lastGood = status
+	s.lastGoodElapsed = elapsed
 	s.hasGood = true
 	return status, nil
 }
@@ -92,8 +97,8 @@ func (s *Service) observeUp(ctx context.Context, observation *Observation) {
 	observation.Handshakes, observation.HandshakeErr = s.wg.LatestHandshakes(ctx, Interface)
 }
 
-func (s *Service) readFailure(now time.Time) (TunnelStatus, error) {
-	if s.hasGood && !now.After(s.lastGood.ObservedAt.Add(MaxStale)) {
+func (s *Service) readFailure(elapsed time.Duration) (TunnelStatus, error) {
+	if s.hasGood && elapsed-s.lastGoodElapsed <= MaxStale {
 		stale := s.lastGood
 		stale.Stale = true
 		return stale, nil
