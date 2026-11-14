@@ -11,6 +11,7 @@ const { createLoader, profiles, tunnel } = vi.hoisted(() => ({
     status: { state: 'ready' },
     data: { profiles: [], selected_id: null },
     retry: vi.fn(),
+    stop: vi.fn(),
   },
   tunnel: {
     status: { state: 'ready' } as LoadStatus,

@@ -137,4 +137,55 @@ describe('LoadState', () => {
       vi.useRealTimers();
     }
   });
+
+  it('publishes a slow request without overlapping the next scheduled poll', async () => {
+    vi.useFakeTimers();
+    try {
+      let resolveSlow: (value: string) => void = () => {};
+      const fn = vi
+        .fn()
+        .mockImplementationOnce(() => new Promise<string>((resolve) => (resolveSlow = resolve)));
+      const loader = createLoader(fn, 10000);
+
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(fn).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(5000);
+      resolveSlow('slow but successful');
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(loader.data).toBe('slow but successful');
+      expect(loader.status).toEqual({ state: 'ready' });
+      loader.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('aborts a hung request and recovers on a later scheduled poll', async () => {
+    vi.useFakeTimers();
+    try {
+      const signals: (AbortSignal | undefined)[] = [];
+      const fn = vi
+        .fn()
+        .mockImplementationOnce((signal?: AbortSignal) => {
+          signals.push(signal);
+          return new Promise<string>(() => {});
+        })
+        .mockResolvedValueOnce('recovered');
+      const loader = createLoader(fn, 10000);
+
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(signals[0]?.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(10000);
+
+      expect(signals[0]?.aborted).toBe(true);
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(loader.data).toBe('recovered');
+      expect(loader.status).toEqual({ state: 'ready' });
+      loader.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
