@@ -7,14 +7,14 @@ export type LoadStatus =
 export function createLoader<T>(fn: (signal?: AbortSignal) => Promise<T>, interval?: number) {
   let status = $state<LoadStatus>({ state: 'loading' });
   let data = $state<T>();
-  const timer = interval === undefined ? undefined : setInterval(() => void run(), interval);
+  const timer = interval === undefined ? undefined : setInterval(() => void run(false), interval);
 
   // Only the latest run may write state: a slow earlier attempt must not overwrite a retry.
   let latest = 0;
 
-  async function run(): Promise<void> {
+  async function run(announceLoading = true): Promise<void> {
     const mine = ++latest;
-    status = { state: 'loading' };
+    if (announceLoading) status = { state: 'loading' };
     try {
       const result = await fn();
       if (mine !== latest) return;
