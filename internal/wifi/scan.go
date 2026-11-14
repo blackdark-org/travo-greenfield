@@ -89,6 +89,9 @@ type scannedAP struct {
 func (s *Service) scan(ctx context.Context) (ScanResult, error) {
 	out := emptyScanResult()
 	reply, err := s.ubus.Call(ctx, "network.wireless", "status", nil)
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return out, ctxErr
+	}
 	if err != nil {
 		return out, ErrUnavailable
 	}
@@ -99,6 +102,9 @@ func (s *Service) scan(ctx context.Context) (ScanResult, error) {
 	groups := map[string][]AccessPoint{}
 	attempted, succeeded := 0, 0
 	for _, radio := range radios {
+		if err := ctx.Err(); err != nil {
+			return out, err
+		}
 		status := RadioScan{Radio: radio.Name, Band: radio.Band, Status: "ok"}
 		if radio.Disabled {
 			status.Status = "skipped"
@@ -107,6 +113,9 @@ func (s *Service) scan(ctx context.Context) (ScanResult, error) {
 		}
 		attempted++
 		aps, code := s.scanTarget(ctx, scanTarget(radio))
+		if err := ctx.Err(); err != nil {
+			return out, err
+		}
 		if code != "" {
 			status.Status, status.Code = "error", code
 		} else {
