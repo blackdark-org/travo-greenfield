@@ -12,8 +12,8 @@ import Status from '../ui/Status.svelte';
 
 const request = new AbortController();
 const status = createLoader(fetchVpnStatus, 10000);
-const profiles = createLoader(async () => {
-  const result = await getVpnProfiles({ signal: request.signal });
+const profiles = createLoader(async (signal) => {
+  const result = await getVpnProfiles({ signal });
   if (!result.data) throw new Error(m.vpn_unavailable());
   return result.data;
 });
@@ -24,6 +24,7 @@ let error = $state('');
 let removing = $state<string>();
 onDestroy(() => {
   status.stop();
+  profiles.stop();
   request.abort();
   config = '';
 });
