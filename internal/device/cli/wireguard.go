@@ -20,7 +20,7 @@ func (d *Device) LatestHandshakes(ctx context.Context, iface string) ([]device.P
 	}
 	out, err := d.run(ctx, TierRead, "wg", "show", iface, "latest-handshakes")
 	if err != nil {
-		if strings.Contains(err.Error(), "No such device") {
+		if hasDiagnostic(err, "Unable to access interface: No such device") {
 			return nil, fmt.Errorf("%w: %v", device.ErrNotFound, err)
 		}
 		return nil, err

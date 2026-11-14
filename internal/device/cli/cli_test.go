@@ -13,6 +13,15 @@ import (
 
 type call struct{ name, args string }
 
+func failedCommand(name, diagnostic string, args ...string) error {
+	return &runner.CommandError{
+		Name:   name,
+		Args:   args,
+		Err:    errors.New("exit status 1"),
+		Stderr: diagnostic,
+	}
+}
+
 func fake(calls *[]call, reply map[string]string, failCmd string) runner.Runner {
 	return func(ctx context.Context, name string, args ...string) (string, int, error) {
 		a := strings.Join(args, " ")
@@ -31,37 +40,43 @@ func TestUCIExitOneNotFoundClassification(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		args         []string
-		commandError string
+		diagnostic   string
 		wantNotFound bool
 	}{
 		{
 			name:         "export entry not found diagnostic",
 			args:         []string{"export", "nosuch"},
-			commandError: "uci export nosuch: exit status 1: uci: Entry not found",
+			diagnostic:   "uci: Entry not found",
 			wantNotFound: true,
 		},
 		{
 			name:         "export transient failure",
 			args:         []string{"export", "network"},
-			commandError: "uci export network: exit status 1: uci: I/O error",
+			diagnostic:   "uci: I/O error",
+			wantNotFound: false,
+		},
+		{
+			name:         "different diagnostic containing entry not found",
+			args:         []string{"export", "network"},
+			diagnostic:   "uci: Entry not found while reading config",
 			wantNotFound: false,
 		},
 		{
 			name:         "quiet get suppresses not found diagnostic",
 			args:         []string{"-q", "get", "network.nosuch"},
-			commandError: "uci -q get network.nosuch: exit status 1: ",
+			diagnostic:   "",
 			wantNotFound: true,
 		},
 		{
 			name:         "quiet delete suppresses not found diagnostic",
 			args:         []string{"-q", "delete", "dhcp.nosuch.server"},
-			commandError: "uci -q delete dhcp.nosuch.server: exit status 1: ",
+			diagnostic:   "",
 			wantNotFound: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
-				return "", 1, errors.New(tc.commandError)
+				return "", 1, failedCommand("uci", tc.diagnostic, tc.args...)
 			}}
 			_, err := d.run(context.Background(), TierRead, "uci", tc.args...)
 			if err == nil {
@@ -108,6 +123,16 @@ func TestCallRejectsNonJSON(t *testing.T) {
 	d := &Device{Run: fake(&calls, map[string]string{"ubus call a.b c {}": "oops"}, "")}
 	if _, err := d.Call(context.Background(), "a.b", "c", nil); err == nil {
 		t.Fatal("accepted non-JSON reply")
+	}
+}
+
+func TestCallDoesNotMapDifferentDiagnosticContainingNotFound(t *testing.T) {
+	d := &Device{Run: func(context.Context, string, ...string) (string, int, error) {
+		return "", 1, failedCommand("ubus", "Command failed: Not found; retry later")
+	}}
+	_, err := d.Call(context.Background(), "network.interface.wg0", "status", nil)
+	if errors.Is(err, device.ErrNotFound) {
+		t.Fatalf("unrecognized diagnostic mapped to ErrNotFound: %v", err)
 	}
 }
 

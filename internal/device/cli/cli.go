@@ -28,6 +28,11 @@ type Device struct {
 
 func New() *Device { return &Device{Run: runner.Exec, RunInput: runner.RunInput} }
 
+func hasDiagnostic(err error, diagnostic string) bool {
+	stderr, ok := runner.Stderr(err)
+	return ok && stderr == diagnostic
+}
+
 func (d *Device) run(ctx context.Context, tier time.Duration, name string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, tier)
 	defer cancel()
@@ -36,7 +41,7 @@ func (d *Device) run(ctx context.Context, tier time.Duration, name string, args 
 		// Exec includes stderr in err. Quiet commands suppress the not-found diagnostic,
 		// so their historical exit-1 mapping is the only evidence available to callers.
 		quiet := len(args) > 0 && args[0] == "-q"
-		if quiet || strings.Contains(err.Error(), "uci: Entry not found") {
+		if quiet || hasDiagnostic(err, "uci: Entry not found") {
 			return out, fmt.Errorf("%w: %v", device.ErrNotFound, err)
 		}
 	}
@@ -110,7 +115,7 @@ func (d *Device) Call(ctx context.Context, object, method string, args any) (jso
 	}
 	out, err := d.run(ctx, TierRead, "ubus", "call", object, method, string(payload))
 	if err != nil {
-		if strings.Contains(err.Error(), "Not found") {
+		if hasDiagnostic(err, "Command failed: Not found") {
 			return nil, fmt.Errorf("%w: %v", device.ErrNotFound, err)
 		}
 		return nil, err
