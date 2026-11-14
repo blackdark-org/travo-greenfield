@@ -39,6 +39,8 @@ func (s selectionResult) List() (vpnprofiles.List, error) {
 	return list, s.err
 }
 
+func zeroElapsed() time.Duration { return 0 }
+
 type ubusFunc func(context.Context, string, string, any) (json.RawMessage, error)
 
 func (f ubusFunc) Call(ctx context.Context, object, method string, args any) (json.RawMessage, error) {
@@ -171,7 +173,7 @@ func TestServiceFixtureStates(t *testing.T) {
 			cfg := &configResult{sections: fixtureSections(t, tc.fixture)}
 			d, calls := fixtureCLI(t, tc.fixture)
 			now := fixtureTime(t, tc.fixture)
-			service := New(cfg, d, d, selectionResult{selected: tc.selected}, func() time.Time { return now })
+			service := New(cfg, d, d, selectionResult{selected: tc.selected}, func() time.Time { return now }, zeroElapsed)
 			got, err := service.Status(context.Background())
 			if err != nil {
 				t.Fatal(err)
@@ -198,7 +200,7 @@ func TestServiceMissingNetworkConfig(t *testing.T) {
 		{selected: true, state: Configured},
 	} {
 		d, calls := fixtureCLI(t, "disabled")
-		service := New(&configResult{err: device.ErrNotFound}, d, d, selectionResult{selected: tc.selected}, func() time.Time { return fixtureTime(t, "disabled") })
+		service := New(&configResult{err: device.ErrNotFound}, d, d, selectionResult{selected: tc.selected}, func() time.Time { return fixtureTime(t, "disabled") }, zeroElapsed)
 		got, err := service.Status(context.Background())
 		if err != nil || got.State != tc.state {
 			t.Fatalf("got %+v, %v", got, err)
@@ -216,7 +218,7 @@ func TestServiceConfigReadFailureIsUnavailable(t *testing.T) {
 		}
 		return "", 1, errors.New("uci export network: exit status 1: uci: I/O error")
 	}}
-	service := New(d, d, d, selectionResult{}, func() time.Time { return fixtureTime(t, "connected") })
+	service := New(d, d, d, selectionResult{}, func() time.Time { return fixtureTime(t, "connected") }, zeroElapsed)
 	got, err := service.Status(context.Background())
 	if !errors.Is(err, ErrUnavailable) || got.State != "" {
 		t.Fatalf("transient config failure produced %+v, %v", got, err)
@@ -232,7 +234,7 @@ func TestServiceMissingNetifdObject(t *testing.T) {
 		t.Fatal("read handshakes without netifd up")
 		return nil, nil
 	})
-	service := New(cfg, ubus, wg, selectionResult{selected: true}, func() time.Time { return fixtureTime(t, "no-handshake") })
+	service := New(cfg, ubus, wg, selectionResult{selected: true}, func() time.Time { return fixtureTime(t, "no-handshake") }, zeroElapsed)
 	got, err := service.Status(context.Background())
 	if err != nil || got.State != EnabledNotUp {
 		t.Fatalf("got %+v, %v", got, err)
@@ -247,7 +249,7 @@ func TestServiceMissingWireGuardDevice(t *testing.T) {
 	wg := wireGuardFunc(func(context.Context, string) ([]device.PeerHandshake, error) {
 		return nil, device.ErrNotFound
 	})
-	service := New(cfg, ubus, wg, selectionResult{selected: true}, func() time.Time { return fixtureTime(t, "connected") })
+	service := New(cfg, ubus, wg, selectionResult{selected: true}, func() time.Time { return fixtureTime(t, "connected") }, zeroElapsed)
 	got, err := service.Status(context.Background())
 	if err != nil || got.State != EnabledNotUp {
 		t.Fatalf("got %+v, %v", got, err)
@@ -282,9 +284,10 @@ func TestClassifyReadFailuresDoNotProduceState(t *testing.T) {
 
 func TestServiceKeepsLastGoodUntilStaleExpires(t *testing.T) {
 	now := fixtureTime(t, "connected")
+	elapsed := time.Duration(0)
 	cfg := &configResult{sections: fixtureSections(t, "connected")}
 	d, _ := fixtureCLI(t, "connected")
-	service := New(cfg, d, d, selectionResult{selected: true}, func() time.Time { return now })
+	service := New(cfg, d, d, selectionResult{selected: true}, func() time.Time { return now }, func() time.Duration { return elapsed })
 	good, err := service.Status(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -297,7 +300,7 @@ func TestServiceKeepsLastGoodUntilStaleExpires(t *testing.T) {
 	if stale.State != good.State || !stale.Stale || !stale.ObservedAt.Equal(good.ObservedAt) || *stale.HandshakeAgeSeconds != *good.HandshakeAgeSeconds {
 		t.Fatalf("good %+v stale %+v", good, stale)
 	}
-	now = now.Add(MaxStale + time.Second)
+	elapsed = MaxStale + time.Second
 	if _, err := service.Status(context.Background()); !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("got %v", err)
 	}
@@ -305,8 +308,34 @@ func TestServiceKeepsLastGoodUntilStaleExpires(t *testing.T) {
 
 func TestServiceFirstReadFailureIsUnavailable(t *testing.T) {
 	d, _ := fixtureCLI(t, "connected")
-	service := New(&configResult{err: errors.New("read failed")}, d, d, selectionResult{}, func() time.Time { return fixtureTime(t, "connected") })
+	service := New(&configResult{err: errors.New("read failed")}, d, d, selectionResult{}, func() time.Time { return fixtureTime(t, "connected") }, zeroElapsed)
 	if got, err := service.Status(context.Background()); !errors.Is(err, ErrUnavailable) || got.State != "" || got.Stale {
 		t.Fatalf("got %+v, %v", got, err)
+	}
+}
+
+func TestServiceClockRollbackDoesNotExtendStaleCache(t *testing.T) {
+	now := fixtureTime(t, "connected")
+	elapsed := time.Duration(0)
+	cfg := &configResult{sections: fixtureSections(t, "connected")}
+	d, _ := fixtureCLI(t, "connected")
+	service := New(cfg, d, d, selectionResult{selected: true}, func() time.Time { return now }, func() time.Duration { return elapsed })
+	good, err := service.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.err = errors.New("read failed")
+
+	elapsed = MaxStale - time.Second
+	now = now.Add(-time.Hour)
+	stale, err := service.Status(context.Background())
+	if err != nil || !stale.Stale || !stale.ObservedAt.Equal(good.ObservedAt) {
+		t.Fatalf("fresh stale observation changed: got %+v, %v", stale, err)
+	}
+
+	// The router clock is still behind the observation after the monotonic expiry.
+	elapsed = MaxStale + time.Second
+	if got, err := service.Status(context.Background()); !errors.Is(err, ErrUnavailable) || got.State != "" {
+		t.Fatalf("clock rollback extended stale cache: got %+v, %v", got, err)
 	}
 }
