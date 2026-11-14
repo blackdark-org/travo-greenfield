@@ -55,6 +55,20 @@ func fixture(t *testing.T, name string) json.RawMessage {
 	return b
 }
 
+func mutatedFixture(t *testing.T, name string, mutate func(map[string]any)) json.RawMessage {
+	t.Helper()
+	var payload map[string]any
+	if err := json.Unmarshal(fixture(t, name), &payload); err != nil {
+		t.Fatal(err)
+	}
+	mutate(payload)
+	b, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
 func summaryUbus(t *testing.T, wireless string) *fakeUbus {
 	t.Helper()
 	return &fakeUbus{replies: map[ubusKey]json.RawMessage{

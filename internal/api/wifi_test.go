@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
 	"github.com/blackdark-org/travo-greenfield/internal/wifi"
 )
 
@@ -25,6 +28,13 @@ func (f fakeWiFi) Summary(context.Context) (wifi.Summary, error) {
 
 func (f fakeWiFi) Scan(context.Context) (wifi.ScanResult, error) {
 	return f.scan, f.scanErr
+}
+
+type recordingScanner struct{ calls []string }
+
+func (s *recordingScanner) ScanWireless(_ context.Context, name string) (json.RawMessage, error) {
+	s.calls = append(s.calls, name)
+	return nil, errTest
 }
 
 func wifiEnv(t *testing.T, service WiFiService) *env {
@@ -84,6 +94,45 @@ func TestWiFiScanJSONContractAndEmptyCollections(t *testing.T) {
 	cookie, _ = e.login()
 	got = e.do(req{method: http.MethodGet, path: "/api/v1/wifi/scan", cookie: cookie})
 	assertWiFiJSON(t, got, `{"networks":[],"hidden":[],"radios":[]}`)
+}
+
+func TestWiFiScanMutatedFixture(t *testing.T) {
+	t.Run("mutated: all-disabled radios return 200", func(t *testing.T) {
+		b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "device", "axt1800-25.12.6", "wifi-scan", "no-sta", "wireless-status.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(b, &payload); err != nil {
+			t.Fatal(err)
+		}
+		for _, entry := range payload {
+			radio := entry.(map[string]any)
+			radio["disabled"] = true
+			radio["config"].(map[string]any)["disabled"] = true
+		}
+		status, err := json.Marshal(payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		device := mock.New()
+		device.SetUbusReply("network.wireless", "status", status)
+		scanner := &recordingScanner{}
+		e := wifiEnv(t, wifi.New(context.Background(), device, scanner))
+		cookie, _ := e.login()
+		got := e.do(req{method: http.MethodGet, path: "/api/v1/wifi/scan", cookie: cookie})
+		assertWiFiJSON(t, got, `{
+			"networks":[],
+			"hidden":[],
+			"radios":[
+				{"radio":"radio0","band":"5g","status":"skipped","ap_count":0},
+				{"radio":"radio1","band":"2g","status":"skipped","ap_count":0}
+			]
+		}`)
+		if len(scanner.calls) != 0 {
+			t.Fatalf("disabled radios were scanned: %v", scanner.calls)
+		}
+	})
 }
 
 func TestWiFiErrorMapping(t *testing.T) {

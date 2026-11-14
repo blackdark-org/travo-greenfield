@@ -83,6 +83,10 @@ func TestScanMergesNoSTABySSIDAndBand(t *testing.T) {
 	if want := []string{"radio0", "phy1-ap0"}; !reflect.DeepEqual(scanner.called(), want) {
 		t.Fatalf("targets %v, want %v", scanner.called(), want)
 	}
+	wantUbusCalls := []ubusKey{{object: "network.wireless", method: "status"}}
+	if calls := s.ubus.(*fakeUbus).calls; !reflect.DeepEqual(calls, wantUbusCalls) {
+		t.Fatalf("ubus calls %v, want %v", calls, wantUbusCalls)
+	}
 	want := []struct {
 		ssid   string
 		signal int
@@ -194,6 +198,61 @@ func TestScanRadioFailuresAreIndependent(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestScanMutatedFixtures(t *testing.T) {
+	t.Run("mutated: disabled radios are skipped, not attempted", func(t *testing.T) {
+		status := mutatedFixture(t, "wifi-scan/no-sta/wireless-status.json", func(payload map[string]any) {
+			for _, entry := range payload {
+				radio := entry.(map[string]any)
+				radio["disabled"] = true
+				radio["config"].(map[string]any)["disabled"] = true
+			}
+		})
+		u := &fakeUbus{replies: map[ubusKey]json.RawMessage{
+			{object: "network.wireless", method: "status"}: status,
+		}}
+		scanner := &fakeScanner{}
+		got, err := New(context.Background(), u, scanner).Scan(context.Background())
+		if err != nil {
+			t.Fatalf("all-disabled scan must not fail as an attempted scan: %v", err)
+		}
+		wantRadios := []RadioScan{
+			{Radio: "radio0", Band: "5g", Status: "skipped"},
+			{Radio: "radio1", Band: "2g", Status: "skipped"},
+		}
+		if !reflect.DeepEqual(got.Radios, wantRadios) {
+			t.Fatalf("radios: got %+v, want %+v", got.Radios, wantRadios)
+		}
+		if got.Networks == nil || got.Hidden == nil || len(got.Networks)+len(got.Hidden) != 0 {
+			t.Fatalf("disabled radios returned scan data: %+v", got)
+		}
+		if calls := scanner.called(); len(calls) != 0 {
+			t.Fatalf("disabled radios were scanned: %v", calls)
+		}
+		wantUbusCalls := []ubusKey{{object: "network.wireless", method: "status"}}
+		if !reflect.DeepEqual(u.calls, wantUbusCalls) {
+			t.Fatalf("ubus calls %v, want %v", u.calls, wantUbusCalls)
+		}
+	})
+
+	t.Run("mutated: unknown numeric band is bad_payload", func(t *testing.T) {
+		svc, scanner := noSTAScanService(t)
+		scanner.replies["radio0"] = mutatedFixture(t, "wifi-scan/no-sta/iwinfo-scan-radio0.json", func(payload map[string]any) {
+			results := payload["results"].([]any)
+			results[0].(map[string]any)["band"] = 7
+		})
+		got, err := svc.Scan(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got.Radios) != 2 || got.Radios[0].Status != "error" || got.Radios[0].Code != "bad_payload" || got.Radios[1].Status != "ok" {
+			t.Fatalf("radios: %+v", got.Radios)
+		}
+		if want := []string{"radio0", "phy1-ap0"}; !reflect.DeepEqual(scanner.called(), want) {
+			t.Fatalf("targets %v, want %v", scanner.called(), want)
+		}
+	})
 }
 
 func TestScanAllAttemptedRadiosFailed(t *testing.T) {
