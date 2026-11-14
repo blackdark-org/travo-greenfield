@@ -6,9 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 )
+
+const commandWaitDelay = time.Second
 
 // Runner executes a command and returns stdout and the exit code.
 type Runner func(ctx context.Context, name string, args ...string) (stdout string, exit int, err error)
@@ -48,6 +53,17 @@ func Exec(ctx context.Context, name string, args ...string) (string, int, error)
 // separately for diagnostic matching, so callers must not pass secrets in args (they would land in logs).
 func RunInput(ctx context.Context, stdin string, name string, args ...string) (string, int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
+	// A canceled shell command can leave descendants holding its output pipes.
+	// Keep commands in their own group so cancellation also stops those children.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		if errors.Is(err, syscall.ESRCH) {
+			return os.ErrProcessDone
+		}
+		return err
+	}
+	cmd.WaitDelay = commandWaitDelay
 	if stdin != "" {
 		cmd.Stdin = strings.NewReader(stdin)
 	}
