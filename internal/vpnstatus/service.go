@@ -27,7 +27,7 @@ type Service struct {
 	now  func() time.Time
 
 	mu       sync.Mutex
-	lastGood Status
+	lastGood TunnelStatus
 	hasGood  bool
 }
 
@@ -36,7 +36,7 @@ func New(cfg Config, ubus device.Ubus, wg device.WireGuardReader, sel Selection,
 }
 
 // Status reads without changing device state; only its in-memory last-good cache mutates.
-func (s *Service) Status(ctx context.Context) (Status, error) {
+func (s *Service) Status(ctx context.Context) (TunnelStatus, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -92,13 +92,13 @@ func (s *Service) observeUp(ctx context.Context, observation *Observation) {
 	observation.Handshakes, observation.HandshakeErr = s.wg.LatestHandshakes(ctx, Interface)
 }
 
-func (s *Service) readFailure(now time.Time) (Status, error) {
+func (s *Service) readFailure(now time.Time) (TunnelStatus, error) {
 	if s.hasGood && !now.After(s.lastGood.ObservedAt.Add(MaxStale)) {
 		stale := s.lastGood
 		stale.Stale = true
 		return stale, nil
 	}
-	return Status{}, ErrUnavailable
+	return TunnelStatus{}, ErrUnavailable
 }
 
 func findSection(sections []device.Section) *device.Section {

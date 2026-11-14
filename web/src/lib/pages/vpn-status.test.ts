@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { VpnStatus } from '../api/gen';
+import type { TunnelStatus } from '../api/gen';
 import { fetchVpnStatus } from '../api/vpn-status';
 import type { LoadStatus } from '../ui/loader.svelte';
 import VPN from './VPN.svelte';
@@ -14,19 +14,19 @@ const { createLoader, profiles, tunnel } = vi.hoisted(() => ({
   },
   tunnel: {
     status: { state: 'ready' } as LoadStatus,
-    data: undefined as VpnStatus | undefined,
+    data: undefined as TunnelStatus | undefined,
     retry: vi.fn(),
     stop: vi.fn(),
   },
 }));
 vi.mock('../ui/loader.svelte', () => ({ createLoader }));
 
-function vpn(status: VpnStatus) {
+function vpn(status: TunnelStatus) {
   tunnel.data = status;
   return render(VPN).body;
 }
 
-function snapshot(state: VpnStatus['state']): VpnStatus {
+function snapshot(state: TunnelStatus['state']): TunnelStatus {
   return {
     state,
     stale: false,

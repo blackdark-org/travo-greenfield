@@ -6,7 +6,6 @@ import (
 	"context"
 	"net/http"
 	"net/netip"
-	"reflect"
 	"sync"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -38,7 +37,7 @@ type ConnectivityReader interface {
 }
 
 type VPNStatusReader interface {
-	Status(context.Context) (vpnstatus.Status, error)
+	Status(context.Context) (vpnstatus.TunnelStatus, error)
 }
 
 // Deps are everything the routes need; the daemon builds them, tests fake them.
@@ -104,12 +103,6 @@ func New(d Deps) (http.Handler, huma.API) {
 	s := &server{Deps: d, sessions: d.Sessions, clock: d.Clock, trusted: d.Trusted}
 	mux := http.NewServeMux()
 	cfg := huma.DefaultConfig("travo-greenfield", d.Version)
-	cfg.Components.Schemas = huma.NewMapRegistry("#/components/schemas/", func(t reflect.Type, hint string) string {
-		if t == reflect.TypeOf(vpnstatus.Status{}) {
-			return "VPNStatus"
-		}
-		return huma.DefaultSchemaNamer(t, hint)
-	})
 	cfg.OpenAPIPath = "/api/openapi"
 	cfg.DocsPath = ""
 	cfg.SchemasPath = ""

@@ -159,6 +159,19 @@ export type ThroughputBody = {
     interfaces: Array<Rate>;
 };
 
+export type TunnelStatus = {
+    handshake_age_seconds: number | null;
+    /**
+     * When State was read (router clock)
+     */
+    observed_at: string;
+    /**
+     * true: last good observation, the latest read failed
+     */
+    stale: boolean;
+    state: 'disabled' | 'configured' | 'enabled_not_up' | 'no_handshake' | 'connected';
+};
+
 export type TxnBody = {
     configs: Array<string> | null;
     id: string;
@@ -173,19 +186,6 @@ export type TxnBody = {
 
 export type UpdateCheckInputBody = {
     mode: 'automatic' | 'manual';
-};
-
-export type VpnStatus = {
-    handshake_age_seconds: number | null;
-    /**
-     * When State was read (router clock)
-     */
-    observed_at: string;
-    /**
-     * true: last good observation, the latest read failed
-     */
-    stale: boolean;
-    state: 'disabled' | 'configured' | 'enabled_not_up' | 'no_handshake' | 'connected';
 };
 
 export type VpnImportInputBody = {
@@ -1077,7 +1077,7 @@ export type GetVpnStatusResponses = {
     /**
      * OK
      */
-    200: VpnStatus;
+    200: TunnelStatus;
 };
 
 export type GetVpnStatusResponse = GetVpnStatusResponses[keyof GetVpnStatusResponses];
