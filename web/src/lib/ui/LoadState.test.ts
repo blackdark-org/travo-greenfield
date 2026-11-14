@@ -93,6 +93,34 @@ describe('LoadState', () => {
     expect(loader.data).toBe('B');
   });
 
+  it('keeps existing data ready while an interval refresh is in flight', async () => {
+    vi.useFakeTimers();
+    try {
+      let resolvePoll: (value: string) => void = () => {};
+      const fn = vi
+        .fn()
+        .mockResolvedValueOnce('initial')
+        .mockImplementationOnce(() => new Promise<string>((resolve) => (resolvePoll = resolve)));
+      const loader = createLoader(fn, 10000);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(loader.status).toEqual({ state: 'ready' });
+      expect(loader.data).toBe('initial');
+
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(loader.data).toBe('initial');
+      expect(loader.status).toEqual({ state: 'ready' });
+
+      resolvePoll('refreshed');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(loader.data).toBe('refreshed');
+      expect(loader.status).toEqual({ state: 'ready' });
+      loader.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('polls at the requested interval until stopped', async () => {
     vi.useFakeTimers();
     try {
