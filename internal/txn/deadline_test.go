@@ -25,7 +25,9 @@ func TestBeginApplyDeadlineRollsBack(t *testing.T) {
 	for _, phase := range []string{"commit", "reload", "probe"} {
 		t.Run(phase, func(t *testing.T) {
 			m, d := setup(t, MinWindow)
-			m.ApplyBudget = 100 * time.Millisecond
+			// Starting the watchdog and syncing its PID are part of the live budget.
+			// Give them room on loaded CI hosts so this test reaches its target phase.
+			m.ApplyBudget = 2 * time.Second
 			stopAtDeadline := func(ctx context.Context) error {
 				if _, ok := ctx.Deadline(); !ok {
 					return errors.New("missing apply deadline")
