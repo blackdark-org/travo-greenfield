@@ -10,7 +10,7 @@ import (
 )
 
 type vpnStatusOutput struct {
-	Body vpnstatus.Status
+	Body vpnstatus.TunnelStatus
 }
 
 func (s *server) registerVPNStatus(a huma.API) {

@@ -23,7 +23,7 @@ const (
 	Connected    State = "connected"
 )
 
-type Status struct {
+type TunnelStatus struct {
 	State               State     `json:"state" enum:"disabled,configured,enabled_not_up,no_handshake,connected"`
 	Stale               bool      `json:"stale" doc:"true: last good observation, the latest read failed"`
 	ObservedAt          time.Time `json:"observed_at" doc:"When State was read (router clock)"`
@@ -44,13 +44,13 @@ type Observation struct {
 	HandshakeErr error
 }
 
-// Classify is pure: observed inputs and now in, Status out. It has no I/O.
-func Classify(in Observation, now time.Time) (Status, error) {
+// Classify is pure: observed inputs and now in, TunnelStatus out. It has no I/O.
+func Classify(in Observation, now time.Time) (TunnelStatus, error) {
 	if in.SelectionErr != nil {
-		return Status{}, fmt.Errorf("read profile selection: %w", in.SelectionErr)
+		return TunnelStatus{}, fmt.Errorf("read profile selection: %w", in.SelectionErr)
 	}
 	if in.ConfigErr != nil && !errors.Is(in.ConfigErr, device.ErrNotFound) {
-		return Status{}, fmt.Errorf("read network config: %w", in.ConfigErr)
+		return TunnelStatus{}, fmt.Errorf("read network config: %w", in.ConfigErr)
 	}
 	section := presentSection(in.Section)
 	if errors.Is(in.ConfigErr, device.ErrNotFound) {
@@ -58,7 +58,7 @@ func Classify(in Observation, now time.Time) (Status, error) {
 	}
 	on, err := tunnelOn(section)
 	if err != nil {
-		return Status{}, err
+		return TunnelStatus{}, err
 	}
 	if !on {
 		state := Disabled
@@ -71,10 +71,10 @@ func Classify(in Observation, now time.Time) (Status, error) {
 		if errors.Is(in.NetifdErr, device.ErrNotFound) {
 			return observed(EnabledNotUp, now, nil), nil
 		}
-		return Status{}, fmt.Errorf("read netifd status: %w", in.NetifdErr)
+		return TunnelStatus{}, fmt.Errorf("read netifd status: %w", in.NetifdErr)
 	}
 	if in.NetifdUp == nil {
-		return Status{}, errors.New("netifd status has no up field")
+		return TunnelStatus{}, errors.New("netifd status has no up field")
 	}
 	if !*in.NetifdUp {
 		return observed(EnabledNotUp, now, nil), nil
@@ -82,12 +82,12 @@ func Classify(in Observation, now time.Time) (Status, error) {
 	return classifyHandshakes(in, now)
 }
 
-func classifyHandshakes(in Observation, now time.Time) (Status, error) {
+func classifyHandshakes(in Observation, now time.Time) (TunnelStatus, error) {
 	if in.HandshakeErr != nil {
 		if errors.Is(in.HandshakeErr, device.ErrNotFound) {
 			return observed(EnabledNotUp, now, nil), nil
 		}
-		return Status{}, fmt.Errorf("read WireGuard handshakes: %w", in.HandshakeErr)
+		return TunnelStatus{}, fmt.Errorf("read WireGuard handshakes: %w", in.HandshakeErr)
 	}
 	var newest time.Time
 	for _, peer := range in.Handshakes {
@@ -100,7 +100,7 @@ func classifyHandshakes(in Observation, now time.Time) (Status, error) {
 	}
 	age := now.Sub(newest)
 	if age < 0 {
-		return Status{}, errors.New("newest WireGuard handshake is after now")
+		return TunnelStatus{}, errors.New("newest WireGuard handshake is after now")
 	}
 	seconds := int64(age / time.Second)
 	if age >= HandshakeFresh {
@@ -130,6 +130,6 @@ func tunnelOn(section *device.Section) (bool, error) {
 	}
 }
 
-func observed(state State, now time.Time, age *int64) Status {
-	return Status{State: state, ObservedAt: now.UTC(), HandshakeAgeSeconds: age}
+func observed(state State, now time.Time, age *int64) TunnelStatus {
+	return TunnelStatus{State: state, ObservedAt: now.UTC(), HandshakeAgeSeconds: age}
 }
