@@ -21,3 +21,54 @@ Before screenshots: `web/screenshots/before/` (ignored local artifacts), both
 mobile drawer. Captured against the mock daemon on isolated ports 18181/18192.
 Preview snapshots failed twice because no screenshot frames were produced;
 the repository's headless Chrome helper was used instead.
+
+## Whole-SPA inventory
+
+| Surface | Owned shadcn primitives | Preserved app contract |
+| --- | --- | --- |
+| `App.svelte`, `ui/MobileNav.svelte` | Button (actions and native-anchor navigation), lazy Sheet | Auth guard, hash navigation/Back, one page scroll container, theme/logout, Close/Escape and Menu focus restoration |
+| `ui/Card.svelte` | Card and CardTitle, customized to section/h2 | Optional title and children; existing block layout |
+| `ui/Status.svelte`, `ui/status.ts` | Badge | Unchanged ok/warn/danger/info/neutral/stale vocabulary, colors, dot and stale italics |
+| `ui/LoadState.svelte`, `ui/FormMessage.svelte` | Skeleton, Alert, Button, Status/Badge | Independent failure/staleness, known data retained, retry/action links |
+| `ui/PasswordField.svelte` | Input and Label | Binding, required/password/autocomplete, per-field invalid/describedby relationships |
+| Login, Setup | Button and the wrappers above | Validation, busy state, auth/return route and secret handling |
+| Dashboard | Button action link, Table/Header/Body/Row/Head/Cell, wrappers | Native WiFi anchor, named interfaces, column/row headers, independent data loaders |
+| WiFi, WiFiSummary | Button and wrappers | Summary tiles remain semantic layout; Scan and transaction state logic unchanged |
+| WiFiScanList | Collapsible, Button, Status/Badge | Network grouping, per-AP disclosure, disabled unsupported Join, hidden networks and per-radio errors |
+| WiFiJoinDialog | Lazy Dialog/Title, Input, Label, Button | Native validation, no outside-click dismissal, Escape/Cancel, secret clearing and trigger focus |
+| VPN | Button, Input, Label, Textarea, Alert, wrappers | Import/profile controls, busy/stale states, Pending/Confirm/Roll back and authoritative terminal state |
+| System, SystemUpdate | Button, Badge, Alert, wrappers | Password change, backup, inline reboot/update confirmations, guarded operations |
+| NotYet, PageHost | Existing wrappers (now composed from shadcn) | Placeholder and retryable lazy loading |
+| `ui/GroupHeading.svelte` | Native h3 | A document heading; no interactive group control is currently used |
+
+No applicable interactive primitive remains custom. Native headings, lists,
+definition lists, forms, live-region prose, SVG icons and layout containers remain
+HTML/SVG as allowed by the brief. WiFiSummary's flat summary tiles are layout,
+not a second card component. No unused select, checkbox, menu or tab controls
+were introduced. The finite variant lookup and clsx-only class composition are
+measured source customizations, not substitute components (see ADR 0013).
+
+The original drawer/backdrop/focus code and native dialog implementation were
+removed. The custom skeleton CSS was removed. App wrappers retain their public
+interfaces. No Go, API client, router or transaction-state implementation changes.
+
+## Acceptance evidence
+
+Pre-rebase full migration: `mise run check` passed, 225 tests; shell **40,273 B**,
+total **82,933 B**, unchanged limits. Final toolchain measurements are recorded
+below after integration with origin/main.
+
+`e2e-components.mjs` passed at 390/1280 px in light/dark themes. It checks real
+keyboard Tab/Shift-Tab/Enter/Space/Escape input, visible focus, modal focus loops,
+restoration, browser Back, no horizontal overflow, and Dashboard → Scan → Join
+Neighbor2 in three activations. Native password length validation rejects short
+user input; Escape and Cancel clear it before reopening. Opening/cancelling
+Join, reboot or update does not send a mutation. HTTP seams exercise confirmed
+Join, VPN Confirm/Roll back, reboot refusal and confirmed update success without
+a real device. Existing reducer/transport tests retain terminal-state coverage.
+
+Screenshots cover login/setup, Dashboard, WiFi scan and Join, VPN, System,
+reboot/update confirmations and the mobile drawer. Before/after artifacts are in
+`docs/evidence/issue-119/`; scripts retain full-resolution local output under
+`web/screenshots/`. Guarded responses in browser tests are API test doubles, not
+claimed device captures. No hardware acceptance is required for this migration.

@@ -15,18 +15,10 @@ const styles = {
     },
     size: {
       default: 'cn-button-size-default',
-      xs: 'cn-button-size-xs',
       sm: 'cn-button-size-sm',
-      lg: 'cn-button-size-lg',
       icon: 'cn-button-size-icon',
-      'icon-xs': 'cn-button-size-icon-xs',
       'icon-sm': 'cn-button-size-icon-sm',
-      'icon-lg': 'cn-button-size-icon-lg',
     },
-  },
-  defaultVariants: {
-    variant: 'default',
-    size: 'default',
   },
 } as const;
 
@@ -51,41 +43,41 @@ export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
 </script>
 
 <script lang="ts">
-	let {
-		class: className,
-		variant = "default",
-		size = "default",
-		ref = $bindable(null),
-		href = undefined,
-		type = "button",
-		disabled,
-		children,
-		...restProps
-	}: ButtonProps = $props();
+  let {
+    class: className,
+    variant = "default",
+    size = "default",
+    ref = $bindable(null),
+    href = undefined,
+    type = "button",
+    disabled,
+    children,
+    ...restProps
+  }: ButtonProps = $props();
 </script>
 
 {#if href}
-	<a
-		bind:this={ref}
-		data-slot="button"
-		class={cn(buttonVariants({ variant, size }), className)}
-		href={disabled ? undefined : href}
-		aria-disabled={disabled}
-		role={disabled ? "link" : undefined}
-		tabindex={disabled ? -1 : undefined}
-		{...restProps}
-	>
-		{@render children?.()}
-	</a>
+  <a
+    bind:this={ref}
+    data-slot="button"
+    class={cn(buttonVariants({ variant, size }), className)}
+    href={disabled ? undefined : href}
+    aria-disabled={disabled}
+    role={disabled ? "link" : undefined}
+    tabindex={disabled ? -1 : undefined}
+    {...restProps}
+  >
+    {@render children?.()}
+  </a>
 {:else}
-	<button
-		bind:this={ref}
-		data-slot="button"
-		class={cn(buttonVariants({ variant, size }), className)}
-		{type}
-		{disabled}
-		{...restProps}
-	>
-		{@render children?.()}
-	</button>
+  <button
+    bind:this={ref}
+    data-slot="button"
+    class={cn(buttonVariants({ variant, size }), className)}
+    {type}
+    {disabled}
+    {...restProps}
+  >
+    {@render children?.()}
+  </button>
 {/if}

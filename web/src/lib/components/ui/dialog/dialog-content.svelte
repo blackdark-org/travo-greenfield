@@ -23,26 +23,26 @@ let {
 </script>
 
 <DialogPortal {...portalProps}>
-	<DialogOverlay />
-	<DialogPrimitive.Content
-		bind:ref
-		data-slot="dialog-content"
-		class={cn(
-			"cn-dialog-content fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none",
-			className
-		)}
-		{...restProps}
-	>
-		{@render children?.()}
-		{#if showCloseButton}
-			<DialogPrimitive.Close data-slot="dialog-close">
-				{#snippet child({ props })}
-					<Button variant="ghost" class="cn-dialog-close" size="icon-sm" {...props}>
-						<X />
-						<span class="sr-only">{m.nav_close()}</span>
-					</Button>
-				{/snippet}
-			</DialogPrimitive.Close>
-		{/if}
-	</DialogPrimitive.Content>
+  <DialogOverlay />
+  <DialogPrimitive.Content
+    bind:ref
+    data-slot="dialog-content"
+    class={cn(
+      "cn-dialog-content fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none",
+      className
+    )}
+    {...restProps}
+  >
+    {@render children?.()}
+    {#if showCloseButton}
+      <DialogPrimitive.Close data-slot="dialog-close">
+        {#snippet child({ props })}
+          <Button variant="ghost" class="cn-dialog-close" size="icon-sm" {...props}>
+            <X />
+            <span class="sr-only">{m.nav_close()}</span>
+          </Button>
+        {/snippet}
+      </DialogPrimitive.Close>
+    {/if}
+  </DialogPrimitive.Content>
 </DialogPortal>

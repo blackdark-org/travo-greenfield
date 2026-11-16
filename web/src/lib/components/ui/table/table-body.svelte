@@ -7,14 +7,9 @@ let {
   class: className,
   children,
   ...restProps
-}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+}: WithElementRef<HTMLAttributes<HTMLTableSectionElement>> = $props();
 </script>
 
-<div
-	bind:this={ref}
-	data-slot="dialog-header"
-	class={cn("cn-dialog-header flex flex-col", className)}
-	{...restProps}
->
-	{@render children?.()}
-</div>
+<tbody bind:this={ref} data-slot="table-body" class={cn("cn-table-body", className)} {...restProps}>
+  {@render children?.()}
+</tbody>

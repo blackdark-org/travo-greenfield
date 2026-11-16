@@ -10,8 +10,8 @@ let {
 </script>
 
 <DialogPrimitive.Overlay
-	bind:ref
-	data-slot="dialog-overlay"
-	class={cn("cn-dialog-overlay fixed inset-0 isolate z-50", className)}
-	{...restProps}
+  bind:ref
+  data-slot="dialog-overlay"
+  class={cn("cn-dialog-overlay fixed inset-0 isolate z-50", className)}
+  {...restProps}
 />

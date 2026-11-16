@@ -64,6 +64,8 @@ describe('Dashboard connectivity', () => {
     const body = dashboard({ state: 'error', message: 'Connectivity unavailable' }, undefined);
 
     expect(body).toContain('Connect to WiFi');
-    expect(body).toMatch(/<a[^>]*href="#\/wifi"[^>]*>Connect to WiFi<\/a>/);
+    expect(body.replace(/<!--.*?-->/g, '')).toMatch(
+      /<a[^>]*href="#\/wifi"[^>]*>Connect to WiFi<\/a>/,
+    );
   });
 });

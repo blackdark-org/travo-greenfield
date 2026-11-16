@@ -1,5 +1,6 @@
 <script lang="ts">
 import { onDestroy, onMount } from 'svelte';
+import Button from '$lib/components/ui/button/button.svelte';
 import {
   confirmTransaction,
   getTransaction,
@@ -15,9 +16,13 @@ import LoadState from '../ui/LoadState.svelte';
 import { createLoader, type LoadStatus } from '../ui/loader.svelte';
 import { wifiScanErrorMessage } from '../wifi';
 import { type JoinState, joinError, reduceJoin } from '../wifi-join';
+import { lazyPage } from './lazy';
+import PageHost from './PageHost.svelte';
 
 import WiFiScanList from './WiFiScanList.svelte';
 import WiFiSummary from './WiFiSummary.svelte';
+
+const joinDialog = lazyPage(() => import('./WiFiJoinDialog.svelte'));
 
 const idle: LoadStatus = { state: 'ready' };
 let {
@@ -170,13 +175,13 @@ async function scan() {
       {/if}
     </LoadState>
     {#if summary.status.state === 'ready'}
-      <button
+      <Button variant="outline" size="sm"
         type="button"
-        class="mt-3 rounded-md border border-border px-3 py-1 text-sm hover:bg-bg"
+        class="mt-3 text-sm"
         onclick={summary.retry}
       >
         {m.wifi_refresh()}
-      </button>
+      </Button>
     {/if}
   </Card>
 
@@ -189,9 +194,9 @@ async function scan() {
       {/if}
     </LoadState>
     {#if scanStatus.state !== 'error'}
-      <button
+      <Button variant="outline" size="sm"
         type="button"
-        class="mt-3 rounded-md border border-border px-3 py-1 text-sm hover:bg-bg disabled:opacity-60"
+        class="mt-3 text-sm"
         disabled={scanStatus.state === 'loading'}
         aria-busy={scanStatus.state === 'loading'}
         onclick={scan}
@@ -201,16 +206,14 @@ async function scan() {
           : scanData
             ? m.wifi_scan_again()
             : m.wifi_scan()}
-      </button>
+      </Button>
     {/if}
   </Card>
 </div>
 
 
 {#if selected}
-  {#await import("./WiFiJoinDialog.svelte") then { default: WiFiJoinDialog }}
-  <WiFiJoinDialog network={selected} busy={joining.state === 'joining'} submit={submitJoin} close={() => { selected = undefined; }} />
-  {/await}
+  <PageHost load={joinDialog} props={{ network: selected, busy: joining.state === 'joining', submit: submitJoin, close: () => { selected = undefined; } }} />
 {/if}
 <div aria-live="polite" class="mt-4 space-y-2 text-sm">
   {#if joining.state === 'joining'}
@@ -218,8 +221,8 @@ async function scan() {
   {:else if joining.state === 'pending'}
     <p>{m.wifi_join_pending({ seconds: Math.max(0, Math.ceil((joining.deadline - now) / 1000)) })}</p>
     <div class="flex gap-2">
-      <button type="button" class="rounded border border-border px-3 py-2" disabled={commandPending} onclick={() => settle(true)}>{m.wifi_join_confirm()}</button>
-      <button type="button" class="rounded border border-border px-3 py-2" disabled={commandPending} onclick={() => settle(false)}>{m.wifi_join_rollback()}</button>
+      <Button variant="outline" type="button" disabled={commandPending} onclick={() => settle(true)}>{m.wifi_join_confirm()}</Button>
+      <Button variant="outline" type="button" disabled={commandPending} onclick={() => settle(false)}>{m.wifi_join_rollback()}</Button>
     </div>
   {:else if joining.state === 'restoring'}
     <p>{m.wifi_join_restoring()}</p>

@@ -32,6 +32,8 @@ Planned work lives in GitHub issues (milestone `0.1.0`, project board "travo-gre
 
 ## Frontend requirements
 
+- Use copied shadcn-svelte primitives by default for applicable UI controls. Keep app-specific wrapper contracts, semantic tokens and localization; record measured compatibility/size exceptions in [ADR 0013](adr/0013-shadcn-components.md) and its inventory.
+
 - Responsive, mobile-first; route-level code split; vector assets; no CDN or external fonts (device is often offline).
 - Only the generated API client is called; no hand-typed endpoints.
 - One card surface; one status vocabulary (ok / warn / danger / info / neutral / stale), no raw colour classes; dark mode mandatory.
