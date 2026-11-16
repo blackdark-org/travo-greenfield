@@ -10,8 +10,8 @@ let {
 </script>
 
 <div
-  bind:this={ref}
-  data-slot="skeleton"
-  class={cn("cn-skeleton animate-pulse", className)}
-  {...restProps}
+	bind:this={ref}
+	data-slot="skeleton"
+	class={cn("bg-muted rounded-md animate-pulse", className)}
+	{...restProps}
 ></div>

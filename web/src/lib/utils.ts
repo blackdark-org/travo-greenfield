@@ -1,8 +1,4 @@
-import { type ClassValue, clsx } from 'clsx';
-
-export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs);
-}
+export { cn } from 'cn';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-unknown
 export type WithoutChild<T> = T extends { child?: unknown } ? Omit<T, 'child'> : T;

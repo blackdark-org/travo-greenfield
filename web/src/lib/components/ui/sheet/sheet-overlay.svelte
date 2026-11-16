@@ -10,11 +10,11 @@ let {
 </script>
 
 <SheetPrimitive.Overlay
-  bind:ref
-  data-slot="sheet-overlay"
-  class={cn(
-    "cn-sheet-overlay fixed inset-0 z-50 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-    className
-  )}
-  {...restProps}
+	bind:ref
+	data-slot="sheet-overlay"
+	class={cn(
+		"bg-black/10 supports-backdrop-filter:backdrop-blur-xs fixed inset-0 z-50 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+		className
+	)}
+	{...restProps}
 />

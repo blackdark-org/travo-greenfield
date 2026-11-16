@@ -1,7 +1,9 @@
 # shadcn-svelte migration evidence (#119)
 
-Base: `95ecdf0ea9feec6a518be38c84a72272f2ec0166`. Budgets remain shell 40,960 B,
-each lazy JavaScript chunk 8,192 B, total 102,400 B, gzip level 9.
+Base: `95ecdf0ea9feec6a518be38c84a72272f2ec0166`. After reinstalling the
+components with `shadcn-svelte` 1.8.1, budgets are shell 81,920 B, each lazy
+JavaScript chunk 16,384 B, total 131,072 B, gzip level 9. The CLI build
+measures 69,108 B shell, 10,265 B largest lazy chunk, and 113,836 B total.
 
 Early production probes (before migrating consumers):
 
@@ -58,7 +60,7 @@ Pre-rebase full migration: `mise run check` passed, 225 tests; shell **40,273 B*
 total **82,933 B**, unchanged limits. Rebased onto `84410ce` with Go 1.27.4, Node 26.13.1, Biome 2.6.7, Paraglide
 3.2.2, message-format 4.6.0, Lucide 1.72.0 and Vite 8.3.8: `mise run check`
 passes again with the same 225 tests and **40,273 B shell / 82,933 B total**.
-The largest lazy chunk is **7,493 B** (Bits UI primitives); none exceeds 8,192 B.
+The largest lazy chunk of that pre-CLI build is **7,493 B** (Bits UI primitives).
 The generated API client is unchanged. Browser checks were repeated on this rebased build.
 
 `e2e-components.mjs` passed at 390/1280 px in light/dark themes. It checks real

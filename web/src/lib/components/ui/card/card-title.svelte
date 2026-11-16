@@ -7,14 +7,14 @@ let {
   class: className,
   children,
   ...restProps
-}: WithElementRef<HTMLAttributes<HTMLElement>> = $props();
+}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
 </script>
 
-<h2
-  bind:this={ref}
-  data-slot="card-title"
-  class={cn("cn-font-heading cn-card-title", className)}
-  {...restProps}
+<div
+	bind:this={ref}
+	data-slot="card-title"
+	class={cn("text-base leading-normal font-medium group-data-[size=sm]/card:text-sm", className)}
+	{...restProps}
 >
-  {@render children?.()}
-</h2>
+	{@render children?.()}
+</div>

@@ -18,24 +18,6 @@ export default defineConfig(({ mode }) => {
       assetsDir: '',
       cssCodeSplit: false,
       modulePreload: { polyfill: false },
-      rollupOptions: {
-        output: {
-          codeSplitting: {
-            includeDependenciesRecursively: false,
-            groups: [
-              {
-                name: 'index',
-                includeDependenciesRecursively: true,
-                priority: -1,
-                test: /\/node_modules\/svelte\/|\/src\/main.ts$|\/src\/lib\/session.svelte.ts$/,
-              },
-              { name: 'dialog-primitives', test: /\/bits-ui\/.*\/bits\// },
-              { name: 'dialog-internal', test: /\/bits-ui\/.*\/internal\// },
-              { name: 'dialog-utils', test: /\/(svelte-toolbelt|runed)\// },
-            ],
-          },
-        },
-      },
     },
     server: { proxy },
     preview: { proxy },

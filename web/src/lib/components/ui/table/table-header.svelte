@@ -11,10 +11,10 @@ let {
 </script>
 
 <thead
-  bind:this={ref}
-  data-slot="table-header"
-  class={cn("cn-table-header", className)}
-  {...restProps}
+	bind:this={ref}
+	data-slot="table-header"
+	class={cn("[&_tr]:border-b", className)}
+	{...restProps}
 >
-  {@render children?.()}
+	{@render children?.()}
 </thead>

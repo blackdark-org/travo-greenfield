@@ -5,6 +5,7 @@
 /* Design tokens. Pages use these via the utilities below or the .status-* classes, never raw colours. */
 :root {
   color-scheme: light;
+  --radius-md: 0.5rem;
   --bg: #f6f7f9;
   --surface: #ffffff;
   --border: #d9dde3;
@@ -137,6 +138,7 @@ body {
   --color-primary-foreground: var(--accent-contrast);
   --color-secondary: var(--neutral-bg);
   --color-secondary-foreground: var(--text);
+  --color-muted: var(--neutral-bg);
   --color-muted-foreground: var(--text-muted);
   --color-accent-foreground: var(--accent-contrast);
   --color-destructive: var(--danger);
@@ -144,45 +146,6 @@ body {
   --color-danger: var(--danger);
   --color-input: var(--border);
   --color-ring: var(--accent);
-}
-
-@layer components {
-  .cn-button {
-    @apply rounded-md border border-transparent text-sm font-medium;
-  }
-  .cn-button-variant-default {
-    @apply bg-primary text-primary-foreground;
-  }
-  .cn-button-variant-outline {
-    @apply border-border hover:bg-bg;
-  }
-  .cn-button-variant-secondary {
-    @apply bg-secondary text-secondary-foreground;
-  }
-  .cn-button-variant-ghost {
-    @apply hover:bg-bg;
-  }
-  .cn-button-variant-destructive {
-    @apply bg-destructive text-destructive-foreground;
-  }
-  .cn-button-variant-link {
-    @apply text-primary underline;
-  }
-  .cn-button-size-default {
-    @apply gap-2 px-3 py-2;
-  }
-  .cn-button-size-sm {
-    @apply gap-1 px-3 py-1;
-  }
-  .cn-button-size-icon-sm {
-    @apply p-1;
-  }
-  .cn-button-size-icon {
-    @apply p-2;
-  }
-  .cn-dialog-overlay {
-    @apply bg-black/50;
-  }
 }
 
 /* The native focus ring is shared by links, controls and copied primitives. */
@@ -201,36 +164,7 @@ body {
   }
 }
 
-@layer components {
-  .cn-input,
-  .cn-textarea {
-    @apply rounded-md border border-border bg-bg px-3 py-2;
-  }
-  .cn-label {
-    @apply text-sm font-medium;
-  }
-  .cn-card {
-    @apply rounded-lg border border-border bg-surface p-4;
-  }
-  .cn-card-title {
-    @apply mb-3 text-base font-semibold;
-  }
-  .cn-skeleton {
-    @apply rounded-md bg-secondary;
-  }
-  .cn-sheet-overlay {
-    @apply fixed inset-0 z-50 bg-black/50;
-  }
-  .cn-sheet-content {
-    @apply fixed inset-y-0 left-0 z-50 flex w-60 flex-col border-r border-border bg-surface;
-  }
-  .cn-sheet-close {
-    @apply absolute top-3 right-3;
-  }
-  .cn-sheet-title {
-    @apply text-lg font-semibold;
-  }
-  [data-slot="collapsible-content"][data-state="closed"] {
-    display: none;
-  }
+/* forceMount keeps scan rows in the document; the closed state still hides them. */
+[data-slot="collapsible-content"][data-state="closed"] {
+  display: none;
 }
