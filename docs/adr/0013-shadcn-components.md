@@ -22,8 +22,9 @@ the existing `--color-*` mappings, plus `--color-muted` and `--radius-md`.
 App wrappers still own page contracts: Card keeps an h2, status colors stay on
 Badge, and the mobile sheet is constrained to the sidebar width. Close labels
 use Paraglide. A disabled anchor Button does not run its click handler.
-`web/src/lib/components/ui/LICENSE.md` is the upstream MIT notice; the same
-text ships as `web/public/shadcn-svelte-LICENSE.txt`.
+The component source is not an npm package, so `package.json` does not carry
+its MIT notice. That notice ships once, as
+`web/public/shadcn-svelte-LICENSE.txt`, which the build copies into `dist`.
 
 Dialogs load on demand with their routes. Accessibility remains implemented by
 Bits UI. No router or device behavior changes are part of adoption. The
