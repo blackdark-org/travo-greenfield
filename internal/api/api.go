@@ -57,6 +57,12 @@ type WiFiJoiner interface {
 	Join(context.Context, wifi.JoinRequest) (txn.Status, error)
 }
 
+// WiFiAPEditor lists and edits configured access points through guarded transactions.
+type WiFiAPEditor interface {
+	AccessPoints(context.Context) ([]wifi.APConfig, error)
+	UpdateAP(context.Context, wifi.APRequest) (txn.Status, error)
+}
+
 type WiFiService interface {
 	Summary(context.Context) (wifi.Summary, error)
 	Scan(context.Context) (wifi.ScanResult, error)
@@ -87,6 +93,7 @@ type Deps struct {
 	WiFi         WiFiService
 	WiFiJoin     WiFiJoiner
 	WiFiProfiles WiFiProfileService
+	WiFiAPs      WiFiAPEditor
 	Txns         Txns
 	Sessions     *auth.Store
 	Limiter      *auth.RateLimiter
