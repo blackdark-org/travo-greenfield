@@ -173,7 +173,7 @@ async function logout() {
     <div>
       <Button variant="outline"
         type="button"
-        
+
         disabled={backupPending}
         onclick={downloadBackup}
       >
@@ -284,7 +284,7 @@ async function logout() {
   <div>
     <Button variant="outline"
       type="button"
-      
+
       onclick={logout}
     >
       {m.logout()}

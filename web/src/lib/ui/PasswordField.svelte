@@ -28,7 +28,7 @@ let {
     bind:value
     aria-invalid={error ? 'true' : undefined}
     aria-describedby={error ? `${id}-error` : undefined}
-    
+
   />
   {#if error}
     <p id="{id}-error" class="text-sm text-(--danger)">{error}</p>

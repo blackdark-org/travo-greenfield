@@ -159,7 +159,7 @@ onMount(() => {
     </p>
     <Button variant="outline"
       type="button"
-      
+
       disabled={pending || verifying || result?.status === 'disabled'}
       onclick={() => { if (controller) void check('manual', controller); }}
     >
@@ -168,7 +168,7 @@ onMount(() => {
     {#if result?.status === 'available' && result.latest_version}
       <Button variant="outline"
         type="button"
-        
+
         disabled={pending || verifying || stage?.status === 'verifying'}
         onclick={() => {
           if (controller && result?.latest_version) void verify(result.latest_version, controller);
@@ -213,12 +213,12 @@ onMount(() => {
     {#if confirming}
       <p class="mt-2">{m.update_confirm({ version: stage.version })}</p>
       <div class="mt-2 flex flex-wrap gap-2">
-        <Button variant="outline" type="button" 
+        <Button variant="outline" type="button"
           disabled={updating}
           onclick={() => { if (controller && stage?.version) void changeOperation(controller, stage.version); }}>
           {m.update_apply()}
         </Button>
-        <Button variant="outline" type="button" 
+        <Button variant="outline" type="button"
           onclick={() => { confirming = false; }}>
           {m.update_cancel()}
         </Button>

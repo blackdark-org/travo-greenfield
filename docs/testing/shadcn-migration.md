@@ -13,8 +13,8 @@ Early production probes (before migrating consumers):
 | Static variants, explicit lazy library chunks | 39,757 | 6,219 | 77,385 |
 
 The optimized probe still uses the upstream Button template and Bits UI Dialog.
-No accessibility functionality is removed. The final inventory, browser checks
-and measurements will accompany the consumer migration.
+No accessibility functionality is removed. The completed inventory and acceptance
+results follow.
 
 Before screenshots: `web/screenshots/before/` (ignored local artifacts), both
 390 and 1280 px, light/dark, login/setup/Dashboard/WiFi/VPN/System, WiFi join and
@@ -55,8 +55,12 @@ interfaces. No Go, API client, router or transaction-state implementation change
 ## Acceptance evidence
 
 Pre-rebase full migration: `mise run check` passed, 225 tests; shell **40,273 B**,
-total **82,933 B**, unchanged limits. Final toolchain measurements are recorded
-below after integration with origin/main.
+total **82,933 B**, unchanged limits. Rebased onto `84410ce` with Go 1.27.4, Node 26.13.1, Biome 2.6.7, Paraglide
+3.2.2, message-format 4.6.0, Lucide 1.72.0 and Vite 8.3.8: `mise run check`
+passes again with the same 225 tests and **40,273 B shell / 82,933 B total**.
+The largest lazy chunk is **7,493 B** (Bits UI primitives); none exceeds 8,192 B.
+The generated API client is unchanged. Browser checks and screenshots were
+repeated on this rebased build.
 
 `e2e-components.mjs` passed at 390/1280 px in light/dark themes. It checks real
 keyboard Tab/Shift-Tab/Enter/Space/Escape input, visible focus, modal focus loops,
@@ -72,3 +76,18 @@ reboot/update confirmations and the mobile drawer. Before/after artifacts are in
 `docs/evidence/issue-119/`; scripts retain full-resolution local output under
 `web/screenshots/`. Guarded responses in browser tests are API test doubles, not
 claimed device captures. No hardware acceptance is required for this migration.
+
+First-run `e2e-auth.mjs` also passes after rebase: setup, reload, logout, rejected
+password, successful login and return-to-System.
+
+Representative comparisons (the linked directories contain the full matrix):
+
+| Surface | Before | After |
+| --- | --- | --- |
+| dashboard-1280-light | [PNG](../evidence/issue-119/before/dashboard-1280-light.png) | [PNG](../evidence/issue-119/after/dashboard-1280-light.png) |
+| join-390-dark | [PNG](../evidence/issue-119/before/join-390-dark.png) | [PNG](../evidence/issue-119/after/join-390-dark.png) |
+| drawer-390-light | [PNG](../evidence/issue-119/before/drawer-390-light.png) | [PNG](../evidence/issue-119/after/drawer-390-light.png) |
+| login-390-light | [PNG](../evidence/issue-119/before/login-390-light.png) | [PNG](../evidence/issue-119/after/login-390-light.png) |
+| setup-1280-dark | [PNG](../evidence/issue-119/before/setup-1280-dark.png) | [PNG](../evidence/issue-119/after/setup-1280-dark.png) |
+| vpn-390-dark | [PNG](../evidence/issue-119/before/vpn-390-dark.png) | [PNG](../evidence/issue-119/after/vpn-390-dark.png) |
+| system-1280-light | [PNG](../evidence/issue-119/before/system-1280-light.png) | [PNG](../evidence/issue-119/after/system-1280-light.png) |
