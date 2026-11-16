@@ -206,6 +206,7 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 	var wireless api.WiFiService
 	var wirelessJoin api.WiFiJoiner
 	var association wifiprofiles.AssociationReader
+	var wirelessAPs api.WiFiAPEditor
 	if scanner, ok := deps.Device.(device.WirelessScanner); ok {
 		service := wifi.New(ctx, deps.Device, scanner)
 		wireless = service
@@ -213,8 +214,10 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 		routes, hasRoutes := deps.Device.(device.DefaultRouteReader)
 		keys, hasKeys := deps.Device.(device.WirelessKeyWriter)
 		links, hasLinks := deps.Device.(device.LinkIndexReader)
-		if hasRoutes && hasKeys && hasLinks {
-			wirelessJoin = service.WithJoin(wifi.JoinDeps{UCI: deps.Device, Ubus: deps.Device, Routes: routes, Links: links, Keys: keys, Txns: deps.Txn})
+		neighbours, hasNeighbours := deps.Device.(device.NeighbourReader)
+		if hasRoutes && hasKeys && hasLinks && hasNeighbours {
+			service.WithJoin(wifi.JoinDeps{UCI: deps.Device, Ubus: deps.Device, Routes: routes, Links: links, Keys: keys, Neighbours: neighbours, Txns: deps.Txn})
+			wirelessJoin, wirelessAPs = service, service
 		}
 	}
 	savedUplinks := wifiprofiles.New(filepath.Join(deps.Paths.State, "wifi-profiles.json"), wirelessJoin, association)
@@ -269,6 +272,7 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 		WiFiJoin:      wirelessJoin,
 		WiFiProfiles:  savedUplinks,
 		AdGuard:       adguardSvc,
+		WiFiAPs:       wirelessAPs,
 		Throughput:    sampler,
 		Version:       version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,

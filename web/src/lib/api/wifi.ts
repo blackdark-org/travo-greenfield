@@ -5,12 +5,15 @@ import {
   createWiFiProfile,
   deleteWiFiProfile,
   getWiFi,
+  getWiFiAccessPoints,
   getWiFiProfiles,
   getWiFiScan,
   type JoinWiFiData,
   joinWiFi,
   reorderWiFiProfiles,
   selectWiFiProfile,
+  type UpdateWiFiAccessPointData,
+  updateWiFiAccessPoint,
 } from './gen';
 
 export async function fetchWifi(signal?: AbortSignal) {
@@ -55,4 +58,18 @@ export function forgetWifiProfile(id: string, signal?: AbortSignal) {
 
 export function selectWifiProfile(id: string, signal?: AbortSignal) {
   return selectWiFiProfile({ path: { id }, signal });
+}
+
+export async function fetchAccessPoints(signal?: AbortSignal) {
+  const response = await getWiFiAccessPoints({ signal });
+  if (!response.data) throw new Error(m.wifi_unavailable());
+  return response.data.aps;
+}
+
+export function updateAccessPoint(
+  section: string,
+  body: UpdateWiFiAccessPointData['body'],
+  signal?: AbortSignal,
+) {
+  return updateWiFiAccessPoint({ path: { section }, body, signal });
 }
