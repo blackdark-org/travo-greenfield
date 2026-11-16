@@ -2,6 +2,7 @@
 package app
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -74,6 +75,13 @@ func New(o Options) (Deps, error) {
 		mock.SeedSystem(dev)
 		mock.SeedConnectivity(dev)
 		mock.SeedWiFi(dev)
+		wireless, err := cli.ParseShow("wireless", string(mock.WirelessUCI))
+		if err != nil {
+			return Deps{}, fmt.Errorf("mock wireless: %w", err)
+		}
+		if err := dev.Load(context.Background(), "wireless", wireless); err != nil {
+			return Deps{}, fmt.Errorf("mock wireless: %w", err)
+		}
 		if o.FirstRun {
 			dev.SetPassword("")
 		}
