@@ -67,7 +67,7 @@ function formatRate(rate: number | null): string {
         {/if}
       {/if}
     </LoadState>
-    <Button variant="link" class="mt-3" href={href('wifi')}>
+    <Button size="sm" class="mt-3" href={href('wifi')}>
       {m.dashboard_connect_to_wifi()}
     </Button>
   </Card>

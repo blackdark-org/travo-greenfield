@@ -9,7 +9,10 @@ export default defineConfig(({ mode }) => {
   const proxy = { '/api': target };
   return {
     plugins: [tailwindcss(), svelte()],
-    resolve: { alias: { $lib: new URL('./src/lib', import.meta.url).pathname } },
+    // pathname leaves %20 intact, so a checkout path with spaces misses $lib.
+    resolve: {
+      alias: { $lib: decodeURIComponent(new URL('./src/lib', import.meta.url).pathname) },
+    },
     build: {
       // Flat output: the device server serves dist/ as-is, with the *.gz written by scripts/gzip-dist.mjs.
       assetsDir: '',

@@ -17,6 +17,7 @@
   --warn: #8a5a00;
   --warn-bg: #fdf0d2;
   --danger: #b3261e;
+  --danger-contrast: #ffffff;
   --danger-bg: #fce8e6;
   --info: #1f5fd1;
   --info-bg: #e5eefc;
@@ -40,6 +41,7 @@
   --warn: #f0c060;
   --warn-bg: #36290b;
   --danger: #ff8a80;
+  --danger-contrast: #3b1714;
   --danger-bg: #3b1714;
   --info: #7fb0ff;
   --info-bg: #14253f;
@@ -138,6 +140,7 @@ body {
   --color-muted-foreground: var(--text-muted);
   --color-accent-foreground: var(--accent-contrast);
   --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-contrast);
   --color-danger: var(--danger);
   --color-input: var(--border);
   --color-ring: var(--accent);
@@ -160,7 +163,7 @@ body {
     @apply hover:bg-bg;
   }
   .cn-button-variant-destructive {
-    @apply bg-destructive text-white;
+    @apply bg-destructive text-destructive-foreground;
   }
   .cn-button-variant-link {
     @apply text-primary underline;

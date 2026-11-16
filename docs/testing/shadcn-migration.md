@@ -26,13 +26,13 @@ the repository's headless Chrome helper was used instead.
 
 | Surface | Owned shadcn primitives | Preserved app contract |
 | --- | --- | --- |
-| `App.svelte`, `ui/MobileNav.svelte` | Button (actions and native-anchor navigation), lazy Sheet | Auth guard, hash navigation/Back, one page scroll container, theme/logout, Close/Escape and Menu focus restoration |
+| `App.svelte`, `ui/MobileNav.svelte` | Button (actions and native-anchor navigation), lazy Sheet | Auth guard, hash navigation/Back, one page scroll container, theme/logout, Close/Escape (Escape while the sheet chunk is pending, Close and Escape if it fails) and Menu focus restoration |
 | `ui/Card.svelte` | Card and CardTitle, customized to section/h2 | Optional title and children; existing block layout |
 | `ui/Status.svelte`, `ui/status.ts` | Badge | Unchanged ok/warn/danger/info/neutral/stale vocabulary, colors, dot and stale italics |
 | `ui/LoadState.svelte`, `ui/FormMessage.svelte` | Skeleton, Alert, Button, Status/Badge | Independent failure/staleness, known data retained, retry/action links |
 | `ui/PasswordField.svelte` | Input and Label | Binding, required/password/autocomplete, per-field invalid/describedby relationships |
 | Login, Setup | Button and the wrappers above | Validation, busy state, auth/return route and secret handling |
-| Dashboard | Button action link, Table/Header/Body/Row/Head/Cell, wrappers | Native WiFi anchor, named interfaces, column/row headers, independent data loaders |
+| Dashboard | Button, Table/Header/Body/Row/Head/Cell, wrappers | WiFi navigation button, named interfaces, column/row headers, independent data loaders |
 | WiFi, WiFiSummary | Button and wrappers | Summary tiles remain semantic layout; Scan and transaction state logic unchanged |
 | WiFiScanList | Collapsible, Button, Status/Badge | Network grouping, per-AP disclosure, disabled unsupported Join, hidden networks and per-radio errors |
 | WiFiJoinDialog | Lazy Dialog/Title, Input, Label, Button | Native validation, no outside-click dismissal, Escape/Cancel, secret clearing and trigger focus |
@@ -59,8 +59,7 @@ total **82,933 B**, unchanged limits. Rebased onto `84410ce` with Go 1.27.4, Nod
 3.2.2, message-format 4.6.0, Lucide 1.72.0 and Vite 8.3.8: `mise run check`
 passes again with the same 225 tests and **40,273 B shell / 82,933 B total**.
 The largest lazy chunk is **7,493 B** (Bits UI primitives); none exceeds 8,192 B.
-The generated API client is unchanged. Browser checks and screenshots were
-repeated on this rebased build.
+The generated API client is unchanged. Browser checks were repeated on this rebased build.
 
 `e2e-components.mjs` passed at 390/1280 px in light/dark themes. It checks real
 keyboard Tab/Shift-Tab/Enter/Space/Escape input, visible focus, modal focus loops,
@@ -71,26 +70,14 @@ Join, reboot or update does not send a mutation. HTTP seams exercise confirmed
 Join, VPN Confirm/Roll back, reboot refusal and confirmed update success without
 a real device. Existing reducer/transport tests retain terminal-state coverage.
 
-Screenshots cover login/setup, Dashboard, WiFi scan and Join, VPN, System,
-reboot/update confirmations and the mobile drawer. Before/after artifacts are in
-`docs/evidence/issue-119/`; scripts retain full-resolution local output under
-`web/screenshots/`. Guarded responses in browser tests are API test doubles, not
-claimed device captures. No hardware acceptance is required for this migration.
+Browser checks cover login/setup, Dashboard, WiFi scan and Join, VPN, System,
+reboot/update confirmations and the mobile drawer. Captures stay in the ignored
+`web/screenshots/` directory and are not committed. Guarded responses in browser
+tests are API test doubles, not claimed device captures. No hardware acceptance
+is required for this migration.
 
 First-run `e2e-auth.mjs` also passes after rebase: setup, reload, logout, rejected
 password, successful login and return-to-System.
-
-Representative comparisons (the linked directories contain the full matrix):
-
-| Surface | Before | After |
-| --- | --- | --- |
-| dashboard-1280-light | [PNG](../evidence/issue-119/before/dashboard-1280-light.png) | [PNG](../evidence/issue-119/after/dashboard-1280-light.png) |
-| join-390-dark | [PNG](../evidence/issue-119/before/join-390-dark.png) | [PNG](../evidence/issue-119/after/join-390-dark.png) |
-| drawer-390-light | [PNG](../evidence/issue-119/before/drawer-390-light.png) | [PNG](../evidence/issue-119/after/drawer-390-light.png) |
-| login-390-light | [PNG](../evidence/issue-119/before/login-390-light.png) | [PNG](../evidence/issue-119/after/login-390-light.png) |
-| setup-1280-dark | [PNG](../evidence/issue-119/before/setup-1280-dark.png) | [PNG](../evidence/issue-119/after/setup-1280-dark.png) |
-| vpn-390-dark | [PNG](../evidence/issue-119/before/vpn-390-dark.png) | [PNG](../evidence/issue-119/after/vpn-390-dark.png) |
-| system-1280-light | [PNG](../evidence/issue-119/before/system-1280-light.png) | [PNG](../evidence/issue-119/after/system-1280-light.png) |
 
 ## Self-review correction
 
@@ -98,6 +85,8 @@ Both Standards and Spec reviews identified one minor issue: Menu's
 `aria-controls` did not resolve to the mobile Sheet. The new browser assertion
 failed before the fix and passes after assigning `id="sidebar"` to Sheet.Content.
 The full keyboard/guarded matrix passed again. Sheet's type now advertises only
-the supported left side. Final measured build after this correction:
-**40,274 B shell, 7,489 B largest lazy chunk, 82,927 B total**. `mise run check`
-passes with 225 tests; generated API client remains unchanged.
+the supported left side. Measured build after this correction:
+**40,274 B shell, 7,489 B largest lazy chunk, 82,927 B total**. After the review
+follow-up (dark default, button contrast, drawer dismissal): **40,705 B shell,
+7,458 B largest lazy chunk, 82,952 B total**. `mise run check` passes with 225
+tests; generated API client remains unchanged.

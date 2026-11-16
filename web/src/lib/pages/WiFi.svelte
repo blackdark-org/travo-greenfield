@@ -44,6 +44,7 @@ onDestroy(() => {
 });
 
 let selected = $state<Network>();
+let joinTrigger = $state<HTMLElement | null>(null);
 let joining = $state<JoinState>({ state: 'idle' });
 let commandPending = $state(false);
 let activePoll: AbortController | undefined;
@@ -188,7 +189,7 @@ async function scan() {
   <Card title={m.wifi_scan_title()}>
     <LoadState status={scanStatus} retry={scan} stale={scanData !== undefined}>
       {#if scanData}
-        <WiFiScanList result={scanData} join={(network) => { selected = network; }} {busy} />
+        <WiFiScanList result={scanData} join={(network) => { joinTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null; selected = network; }} {busy} />
       {:else}
         <p class="text-muted">{m.wifi_scan_idle()}</p>
       {/if}
@@ -213,7 +214,7 @@ async function scan() {
 
 
 {#if selected}
-  <PageHost load={joinDialog} props={{ network: selected, busy: joining.state === 'joining', submit: submitJoin, close: () => { selected = undefined; } }} />
+  <PageHost load={joinDialog} props={{ network: selected, returnFocus: joinTrigger, busy: joining.state === 'joining', submit: submitJoin, close: () => { selected = undefined; } }} />
 {/if}
 <div aria-live="polite" class="mt-4 space-y-2 text-sm">
   {#if joining.state === 'joining'}

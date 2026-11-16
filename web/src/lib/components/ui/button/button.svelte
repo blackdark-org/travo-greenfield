@@ -51,6 +51,7 @@ export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
     href = undefined,
     type = "button",
     disabled,
+    onclick,
     children,
     ...restProps
   }: ButtonProps = $props();
@@ -60,12 +61,19 @@ export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
   <a
     bind:this={ref}
     data-slot="button"
-    class={cn(buttonVariants({ variant, size }), className)}
+    class={cn(buttonVariants({ variant, size }), disabled && "pointer-events-none", className)}
     href={disabled ? undefined : href}
     aria-disabled={disabled}
     role={disabled ? "link" : undefined}
     tabindex={disabled ? -1 : undefined}
     {...restProps}
+    onclick={(event) => {
+      if (disabled) {
+        event.preventDefault();
+        return;
+      }
+      onclick?.(event);
+    }}
   >
     {@render children?.()}
   </a>
@@ -76,6 +84,7 @@ export type ButtonProps = WithElementRef<HTMLButtonAttributes> &
     class={cn(buttonVariants({ variant, size }), className)}
     {type}
     {disabled}
+    {onclick}
     {...restProps}
   >
     {@render children?.()}

@@ -21,8 +21,10 @@ import { router } from './lib/router.svelte';
 import { session } from './lib/session.svelte';
 import { theme } from './lib/theme.svelte';
 import LoadState from './lib/ui/LoadState.svelte';
+import type { LoadStatus } from './lib/ui/loader.svelte';
 
 let drawerOpen = $state(false);
+let navChunk = $state<LoadStatus>({ state: 'loading' });
 let menuButton: HTMLElement | null = $state(null);
 const mobileNav = lazyPage(() => import('./lib/ui/MobileNav.svelte'));
 // Below md, mount the modal navigation only while open.
@@ -39,6 +41,7 @@ $effect(() => {
 });
 
 function openDrawer() {
+  navChunk = { state: 'loading' };
   drawerOpen = true;
 }
 
@@ -46,6 +49,17 @@ function closeDrawer() {
   if (!drawerOpen) return;
   drawerOpen = false;
   queueMicrotask(() => menuButton?.focus());
+}
+
+function onNavStatus(status: LoadStatus) {
+  navChunk = status;
+}
+
+// Escape dismisses until the sheet chunk loads. A failed chunk has no sheet, so the shell draws Close.
+function onDrawerKey(event: KeyboardEvent) {
+  if (!drawerOpen || navChunk.state === 'ready' || event.key !== 'Escape') return;
+  event.preventDefault();
+  closeDrawer();
 }
 
 // Groups per spec. Sections without a route; the rest render the "not yet" card.
@@ -104,6 +118,7 @@ $effect(() => {
 </script>
 
 <svelte:window
+  onkeydown={onDrawerKey}
   onpagehide={() => dashboardEvents.stop()}
   onpageshow={(e) =>
     restoreDashboardEvents(e.persisted, authenticated, session.generation, dashboardEvents)}
@@ -137,7 +152,28 @@ $effect(() => {
   {#if authenticated}
     {#if mobile.value}
       {#if drawerOpen}
-        <PageHost load={mobileNav} props={{ children: navigation, close: closeDrawer, returnFocus: menuButton }} />
+        {#if navChunk.state === 'error'}
+          <button
+            type="button"
+            class="fixed inset-0 z-40 bg-black/50"
+            aria-label={m.nav_close()}
+            onclick={closeDrawer}
+          ></button>
+        {/if}
+        <div
+          class={navChunk.state === 'error'
+            ? 'fixed inset-y-0 left-0 z-50 flex w-60 flex-col gap-3 overflow-y-auto border-r border-border bg-surface p-3'
+            : 'contents'}
+        >
+          {#if navChunk.state === 'error'}
+            <Button variant="outline" type="button" onclick={closeDrawer}>{m.nav_close()}</Button>
+          {/if}
+          <PageHost
+            load={mobileNav}
+            onStatus={onNavStatus}
+            props={{ children: navigation, close: closeDrawer, returnFocus: menuButton }}
+          />
+        </div>
       {/if}
     {:else}
       <aside id="sidebar" class="flex w-60 shrink-0 flex-col border-r border-border bg-surface">

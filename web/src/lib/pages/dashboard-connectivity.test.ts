@@ -60,7 +60,7 @@ describe('Dashboard connectivity', () => {
     expect(body).toContain('Connectivity unavailable');
   });
 
-  it('keeps the WiFi connection link available when connectivity is unavailable', () => {
+  it('keeps the WiFi button available when connectivity is unavailable', () => {
     const body = dashboard({ state: 'error', message: 'Connectivity unavailable' }, undefined);
 
     expect(body).toContain('Connect to WiFi');

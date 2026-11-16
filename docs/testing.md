@@ -70,7 +70,7 @@ Per release, each from Ethernet unless stated (issues with label `needs-hardware
 
 `mise run screenshots` writes PNGs for UI PRs to `web/screenshots/`; `web/scripts/cdp.mjs` is the shared headless-Chrome helper for browser checks.
 
-Component migration checks: build, then run `scripts/with-mock.sh -- node web/scripts/e2e-components.mjs`. These check keyboard/focus, form validation, confirmations and transaction controls against mock/HTTP seams. See [the inventory and screenshot evidence](testing/shadcn-migration.md); no hardware is required.
+Component migration checks: build, then run `scripts/with-mock.sh -- node web/scripts/e2e-components.mjs`. These check keyboard/focus, form validation, confirmations and transaction controls against mock/HTTP seams. See [the migration inventory](testing/shadcn-migration.md); no hardware is required.
 
 ### Signed update hardware acceptance
 

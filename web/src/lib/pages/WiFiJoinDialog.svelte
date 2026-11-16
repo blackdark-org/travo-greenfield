@@ -11,15 +11,16 @@ let {
   busy = false,
   submit,
   close,
+  returnFocus = null,
 }: {
   network: Network;
   busy?: boolean;
   submit: (body: JoinWiFiData['body']) => void;
   close: () => void;
+  returnFocus?: HTMLElement | null;
 } = $props();
 let open = $state(true);
 let key = $state('');
-const returnFocus = typeof document === 'undefined' ? null : document.activeElement;
 
 function onSubmit(event: SubmitEvent) {
   event.preventDefault();
