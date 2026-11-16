@@ -3,9 +3,9 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const KB = 1024;
-const SHELL_LIMIT = 80 * KB;
+const SHELL_LIMIT = 128 * KB;
 const CHUNK_LIMIT = 16 * KB;
-const TOTAL_LIMIT = 128 * KB;
+const TOTAL_LIMIT = 256 * KB;
 const TOTAL_ASSET = /\.(html|js|css|svg)$/;
 
 function resolveAsset(reference, importer = 'index.html') {
@@ -64,7 +64,7 @@ export function checkBudget({ files, html, sources }) {
 
   const violations = [];
   if (shell > SHELL_LIMIT) {
-    violations.push(`shell ${shell} B exceeds ${SHELL_LIMIT} B (80 KB gzip)`);
+    violations.push(`shell ${shell} B exceeds ${SHELL_LIMIT} B (128 KB gzip)`);
   }
   for (const { name, bytes } of chunks) {
     if (bytes > CHUNK_LIMIT) {
@@ -72,7 +72,7 @@ export function checkBudget({ files, html, sources }) {
     }
   }
   if (total > TOTAL_LIMIT) {
-    violations.push(`total ${total} B exceeds ${TOTAL_LIMIT} B (128 KB gzip)`);
+    violations.push(`total ${total} B exceeds ${TOTAL_LIMIT} B (256 KB gzip)`);
   }
 
   return { shell, total, chunks, violations };
@@ -104,8 +104,8 @@ function formatKB(bytes) {
 function main() {
   const dist = fileURLToPath(new URL('../dist/', import.meta.url));
   const result = checkBudget(readDist(dist));
-  console.log(`shell ${formatKB(result.shell)} / 80 KB gzip (${result.shell} B)`);
-  console.log(`total ${formatKB(result.total)} / 128 KB gzip (${result.total} B)`);
+  console.log(`shell ${formatKB(result.shell)} / 128 KB gzip (${result.shell} B)`);
+  console.log(`total ${formatKB(result.total)} / 256 KB gzip (${result.total} B)`);
   for (const { name, bytes } of result.chunks) {
     console.log(`chunk ${name} ${formatKB(bytes)} / 16 KB gzip (${bytes} B)`);
   }

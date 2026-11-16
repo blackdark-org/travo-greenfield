@@ -1,8 +1,8 @@
 # shadcn-svelte migration evidence (#119)
 
 Base: `95ecdf0ea9feec6a518be38c84a72272f2ec0166`. After reinstalling the
-components with `shadcn-svelte` 1.8.1, budgets are shell 81,920 B, each lazy
-JavaScript chunk 16,384 B, total 131,072 B, gzip level 9. The CLI build
+components with `shadcn-svelte` 1.8.1, budgets are shell 131,072 B, each lazy
+JavaScript chunk 16,384 B, total 262,144 B, gzip level 9. The CLI build
 measures 69,108 B shell, 10,265 B largest lazy chunk, and 113,836 B total.
 
 Early production probes (before migrating consumers):

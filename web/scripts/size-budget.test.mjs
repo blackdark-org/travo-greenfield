@@ -56,16 +56,16 @@ describe('checkBudget', () => {
     const result = checkBudget({
       files: new Map([
         ['index.html', 1],
-        ['index.js', 80 * 1024],
+        ['index.js', 128 * 1024],
       ]),
       html: '<script src="/index.js"></script>',
       sources: new Map([['index.js', '']]),
     });
 
-    expect(result.shell).toBe(80 * 1024 + 1);
+    expect(result.shell).toBe(128 * 1024 + 1);
     expect(result.chunks).toEqual([]);
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0]).toMatch(/shell.*80 KB/);
+    expect(result.violations[0]).toMatch(/shell.*128 KB/);
   });
 
   it('reports an over-limit total independently of the shell and chunk limits', () => {
@@ -73,15 +73,15 @@ describe('checkBudget', () => {
       files: new Map([
         ['index.html', 1],
         ['index.js', 1],
-        ['extra.css', 128 * 1024 - 1],
+        ['extra.css', 256 * 1024 - 1],
       ]),
       html: '<script src="/index.js"></script>',
       sources: new Map([['index.js', '']]),
     });
 
     expect(result.shell).toBe(2);
-    expect(result.total).toBe(128 * 1024 + 1);
+    expect(result.total).toBe(256 * 1024 + 1);
     expect(result.violations).toHaveLength(1);
-    expect(result.violations[0]).toMatch(/total.*128 KB/);
+    expect(result.violations[0]).toMatch(/total.*256 KB/);
   });
 });
