@@ -35,7 +35,7 @@ On the WiFi page, scan for an uplink, join it on a free radio, and confirm the c
 
 ## UI components
 
-The Svelte UI uses locally owned [shadcn-svelte components](web/src/lib/components/ui/SOURCE.md), with the same light/dark palette and offline assets. New controls compose these primitives through the existing app wrappers. See [ADR 0013](docs/adr/0013-shadcn-components.md) for the size tradeoffs and [migration evidence](docs/testing/shadcn-migration.md) for the inventory and keyboard checks.
+The Svelte UI uses locally owned shadcn-svelte components, with the same light/dark palette and offline assets. New controls compose these primitives through the existing app wrappers. See [ADR 0013](docs/adr/0013-shadcn-components.md) for the size tradeoffs and [migration evidence](docs/testing/shadcn-migration.md) for the inventory and keyboard checks.
 
 ## Docs
 

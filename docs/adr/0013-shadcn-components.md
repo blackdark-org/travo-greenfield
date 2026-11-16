@@ -3,9 +3,12 @@
 Status: accepted
 
 Use upstream-derived shadcn-svelte primitives throughout the SPA, preserving the
-app-specific wrapper contracts and semantic palette. We own the copied source,
-record its revision and MIT license beside it, and review upstream updates as
-diffs. Manual installation avoids overwriting the app theme or introducing Kit.
+app-specific wrapper contracts and semantic palette. We own the copied source
+from huntabyte/shadcn-svelte `28f5a3bef5ea7934044a7fb60a3e6f201b3b090a`
+(retrieved 2026-11-16). `web/src/lib/components/ui/LICENSE.md` is the upstream
+MIT notice and stays with the copy; the same text ships in the built UI as
+`web/public/shadcn-svelte-LICENSE.txt`. Upstream updates are reviewed diffs.
+Manual installation avoids overwriting the app theme or introducing Kit.
 
 The initial Button/Dialog probe at 95ecdf0 measured 63,878 B eager shell and
 19,152 B WiFi chunk (baseline 37,851 B shell, 58,711 B total). The general variant
