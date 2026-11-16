@@ -203,6 +203,16 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 			return time.Since(statusStart)
 		})
 	}
+	var vpnDNS api.VPNDNS
+	if vpnStatus != nil {
+		svc := newVPNDNS(deps, dnsLayers, vpnStatus, profiles)
+		vpnDNS = svc
+		workers.Go("vpn-dns-layer", lifecycle.Every(15*time.Second, func(c context.Context) {
+			if _, err := svc.Reconcile(c); err != nil && c.Err() == nil {
+				slog.Warn("vpn dns layer", "err", err)
+			}
+		}))
+	}
 	var wireless api.WiFiService
 	var wirelessJoin api.WiFiJoiner
 	var association wifiprofiles.AssociationReader
@@ -257,6 +267,7 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 		VPNProfiles:   profiles,
 		VPNStatus:     vpnStatus,
 		VPNTunnel:     vpnTunnel,
+		VPNDNS:        vpnDNS,
 		UpdateApply:   updater,
 		UpdateStage:   updateStage,
 		Rebooter:      rebooter,

@@ -24,6 +24,7 @@ import Card from '../ui/Card.svelte';
 import LoadState from '../ui/LoadState.svelte';
 import { createLoader } from '../ui/loader.svelte';
 import Status from '../ui/Status.svelte';
+import VPNDNSCard from './VPNDNSCard.svelte';
 
 const request = new AbortController();
 const status = createLoader(fetchVpnStatus, 10000);
@@ -230,6 +231,8 @@ const tunnelStates = {
     {/if}
     {#if tunnelError}<Alert class="mt-2 text-danger">{tunnelError}</Alert>{/if}
   </Card>
+
+  <VPNDNSCard />
 
   <Card title={m.vpn_saved_profiles()}>
     <LoadState status={profiles.status} retry={profiles.retry}>

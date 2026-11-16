@@ -67,6 +67,7 @@ type Deps struct {
 	VPNProfiles *vpnprofiles.Service
 	VPNStatus   VPNStatusReader
 	VPNTunnel   VPNTunnelSetter
+	VPNDNS      VPNDNS
 	// DaemonContext stops live streams and their producers before HTTP shutdown drains.
 	DaemonContext context.Context
 	UpdateStage   UpdateStager
@@ -168,6 +169,7 @@ func New(d Deps) (http.Handler, huma.API) {
 	s.registerVPNProfiles(a)
 	s.registerVPNStatus(a)
 	s.registerVPNTunnel(a)
+	s.registerVPNDNS(a)
 	s.registerUpdateCheck(a)
 	s.registerUpdateStage(a)
 	s.registerUpdateApply(a)
