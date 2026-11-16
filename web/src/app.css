@@ -140,3 +140,73 @@ body {
     animation: none;
   }
 }
+
+/* Copied shadcn primitives use the existing semantic palette. */
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--accent-contrast);
+  --color-secondary: var(--neutral-bg);
+  --color-secondary-foreground: var(--text);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent-foreground: var(--accent-contrast);
+  --color-destructive: var(--danger);
+  --color-danger: var(--danger);
+  --color-input: var(--border);
+  --color-ring: var(--accent);
+}
+
+@layer components {
+  .cn-button {
+    @apply rounded-md border border-transparent text-sm font-medium;
+  }
+  .cn-button-variant-default {
+    @apply bg-primary text-primary-foreground;
+  }
+  .cn-button-variant-outline {
+    @apply border-border hover:bg-bg;
+  }
+  .cn-button-variant-secondary {
+    @apply bg-secondary text-secondary-foreground;
+  }
+  .cn-button-variant-ghost {
+    @apply hover:bg-bg;
+  }
+  .cn-button-variant-destructive {
+    @apply bg-destructive text-white;
+  }
+  .cn-button-variant-link {
+    @apply text-primary underline;
+  }
+  .cn-button-size-default {
+    @apply gap-2 px-3 py-2;
+  }
+  .cn-button-size-sm {
+    @apply gap-1 px-3 py-1;
+  }
+  .cn-button-size-icon {
+    @apply p-2;
+  }
+  .cn-dialog-overlay {
+    @apply bg-black/50;
+  }
+}
+
+/* The native focus ring is shared by links, controls and copied primitives. */
+[data-slot]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

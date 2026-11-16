@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
   const proxy = { '/api': target };
   return {
     plugins: [tailwindcss(), svelte()],
+    resolve: { alias: { $lib: new URL('./src/lib', import.meta.url).pathname } },
     build: {
       // Flat output: the device server serves dist/ as-is, with the *.gz written by scripts/gzip-dist.mjs.
       assetsDir: '',
@@ -16,16 +17,19 @@ export default defineConfig(({ mode }) => {
       modulePreload: { polyfill: false },
       rollupOptions: {
         output: {
-          manualChunks(id) {
-            // Keep the eager shell runtime together. Route chunks stay lazy, while
-            // extra shared entry chunks cost over 1 KB in aggregate gzip overhead.
-            if (
-              id.endsWith('/src/main.ts') ||
-              id.includes('/node_modules/svelte/') ||
-              id.endsWith('/src/lib/session.svelte.ts')
-            ) {
-              return 'index';
-            }
+          codeSplitting: {
+            includeDependenciesRecursively: false,
+            groups: [
+              {
+                name: 'index',
+                includeDependenciesRecursively: true,
+                priority: -1,
+                test: /\/node_modules\/svelte\/|\/src\/main.ts$|\/src\/lib\/session.svelte.ts$/,
+              },
+              { name: 'dialog-primitives', test: /\/bits-ui\/.*\/bits\// },
+              { name: 'dialog-internal', test: /\/bits-ui\/.*\/internal\// },
+              { name: 'dialog-utils', test: /\/(svelte-toolbelt|runed)\// },
+            ],
           },
         },
       },

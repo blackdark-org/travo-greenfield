@@ -10,6 +10,7 @@ import Shield from '@lucide/svelte/icons/shield';
 import Sun from '@lucide/svelte/icons/sun';
 import Wifi from '@lucide/svelte/icons/wifi';
 import X from '@lucide/svelte/icons/x';
+import Button from '$lib/components/ui/button/button.svelte';
 import { ownDashboardEvents, restoreDashboardEvents } from './lib/app-dashboard-events';
 import { dashboardEvents } from './lib/dashboard-events.svelte';
 import { navigate } from './lib/navigate';
@@ -180,7 +181,7 @@ $effect(() => {
         <Menu aria-hidden="true" size={20} />
       </button>
       <div class="flex items-center gap-1">
-        <button
+        <Button
           type="button"
           class="rounded-md p-2 hover:bg-bg"
           aria-label={m.theme_toggle()}
@@ -191,7 +192,7 @@ $effect(() => {
           {:else}
             <MoonStar aria-hidden="true" size={20} />
           {/if}
-        </button>
+        </Button>
         {#if authenticated}
           <button
             type="button"

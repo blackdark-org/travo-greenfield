@@ -15,7 +15,7 @@ import LoadState from '../ui/LoadState.svelte';
 import { createLoader, type LoadStatus } from '../ui/loader.svelte';
 import { wifiScanErrorMessage } from '../wifi';
 import { type JoinState, joinError, reduceJoin } from '../wifi-join';
-import WiFiJoinDialog from './WiFiJoinDialog.svelte';
+
 import WiFiScanList from './WiFiScanList.svelte';
 import WiFiSummary from './WiFiSummary.svelte';
 
@@ -208,7 +208,9 @@ async function scan() {
 
 
 {#if selected}
+  {#await import("./WiFiJoinDialog.svelte") then { default: WiFiJoinDialog }}
   <WiFiJoinDialog network={selected} busy={joining.state === 'joining'} submit={submitJoin} close={() => { selected = undefined; }} />
+  {/await}
 {/if}
 <div aria-live="polite" class="mt-4 space-y-2 text-sm">
   {#if joining.state === 'joining'}

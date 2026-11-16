@@ -1,4 +1,5 @@
 <script lang="ts">
+import * as Dialog from '$lib/components/ui/dialog';
 import type { JoinWiFiData, Network } from '../api/gen';
 import { m } from '../paraglide/messages.js';
 
@@ -13,18 +14,15 @@ let {
   submit: (body: JoinWiFiData['body']) => void;
   close: () => void;
 } = $props();
-let dialog: HTMLDialogElement;
+let open = $state(true);
 let key = $state('');
-
-$effect(() => {
-  dialog?.showModal();
-});
+const returnFocus = typeof document === 'undefined' ? null : document.activeElement;
 
 function onSubmit(event: SubmitEvent) {
   event.preventDefault();
   if (busy) return;
   submit({ ssid: network.ssid, security: network.security, key });
-  dialog.close();
+  open = false;
   key = '';
 }
 
@@ -34,12 +32,10 @@ function onClose() {
 }
 </script>
 
-<dialog
-  bind:this={dialog}
-  onclose={onClose}
-  aria-label={m.wifi_join_dialog()}
-  class="m-auto w-[min(90vw,26rem)] rounded-lg border border-border bg-panel p-5 text-fg backdrop:bg-black/50"
->
+<Dialog.Root bind:open onOpenChange={(value) => { if (!value) key = ''; }}>
+<Dialog.Content portalProps={{ disabled: typeof window === "undefined" }} showCloseButton={false}
+ onInteractOutside={(event) => event.preventDefault()}
+ onCloseAutoFocus={(event) => { event.preventDefault(); if (returnFocus instanceof HTMLElement) returnFocus.focus(); onClose(); }} aria-label={m.wifi_join_dialog()} class="w-[min(90vw,26rem)] rounded-lg border border-border bg-surface p-5 text-fg">
   <form class="space-y-4" onsubmit={onSubmit}>
     <h2 class="break-all text-lg font-semibold">{network.ssid}</h2>
     {#if network.security !== 'open'}
@@ -58,7 +54,7 @@ function onClose() {
       </label>
     {/if}
     <div class="flex justify-end gap-2">
-      <button type="button" class="rounded border border-border px-3 py-2" onclick={() => dialog.close()}>
+      <button type="button" class="rounded border border-border px-3 py-2" onclick={() => open = false}>
         {m.wifi_join_cancel()}
       </button>
       <button type="submit" class="rounded border border-border px-3 py-2 disabled:opacity-60" disabled={busy}>
@@ -66,4 +62,5 @@ function onClose() {
       </button>
     </div>
   </form>
-</dialog>
+</Dialog.Content>
+</Dialog.Root>
