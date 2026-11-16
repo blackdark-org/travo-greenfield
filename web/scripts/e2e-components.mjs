@@ -206,6 +206,10 @@ async function wifi(width, scheme) {
   if (width === 390) {
     await click('[aria-controls="sidebar"]');
     await wait(`!!document.querySelector('[data-slot="sheet-content"]')`);
+    await check(
+      `document.getElementById(document.querySelector('[aria-controls="sidebar"]').getAttribute('aria-controls'))?.getAttribute('role') === 'dialog'`,
+      'Menu controls the open drawer',
+    );
     await check(`document.activeElement.hasAttribute('data-dialog-close')`, 'drawer focuses Close');
     await key('Tab');
     await check(

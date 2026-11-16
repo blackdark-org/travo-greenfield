@@ -12,7 +12,7 @@ let open = $state(true);
 </script>
 
 <Sheet.Root bind:open>
-  <Sheet.Content side="left" aria-label={m.nav_label()}
+  <Sheet.Content id="sidebar" side="left" aria-label={m.nav_label()}
     onOpenAutoFocus={(event) => { event.preventDefault(); document.querySelector<HTMLElement>('[data-slot="sheet-content"] [data-dialog-close]')?.focus(); }}
     onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus?.focus(); close(); }}>
     <div class="px-4 py-3"><Sheet.Title>{m.app_name()}</Sheet.Title></div>

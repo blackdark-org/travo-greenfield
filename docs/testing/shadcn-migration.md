@@ -91,3 +91,13 @@ Representative comparisons (the linked directories contain the full matrix):
 | setup-1280-dark | [PNG](../evidence/issue-119/before/setup-1280-dark.png) | [PNG](../evidence/issue-119/after/setup-1280-dark.png) |
 | vpn-390-dark | [PNG](../evidence/issue-119/before/vpn-390-dark.png) | [PNG](../evidence/issue-119/after/vpn-390-dark.png) |
 | system-1280-light | [PNG](../evidence/issue-119/before/system-1280-light.png) | [PNG](../evidence/issue-119/after/system-1280-light.png) |
+
+## Self-review correction
+
+Both Standards and Spec reviews identified one minor issue: Menu's
+`aria-controls` did not resolve to the mobile Sheet. The new browser assertion
+failed before the fix and passes after assigning `id="sidebar"` to Sheet.Content.
+The full keyboard/guarded matrix passed again. Sheet's type now advertises only
+the supported left side. Final measured build after this correction:
+**40,274 B shell, 7,489 B largest lazy chunk, 82,927 B total**. `mise run check`
+passes with 225 tests; generated API client remains unchanged.
