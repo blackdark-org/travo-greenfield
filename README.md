@@ -31,7 +31,7 @@ When System finds a newer release, **Verify package** checks the signed archive 
 
 Use **VPN** to import and select a WireGuard profile, then enable or disable the tunnel. Confirm the change once the router verifies connectivity, or roll it back. The page also shows the current tunnel state and handshake age.
 
-On the WiFi page, scan for an uplink, join it on a free radio, and confirm the connection once it is verified. **Access point settings** edits each access point's name and password and enables or disables it, with the same verify-then-confirm flow. Disabling the access point you are connected through is refused unless you choose **Apply anyway**.
+On the WiFi page, scan for an uplink, join it on a free radio, and confirm the connection once it is verified. **Access point settings** edits each access point's name and password and enables or disables it, with the same verify-then-confirm flow. Disabling the access point you are connected through is refused unless you choose **Apply anyway**. **Guest network** sets up a separate access point on 192.168.2.0/24 with internet access only.
 
 **Saved uplinks** keeps an ordered list of networks. Use **Save** in a network's dialog to store its credentials without changing the current connection. Move a network up or down to change its priority. **Select** joins a saved network with the same confirm or rollback flow as Join. **Forget** removes a saved network and leaves the current connection up.
 
