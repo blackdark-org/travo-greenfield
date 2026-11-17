@@ -69,6 +69,12 @@ type WiFiGuestEditor interface {
 	SetGuest(context.Context, wifi.GuestRequest) (txn.Status, error)
 }
 
+// WiFiMACEditor reads and applies the uplink STA MAC policy.
+type WiFiMACEditor interface {
+	UplinkMAC(context.Context) (wifi.MACPolicy, error)
+	SetUplinkMAC(context.Context, wifi.MACRequest) (txn.Status, error)
+}
+
 type WiFiService interface {
 	Summary(context.Context) (wifi.Summary, error)
 	Scan(context.Context) (wifi.ScanResult, error)
@@ -101,6 +107,7 @@ type Deps struct {
 	WiFiProfiles WiFiProfileService
 	WiFiAPs      WiFiAPEditor
 	WiFiGuest    WiFiGuestEditor
+	WiFiMAC      WiFiMACEditor
 	Txns         Txns
 	Sessions     *auth.Store
 	Limiter      *auth.RateLimiter
