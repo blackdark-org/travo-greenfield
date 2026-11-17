@@ -143,3 +143,7 @@ transaction guard remained. The temporary listener was stopped after testing.
 Mixed WPA2/WPA3 was not tested. The AP lockout-refusal case is not applicable
 to Join because it does not edit APs. `mise run check` passed with unchanged
 limits (WiFi chunk 5,210 bytes gzip).
+
+## Captive bypass and wwan renew (#130, #131, 2026-11-17)
+
+GL-AXT1800, OpenWrt 25.12.6, uplink wwan on phy0-sta0 (no AdGuard base: dnsmasq had no `server`, no `noresolv`, `rebind_protection 1`). `internal/captive/hardware_test.go` under the shared router lock: Enable pushed `list server` = the uplink DHCP resolver, `noresolv 0`, `rebind_protection 0`; resolution worked during the bypass (after the 2 to 4 s procd reload) and after restore; restore returned the base exactly. `RenewLease("wwan")` produced `udhcpc: sending renew` and an unchanged lease, no interface down; the default route via phy0-sta0 was proven after the 2 s settle (2.02 s total). `uci export` was identical before and after; no guard left. Not covered: a real portal (needs the simulator in testing.md).
