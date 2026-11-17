@@ -208,6 +208,7 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 	var association wifiprofiles.AssociationReader
 	var wirelessAPs api.WiFiAPEditor
 	var wirelessGuest api.WiFiGuestEditor
+	var wirelessMAC api.WiFiMACEditor
 	if scanner, ok := deps.Device.(device.WirelessScanner); ok {
 		service := wifi.New(ctx, deps.Device, scanner)
 		wireless = service
@@ -218,7 +219,7 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 		neighbours, hasNeighbours := deps.Device.(device.NeighbourReader)
 		if hasRoutes && hasKeys && hasLinks && hasNeighbours {
 			service.WithJoin(wifi.JoinDeps{UCI: deps.Device, Ubus: deps.Device, Routes: routes, Links: links, Keys: keys, Neighbours: neighbours, Txns: deps.Txn})
-			wirelessJoin, wirelessAPs, wirelessGuest = service, service, service
+			wirelessJoin, wirelessAPs, wirelessGuest, wirelessMAC = service, service, service, service
 		}
 	}
 	savedUplinks := wifiprofiles.New(filepath.Join(deps.Paths.State, "wifi-profiles.json"), wirelessJoin, association)
@@ -275,6 +276,7 @@ func run(addr, proxyListen string, useMock, firstRun bool, hostAllow []string, s
 		AdGuard:       adguardSvc,
 		WiFiAPs:       wirelessAPs,
 		WiFiGuest:     wirelessGuest,
+		WiFiMAC:       wirelessMAC,
 		Throughput:    sampler,
 		Version:       version.Version, Accounts: deps.Accounts, Ubus: deps.Device, Txns: deps.Txn,
 		Sessions: sessions, Limiter: limiter, Clock: clock,
