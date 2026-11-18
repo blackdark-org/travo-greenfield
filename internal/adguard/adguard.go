@@ -114,6 +114,7 @@ func (s *Service) Status(ctx context.Context) (Status, error) {
 		return st, nil
 	}
 	st.Loopback = l.IsLoopback()
+	st.MigrationFailed = st.MigrationFailed && !st.Loopback
 	return st, nil
 }
 
@@ -148,6 +149,9 @@ func (s *Service) Reconcile(ctx context.Context) error {
 	}
 	if !st.Loopback && st.ConfigError == "" {
 		return s.Migrate(ctx)
+	}
+	if st.Loopback {
+		s.failed.Store(nil) // fixed by hand after a failed try
 	}
 	return nil
 }
