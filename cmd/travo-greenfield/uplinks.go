@@ -1,9 +1,16 @@
 package main
 
 import (
+	"context"
+	"log/slog"
+	"path/filepath"
+
 	"github.com/blackdark-org/travo-greenfield/internal/api"
 	"github.com/blackdark-org/travo-greenfield/internal/app"
+	"github.com/blackdark-org/travo-greenfield/internal/connectivity"
 	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/failover"
+	"github.com/blackdark-org/travo-greenfield/internal/lifecycle"
 	"github.com/blackdark-org/travo-greenfield/internal/usbtether"
 )
 
@@ -14,4 +21,29 @@ func newUSBTether(deps app.Deps) api.USBTether {
 		return nil
 	}
 	return &usbtether.Service{UCI: deps.Device, Ubus: deps.Device, Links: links, Packages: deps.Packages}
+}
+
+// startFailover wires multi-WAN failover and its mwan3 reconciler; nil without the ports
+// it needs (reorder, services, the shared connectivity probe).
+func startFailover(deps app.Deps, connection api.ConnectivityReader, workers *lifecycle.Group) api.Failover {
+	reorder, hasReorder := deps.Device.(device.UCIReorderer)
+	services, hasServices := deps.Device.(device.Services)
+	if !hasReorder || !hasServices || connection == nil || deps.Txn == nil {
+		return nil
+	}
+	svc := &failover.Service{
+		UCI: deps.Device, Reorder: reorder, Ubus: deps.Device, Services: services,
+		Packages: deps.Packages, Guards: deps.Guards, Txns: deps.Txn,
+		Online: func(ctx context.Context) bool {
+			return connection.Status(ctx).Internet == connectivity.Online
+		},
+		Path:    filepath.Join(deps.Paths.State, "failover.json"),
+		Ordered: !deps.Mock, // the cli adapter keeps `uci export` order; the mock sorts by name
+	}
+	workers.Go("failover-mwan3", lifecycle.Every(failover.Interval, func(ctx context.Context) {
+		if err := svc.Reconcile(ctx); err != nil && ctx.Err() == nil {
+			slog.Warn("failover reconcile", "err", err)
+		}
+	}))
+	return svc
 }
