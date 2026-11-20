@@ -58,9 +58,7 @@ type profiles struct {
 	err error
 }
 
-func (p *profiles) AppliedConfig(context.Context) (vpnprofiles.Config, error) {
-	return vpnprofiles.Config{DNS: p.dns}, p.err
-}
+func (p *profiles) resolvers(context.Context) ([]netip.Addr, error) { return p.dns, p.err }
 
 type env struct {
 	svc     *Service
@@ -94,7 +92,7 @@ func setup(t *testing.T) *env {
 		profile: &profiles{dns: []netip.Addr{netip.MustParseAddr("10.64.0.1")}}}
 	e.layers = &dnslayer.Service{Device: d, Guards: guard.Dir{Path: filepath.Join(dir, "guards"), Now: time.Now},
 		RecordPath: filepath.Join(dir, "dns-layers.json"), Apply: e.apply}
-	e.svc = &Service{Tunnel: e.tunnel, Profiles: e.profile, Layers: e.layers,
+	e.svc = &Service{Tunnel: e.tunnel, Resolvers: e.profile.resolvers, Layers: e.layers,
 		ReadDNS: func(ctx context.Context) (dnslayer.State, error) {
 			_, st, err := dnslayer.ReadState(ctx, d)
 			return st, err
@@ -240,7 +238,7 @@ func TestVerify(t *testing.T) {
 	if v, _ = e.svc.Verify(ctx); v.Result != LookupFailed {
 		t.Fatalf("%+v", v)
 	}
-	e.profile.dns = []netip.Addr{netip.MustParseAddr("10.8.0.1")} // wg0 re-applied from another profile, reconcile pending
+	e.profile.dns = []netip.Addr{netip.MustParseAddr("10.8.0.1")} // wg0 re-applied, reconcile pending
 	if v, _ = e.svc.Verify(ctx); v.Result != Mismatch {
 		t.Fatalf("%+v", v)
 	}
@@ -281,41 +279,5 @@ func TestReconcilePopsWhenTunnelConfigIsDeleted(t *testing.T) {
 	e.reconcile(t, Pop)
 	if got := e.live(t); !reflect.DeepEqual(got, base) {
 		t.Fatalf("base not restored:\n got %+v\nwant %+v", got, base)
-	}
-}
-
-// A wg0 that is only partly staged matches no profile; a pending transaction keeps the
-// layer instead of popping DNS to the uplink while the tunnel still carries traffic.
-func TestReconcileKeepsLayerWhileTransactionStagesWG0(t *testing.T) {
-	e := setup(t)
-	e.reconcile(t, Push)
-	e.profile.err = vpnprofiles.ErrNotFound
-	e.txnOpen = true
-	e.reconcile(t, Keep)
-	e.tunnel.status.State = vpnstatus.Configured
-	e.reconcile(t, Pop) // the fail-safe pop still runs for a tunnel that is off
-}
-
-func TestReconcileAmbiguousProfileChangesNothing(t *testing.T) {
-	e := setup(t)
-	e.reconcile(t, Push)
-	e.profile.err = errors.New("several VPN profiles match the configured tunnel")
-	e.reconcile(t, Keep)
-	if got := e.live(t).Server.Values; !slices.Equal(got, []string{"10.64.0.1"}) {
-		t.Fatalf("%v", got)
-	}
-}
-
-// The guard is written before staging, so a transaction that began between the first guard
-// check and the network read is seen by a second check: no pop to the uplink resolvers.
-func TestReconcileRechecksTransactionAfterReadingWG0(t *testing.T) {
-	e := setup(t)
-	e.reconcile(t, Push)
-	e.profile.err = vpnprofiles.ErrNotFound
-	checks := 0
-	e.svc.TxnOpen = func() (bool, error) { checks++; return checks > 1, nil }
-	e.reconcile(t, Keep)
-	if checks != 2 {
-		t.Fatalf("guard checked %d times", checks)
 	}
 }

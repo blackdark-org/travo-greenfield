@@ -19,7 +19,6 @@ var errProof = errors.New("could not verify WireGuard tunnel change")
 
 type ProfileStore interface {
 	SelectedConfig() (vpnprofiles.Config, error)
-	ConfigFinder
 }
 
 type Transactions interface {

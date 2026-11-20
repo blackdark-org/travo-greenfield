@@ -19,11 +19,10 @@ type Tunnel interface {
 	Status(ctx context.Context) (vpnstatus.TunnelStatus, error)
 }
 
-// Profiles finds the stored profile the configured tunnel was applied from; its DNS lines
-// are the tunnel resolvers. Selecting another profile does not change them (#289).
-type Profiles interface {
-	AppliedConfig(ctx context.Context) (vpnprofiles.Config, error)
-}
+// Resolvers reads the `DNS =` resolvers the configured tunnel was applied with
+// (vpntunnel.TunnelResolvers over the live network config); vpnprofiles.ErrNotFound when
+// there are none to know of. Selecting another profile does not change them (#289).
+type Resolvers func(ctx context.Context) ([]netip.Addr, error)
 
 // Layers is the shared DNS layer stack (dnslayer.Service).
 type Layers interface {
@@ -38,9 +37,9 @@ type Layers interface {
 type Lookup func(ctx context.Context, host string) error
 
 type Service struct {
-	Tunnel   Tunnel
-	Profiles Profiles
-	Layers   Layers
+	Tunnel    Tunnel
+	Resolvers Resolvers
+	Layers    Layers
 	// ReadDNS reads the live dnsmasq options the layer stack owns.
 	ReadDNS func(ctx context.Context) (dnslayer.State, error)
 	// TxnOpen reports a pending transaction (guard present).
@@ -77,9 +76,9 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if err != nil {
 		return Keep, err
 	}
-	resolvers, keep, err := s.tunnelResolvers(ctx, st, open)
-	if keep || err != nil {
-		return Keep, err
+	resolvers, err := s.resolvers(ctx)
+	if err != nil {
+		return Keep, nil // unreadable network config or profile store: change nothing
 	}
 	rec, err := s.Layers.Load()
 	if err != nil {
@@ -96,8 +95,11 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 }
 
 func (s *Service) resolvers(ctx context.Context) ([]netip.Addr, error) {
-	cfg, err := s.Profiles.AppliedConfig(ctx)
-	return cfg.DNS, err
+	dns, err := s.Resolvers(ctx)
+	if errors.Is(err, vpnprofiles.ErrNotFound) {
+		return nil, nil
+	}
+	return dns, err
 }
 
 func vpnLayer(rec *dnslayer.Record) *dnslayer.Layer {
@@ -124,7 +126,7 @@ const (
 
 type DNSStatus struct {
 	Layer LayerState `json:"layer" enum:"active,inactive,failed"`
-	// Resolvers are the DNS servers of the profile wg0 was applied from ([] without one).
+	// Resolvers are the DNS servers the configured tunnel was applied with ([] without any).
 	Resolvers []string `json:"resolvers"`
 	// Effective is dnsmasq's live server list; null when it could not be read.
 	Effective []string `json:"effective" nullable:"true"`
@@ -249,24 +251,4 @@ func LocalLookup(addr string) Lookup {
 		}
 		return err
 	}
-}
-
-// tunnelResolvers reads the applied profile's resolvers for Reconcile; keep means change
-// nothing this tick. No matching profile means none, except while a connected tunnel may
-// be mid-transaction: a partly staged wg0 matches nothing until the transaction settles.
-func (s *Service) tunnelResolvers(ctx context.Context, st vpnstatus.TunnelStatus, open bool) ([]netip.Addr, bool, error) {
-	resolvers, err := s.resolvers(ctx)
-	switch {
-	case err == nil:
-		return resolvers, false, nil
-	case !errors.Is(err, vpnprofiles.ErrNotFound):
-		return nil, true, nil // unreadable or ambiguous profile store
-	case st.State != vpnstatus.Connected:
-		return nil, false, nil
-	case open:
-		return nil, true, nil
-	}
-	// the guard is written before staging: a transaction begun after the first check shows here
-	began, err := s.TxnOpen()
-	return nil, began || err != nil, err
 }

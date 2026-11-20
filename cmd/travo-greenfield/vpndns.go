@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"net/netip"
 
 	"github.com/blackdark-org/travo-greenfield/internal/app"
 	"github.com/blackdark-org/travo-greenfield/internal/dnslayer"
@@ -15,13 +16,19 @@ import (
 
 // newVPNDNS wires the `vpn` DNS layer reconciler to the shared layer stack.
 func newVPNDNS(deps app.Deps, layers vpndns.Layers, tunnel vpndns.Tunnel, profiles *vpnprofiles.Service) *vpndns.Service {
-	applied := vpntunnel.Applied{UCI: deps.Device, Profiles: profiles}
 	lookup := vpndns.LocalLookup("127.0.0.1:53")
 	if deps.Mock {
 		lookup = func(context.Context, string) error { return nil }
 	}
 	return &vpndns.Service{
-		Tunnel: tunnel, Profiles: applied, Layers: layers, Lookup: lookup,
+		Tunnel: tunnel, Layers: layers, Lookup: lookup,
+		Resolvers: func(ctx context.Context) ([]netip.Addr, error) {
+			network, err := deps.Device.Show(ctx, "network")
+			if err != nil {
+				return nil, err
+			}
+			return vpntunnel.TunnelResolvers(network, profiles)
+		},
 		ReadDNS: func(ctx context.Context) (dnslayer.State, error) {
 			_, st, err := dnslayer.ReadState(ctx, deps.Device)
 			return st, err

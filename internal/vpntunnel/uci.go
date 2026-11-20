@@ -18,6 +18,7 @@ func desiredSections(profile vpnprofiles.Config) ([]device.Section, error) {
 	tunnel := device.Section{Name: iface, Type: "interface", Options: map[string]string{
 		"proto": "wireguard", "disabled": "0", "private_key": profile.PrivateKey,
 	}, Lists: map[string][]string{"addresses": prefixes(profile.Addresses)}}
+	tunnel.Options[ResolversOption] = resolversValue(profile.DNS)
 	addNumber(tunnel.Options, "listen_port", profile.ListenPort)
 	addNumber(tunnel.Options, "mtu", profile.MTU)
 	out := make([]device.Section, 1, 1+len(profile.Peers))
@@ -88,7 +89,7 @@ func checkPeerNames(current, peers []device.Section) error {
 	return nil
 }
 
-var tunnelOptions = []string{"proto", "disabled", "private_key", "listen_port", "mtu", "addresses"}
+var tunnelOptions = []string{"proto", "disabled", "private_key", "listen_port", "mtu", "addresses", ResolversOption}
 
 func matches(current, desired []device.Section, enabled bool) bool {
 	if !enabled {

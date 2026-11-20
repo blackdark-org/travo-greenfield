@@ -121,9 +121,7 @@ func (s *Service) Split(ctx context.Context) (Split, error) {
 	}
 	var dns []netip.Addr
 	if s.profiles != nil {
-		if cfg, err := s.tunnelProfile(current); err == nil {
-			dns = cfg.DNS
-		}
+		dns, _ = TunnelResolvers(current, s.profiles)
 	}
 	out := userSplit(routes, dns)
 	if out == nil {
@@ -162,10 +160,11 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 			return vpnprofiles.ErrNotFound // nothing to split before a profile was applied
 		}
 		// the running tunnel's resolvers need their /32s, not a later selection's (#289)
-		if profile, err = s.tunnelProfile(current); err != nil {
+		dns, err := TunnelResolvers(current, s.profiles)
+		if err != nil {
 			return err
 		}
-		routes = splitRoutes(user, profile.DNS)
+		routes = splitRoutes(user, dns)
 		have, err := currentSplit(current)
 		if err != nil {
 			return err
