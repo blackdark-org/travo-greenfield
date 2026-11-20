@@ -70,18 +70,24 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if layers.Pending || layers.Corrupt != "" {
 		return Keep, nil // a failed stack change waits for its explicit retry
 	}
+	// The settled read can wait out a transaction's apply phase. Guard checks on both sides
+	// catch a transaction that began or rolled back meanwhile, and the tunnel state is read
+	// last so Decide sees it after the wait (#295 review).
+	openBefore, err := s.TxnOpen()
+	if err != nil {
+		return Keep, err
+	}
+	resolvers, readErr := s.resolvers(ctx, true)
+	openAfter, err := s.TxnOpen()
+	if err != nil {
+		return Keep, err
+	}
+	open := openBefore || openAfter
 	st, err := s.Tunnel.Status(ctx)
 	if err != nil {
 		return Keep, nil
 	}
-	// Settled read first: it can wait for a transaction's whole apply phase, and the guard
-	// check after it then sees any transaction that began meanwhile (#295 review).
-	resolvers, err := s.resolvers(ctx, true)
-	open, openErr := s.TxnOpen()
-	if openErr != nil {
-		return Keep, openErr
-	}
-	if err != nil && !offState(st) {
+	if readErr != nil && !offState(st) {
 		return Keep, nil // unreadable network config or profile store: change nothing
 	}
 	rec, err := s.Layers.Load()

@@ -9,9 +9,9 @@ The `vpn` layer pushed the SELECTED profile's `DNS =` resolvers. Selecting anoth
 ## Decision
 
 - Enable stages the applied profile's resolvers as `network.wg0.travo_dns` (space-separated, or `none`) in the WireGuard transaction, so rollback restores them with `wg0`. If `wg0` already runs as the profile, only that option is staged, without a restart or handshake proof.
-- The reconciler reads them under the `network` write lock (`txn.Manager.ShowSettled`), then checks the transaction guard, so it never acts on a staged delta or an unconfirmed apply. An unreadable value changes nothing, except that a tunnel that is off still pops.
+- The reconciler reads them under the `network` write lock (`txn.Manager.ShowSettled`), checks the transaction guard before and after that read, and reads the tunnel state last, so it never acts on a staged delta or an unconfirmed apply. An unreadable value changes nothing, except that a tunnel that is off still pops.
 - A `wg0` without the option (applied before #289) uses the selected profile until the next Enable records it.
-- Split routes use the same resolvers; when Enable changes them, the resolver `/32`s move with them and `wg0` restarts (#296).
+- Split routes use the same resolvers; when Enable changes them, the resolver `/32`s move with them and `wg0` restarts (#296). With unchanged DNS the split stays as it is. A user route equal to an old resolver address cannot be told apart from the automatic `/32`, so it moves too when the DNS changes.
 
 ## Consequences
 

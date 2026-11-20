@@ -296,7 +296,7 @@ func TestReconcileChecksTheGuardAfterTheSettledRead(t *testing.T) {
 	}
 	e.svc.TxnOpen = func() (bool, error) { calls = append(calls, "guard"); return e.txnOpen, nil }
 	e.reconcile(t, Keep)
-	if !slices.Equal(calls, []string{"settled read", "guard"}) {
+	if !slices.Equal(calls, []string{"guard", "settled read", "guard"}) {
 		t.Fatalf("order %v", calls)
 	}
 	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
@@ -329,5 +329,36 @@ func TestUnreadableResolversStillPopAnOffTunnel(t *testing.T) {
 	e.profile.err = errors.New("network.wg0.travo_dns is malformed")
 	e.reconcile(t, Keep) // connected: change nothing
 	e.tunnel.status.State = vpnstatus.Disabled
+	e.reconcile(t, Pop)
+}
+
+// A pending transaction rolled back while the settled read waited: the read may hold the
+// rolled-back resolvers, so the guard seen before the read still blocks the push.
+func TestReconcileKeepsWhenTheTransactionEndsDuringTheRead(t *testing.T) {
+	e := setup(t)
+	e.txnOpen = true
+	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
+		if settled {
+			e.txnOpen = false // the watchdog restored and the guard was released
+		}
+		return e.profile.dns, nil
+	}
+	e.reconcile(t, Keep)
+	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
+		t.Fatal("pushed resolvers read while a transaction was pending")
+	}
+}
+
+// The tunnel went off while the settled read waited: Decide must see that, not the state
+// from before the wait.
+func TestReconcileReadsTunnelStateAfterTheWait(t *testing.T) {
+	e := setup(t)
+	e.reconcile(t, Push)
+	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
+		if settled {
+			e.tunnel.status.State = vpnstatus.Disabled // a Disable applied during the wait
+		}
+		return e.profile.dns, nil
+	}
 	e.reconcile(t, Pop)
 }

@@ -93,7 +93,10 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 		if err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
 			return errUnavailable
 		}
-		routes := splitRoutes(userSplit(split, oldDNS), profile.DNS)
+		routes := split
+		if !slices.Equal(oldDNS, profile.DNS) { // unchanged DNS keeps the split as it is
+			routes = splitRoutes(userSplit(split, oldDNS), profile.DNS)
+		}
 		if len(routes) > 0 { // the split selection survives a profile (re)apply
 			desired = withRouteAll(desired, "0")
 		}

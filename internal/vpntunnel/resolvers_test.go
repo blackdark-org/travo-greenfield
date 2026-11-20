@@ -383,3 +383,24 @@ func TestEnableWithOnlyResolverRoutesReturnsToFullTunnel(t *testing.T) {
 		t.Fatal("peers stay in split mode with no routes")
 	}
 }
+
+// A user /32 that equals a resolver must survive a re-apply with the same DNS (#295 review):
+// only a resolver change recomputes the split.
+func TestEnableKeepsUserRouteEqualToResolver(t *testing.T) {
+	ctx := context.Background()
+	e := newTunnelEnv(t)
+	e.importSelect(t, 1, "198.18.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.SetSplit(ctx, prefixes4(t, "198.18.0.1/32")); err != nil {
+		t.Fatal(err)
+	}
+	e.importSelect(t, 3, "198.18.0.1") // other tunnel, same DNS
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if !hasSplitRoute(t, e.d, "198.18.0.1/32") || peer(t, e.d).Options["route_allowed_ips"] != "0" {
+		t.Fatal("re-apply dropped the user's route and switched to full tunnel")
+	}
+}
