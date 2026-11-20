@@ -348,3 +348,38 @@ func TestEnableDisabledTunnelStillRestarts(t *testing.T) {
 		}
 	}
 }
+
+// Split sections that hold only resolver /32s (user prefixes removed outside Travo) leave
+// no selection: Enable returns the tunnel to full mode instead of routing nothing.
+func TestEnableWithOnlyResolverRoutesReturnsToFullTunnel(t *testing.T) {
+	ctx := context.Background()
+	e := newTunnelEnv(t)
+	e.importSelect(t, 1, "198.18.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.SetSplit(ctx, prefixes4(t, "10.9.0.0/16")); err != nil {
+		t.Fatal(err)
+	}
+	secs, _ := e.d.Show(ctx, "network")
+	for _, sec := range secs {
+		if sec.Type == "route" && sec.Options["target"] == "10.9.0.0/16" {
+			if err := e.d.DeleteSection(ctx, "network", sec.Name); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := e.d.Commit(ctx, "network"); err != nil {
+		t.Fatal(err)
+	}
+	e.importSelect(t, 1, "10.8.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if hasSplitRoute(t, e.d, "198.18.0.1/32") || hasSplitRoute(t, e.d, "10.8.0.1/32") {
+		t.Fatal("resolver-only split routes left behind")
+	}
+	if peer(t, e.d).Options["route_allowed_ips"] != "1" {
+		t.Fatal("peers stay in split mode with no routes")
+	}
+}
