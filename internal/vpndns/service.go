@@ -20,9 +20,11 @@ type Tunnel interface {
 }
 
 // Resolvers reads the `DNS =` resolvers the configured tunnel was applied with
-// (vpntunnel.TunnelResolvers over the live network config); vpnprofiles.ErrNotFound when
-// there are none to know of. Selecting another profile does not change them (#289).
-type Resolvers func(ctx context.Context) ([]netip.Addr, error)
+// (vpntunnel.TunnelResolvers over the network config); vpnprofiles.ErrNotFound when there
+// are none to know of. Selecting another profile does not change them (#289). settled
+// asks for a read that never sees a transaction's staged delta (txn.Manager.ShowSettled):
+// Reconcile acts on the answer, Status and Verify only show it and must not wait.
+type Resolvers func(ctx context.Context, settled bool) ([]netip.Addr, error)
 
 // Layers is the shared DNS layer stack (dnslayer.Service).
 type Layers interface {
@@ -76,7 +78,7 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if err != nil {
 		return Keep, err
 	}
-	resolvers, err := s.resolvers(ctx)
+	resolvers, err := s.resolvers(ctx, true)
 	if err != nil {
 		return Keep, nil // unreadable network config or profile store: change nothing
 	}
@@ -94,8 +96,8 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	return action, err
 }
 
-func (s *Service) resolvers(ctx context.Context) ([]netip.Addr, error) {
-	dns, err := s.Resolvers(ctx)
+func (s *Service) resolvers(ctx context.Context, settled bool) ([]netip.Addr, error) {
+	dns, err := s.Resolvers(ctx, settled)
 	if errors.Is(err, vpnprofiles.ErrNotFound) {
 		return nil, nil
 	}
@@ -146,7 +148,7 @@ func (s *Service) status(ctx context.Context) (DNSStatus, *dnslayer.State, error
 		return DNSStatus{}, nil, ErrUnavailable
 	}
 	out := DNSStatus{Layer: Inactive, Resolvers: []string{}}
-	if resolvers, err := s.resolvers(ctx); err == nil {
+	if resolvers, err := s.resolvers(ctx, false); err == nil {
 		out.Resolvers = servers(resolvers)
 	}
 	var rec *dnslayer.Record

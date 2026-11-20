@@ -58,7 +58,7 @@ type profiles struct {
 	err error
 }
 
-func (p *profiles) resolvers(context.Context) ([]netip.Addr, error) { return p.dns, p.err }
+func (p *profiles) resolvers(context.Context, bool) ([]netip.Addr, error) { return p.dns, p.err }
 
 type env struct {
 	svc     *Service

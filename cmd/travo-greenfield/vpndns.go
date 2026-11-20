@@ -22,8 +22,12 @@ func newVPNDNS(deps app.Deps, layers vpndns.Layers, tunnel vpndns.Tunnel, profil
 	}
 	return &vpndns.Service{
 		Tunnel: tunnel, Layers: layers, Lookup: lookup,
-		Resolvers: func(ctx context.Context) ([]netip.Addr, error) {
-			network, err := deps.Device.Show(ctx, "network")
+		Resolvers: func(ctx context.Context, settled bool) ([]netip.Addr, error) {
+			show := deps.Device.Show
+			if settled && deps.Txn != nil {
+				show = deps.Txn.ShowSettled
+			}
+			network, err := show(ctx, "network")
 			if err != nil {
 				return nil, err
 			}

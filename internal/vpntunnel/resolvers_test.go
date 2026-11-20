@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/txn"
+	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 )
 
@@ -253,4 +255,97 @@ type failingKeys struct{}
 
 func (failingKeys) SetWireGuardKey(context.Context, string, string, string) error {
 	return errors.New("uci batch failed")
+}
+
+// The staged-delta race with a profile without DNS (#295 review): Enable stages
+// travo_dns=none, then aborts at a later write. An unlocked read saw "none" mid-stage; the
+// settled read the reconciler uses runs under the network lock, after the revert.
+func TestSettledReadNeverSeesAnAbortedNone(t *testing.T) {
+	ctx := context.Background()
+	e := newTunnelEnv(t)
+	e.importSelect(t, 1, "198.18.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	e.importSelect(t, 3, "") // other tunnel, no DNS line
+	locks := &uciwrite.Locks{}
+	e.s.txns = lockedTxns{inner: e.s.txns, locks: locks}
+	settled := func() []netip.Addr {
+		lctx, unlock, err := locks.Lock(ctx, []string{"network"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer unlock()
+		net, err := (*e.d).Show(lctx, "network")
+		if err != nil {
+			t.Fatal(err)
+		}
+		dns, err := TunnelResolvers(net, e.store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return dns
+	}
+	sawNone := false
+	read := make(chan []netip.Addr, 1)
+	e.s.uci = abortAfterNone{UCI: e.s.uci, onNone: func() {
+		sawNone = true
+		go func() { read <- settled() }() // blocks on the lock until the stage is reverted
+	}}
+	if _, err := e.s.Set(ctx, true); err == nil {
+		t.Fatal("Set should abort")
+	}
+	if !sawNone {
+		t.Fatal("test setup: travo_dns=none was never staged")
+	}
+	if got := <-read; !slices.Equal(got, addrs("198.18.0.1")) {
+		t.Fatalf("settled read after the abort: %v", got)
+	}
+}
+
+// abortAfterNone fails the first write after travo_dns=none is staged.
+type abortAfterNone struct {
+	device.UCI
+	onNone func()
+}
+
+func (a abortAfterNone) Set(ctx context.Context, c, s, k, v string) error {
+	if err := a.UCI.Set(ctx, c, s, k, v); err != nil {
+		return err
+	}
+	if k == ResolversOption && v == "none" {
+		a.onNone()
+	}
+	return nil
+}
+
+func (a abortAfterNone) SetType(ctx context.Context, c, s, typ string) error {
+	if staged, _ := a.UCI.Show(ctx, "network"); hasNone(staged) {
+		return errors.New("uci: write failed")
+	}
+	return a.UCI.SetType(ctx, c, s, typ)
+}
+
+func hasNone(network []device.Section) bool {
+	dns, rec, err := AppliedResolvers(network)
+	return err == nil && rec == Applied && len(dns) == 0
+}
+
+// lockedTxns runs the stage under the network write lock, as txn.Manager does.
+type lockedTxns struct {
+	inner Transactions
+	locks *uciwrite.Locks
+}
+
+func (l lockedTxns) BeginWireGuard(ctx context.Context, s string, stage func(context.Context) error, p txn.Probe) (txn.Status, error) {
+	return l.BeginWireGuardWith(ctx, s, nil, stage, p)
+}
+
+func (l lockedTxns) BeginWireGuardWith(ctx context.Context, s string, extra []string, stage func(context.Context) error, p txn.Probe) (txn.Status, error) {
+	lctx, unlock, err := l.locks.Lock(ctx, append([]string{"network"}, extra...))
+	if err != nil {
+		return txn.Status{}, err
+	}
+	defer unlock()
+	return l.inner.BeginWireGuardWith(lctx, s, extra, stage, p)
 }

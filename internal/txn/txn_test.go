@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
 	"github.com/blackdark-org/travo-greenfield/internal/guard"
 	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
@@ -490,5 +491,50 @@ func TestReapDoesNotReleaseGuardHeldByFailedRestore(t *testing.T) {
 	}
 	if !guarded(t, m) {
 		t.Fatal("reaping a restored txn released the guard of a failed one")
+	}
+}
+
+// A reader must not see a delta staged by a transaction that then aborts (#295 review):
+// ShowSettled waits for the stage and reads the reverted config.
+func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
+	t.Parallel()
+	m, d := setup(t, 60*time.Second)
+	staged, release := make(chan struct{}), make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		_, err := m.Begin(ctx, "t", []string{"network"}, func(ctx context.Context) error {
+			if err := stageSet(d, "network")(ctx); err != nil {
+				return err
+			}
+			close(staged)
+			<-release
+			return errors.New("abort after staging")
+		}, nil)
+		done <- err
+	}()
+	<-staged
+	read := make(chan []device.Section, 1)
+	go func() {
+		secs, err := m.ShowSettled(ctx, "network")
+		if err != nil {
+			t.Error(err)
+		}
+		read <- secs
+	}()
+	select {
+	case <-read:
+		t.Fatal("read returned while the transaction was staging")
+	case <-time.After(50 * time.Millisecond):
+	}
+	if secs, _ := d.Show(ctx, "network"); secs[0].Options["k"] != "v" {
+		t.Fatal("test setup: unlocked read should see the staged delta")
+	}
+	close(release)
+	if err := <-done; err == nil {
+		t.Fatal("Begin should fail")
+	}
+	secs := <-read
+	if len(secs) != 1 || secs[0].Options["k"] != "" {
+		t.Fatalf("settled read saw the aborted delta: %+v", secs)
 	}
 }
