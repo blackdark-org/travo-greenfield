@@ -19,9 +19,10 @@ type Tunnel interface {
 	Status(ctx context.Context) (vpnstatus.TunnelStatus, error)
 }
 
-// Profiles reads the selected WireGuard profile; its DNS lines are the tunnel resolvers.
+// Profiles finds the stored profile the configured tunnel was applied from; its DNS lines
+// are the tunnel resolvers. Selecting another profile does not change them (#289).
 type Profiles interface {
-	SelectedConfig() (vpnprofiles.Config, error)
+	AppliedConfig(ctx context.Context) (vpnprofiles.Config, error)
 }
 
 // Layers is the shared DNS layer stack (dnslayer.Service).
@@ -76,7 +77,7 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if err != nil {
 		return Keep, err
 	}
-	resolvers, err := s.resolvers()
+	resolvers, err := s.resolvers(ctx)
 	if err != nil {
 		return Keep, nil // unreadable profile store: change nothing
 	}
@@ -94,8 +95,8 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	return action, err
 }
 
-func (s *Service) resolvers() ([]netip.Addr, error) {
-	cfg, err := s.Profiles.SelectedConfig()
+func (s *Service) resolvers(ctx context.Context) ([]netip.Addr, error) {
+	cfg, err := s.Profiles.AppliedConfig(ctx)
 	if errors.Is(err, vpnprofiles.ErrNotFound) {
 		return nil, nil
 	}
@@ -126,7 +127,7 @@ const (
 
 type DNSStatus struct {
 	Layer LayerState `json:"layer" enum:"active,inactive,failed"`
-	// Resolvers are the selected profile's DNS servers ([] when it has none).
+	// Resolvers are the DNS servers of the profile wg0 was applied from ([] without one).
 	Resolvers []string `json:"resolvers"`
 	// Effective is dnsmasq's live server list; null when it could not be read.
 	Effective []string `json:"effective" nullable:"true"`
@@ -146,7 +147,7 @@ func (s *Service) status(ctx context.Context) (DNSStatus, *dnslayer.State, error
 		return DNSStatus{}, nil, ErrUnavailable
 	}
 	out := DNSStatus{Layer: Inactive, Resolvers: []string{}}
-	if resolvers, err := s.resolvers(); err == nil {
+	if resolvers, err := s.resolvers(ctx); err == nil {
 		out.Resolvers = servers(resolvers)
 	}
 	var rec *dnslayer.Record

@@ -10,16 +10,18 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
 	"github.com/blackdark-org/travo-greenfield/internal/vpndns"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
+	"github.com/blackdark-org/travo-greenfield/internal/vpntunnel"
 )
 
 // newVPNDNS wires the `vpn` DNS layer reconciler to the shared layer stack.
 func newVPNDNS(deps app.Deps, layers vpndns.Layers, tunnel vpndns.Tunnel, profiles *vpnprofiles.Service) *vpndns.Service {
+	applied := vpntunnel.Applied{UCI: deps.Device, Profiles: profiles}
 	lookup := vpndns.LocalLookup("127.0.0.1:53")
 	if deps.Mock {
 		lookup = func(context.Context, string) error { return nil }
 	}
 	return &vpndns.Service{
-		Tunnel: tunnel, Profiles: profiles, Layers: layers, Lookup: lookup,
+		Tunnel: tunnel, Profiles: applied, Layers: layers, Lookup: lookup,
 		ReadDNS: func(ctx context.Context) (dnslayer.State, error) {
 			_, st, err := dnslayer.ReadState(ctx, deps.Device)
 			return st, err

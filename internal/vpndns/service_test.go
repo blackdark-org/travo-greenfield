@@ -58,7 +58,7 @@ type profiles struct {
 	err error
 }
 
-func (p *profiles) SelectedConfig() (vpnprofiles.Config, error) {
+func (p *profiles) AppliedConfig(context.Context) (vpnprofiles.Config, error) {
 	return vpnprofiles.Config{DNS: p.dns}, p.err
 }
 
@@ -240,7 +240,7 @@ func TestVerify(t *testing.T) {
 	if v, _ = e.svc.Verify(ctx); v.Result != LookupFailed {
 		t.Fatalf("%+v", v)
 	}
-	e.profile.dns = []netip.Addr{netip.MustParseAddr("10.8.0.1")} // selected another profile
+	e.profile.dns = []netip.Addr{netip.MustParseAddr("10.8.0.1")} // wg0 re-applied from another profile, reconcile pending
 	if v, _ = e.svc.Verify(ctx); v.Result != Mismatch {
 		t.Fatalf("%+v", v)
 	}
