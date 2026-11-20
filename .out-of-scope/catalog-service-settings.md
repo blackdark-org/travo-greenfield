@@ -4,7 +4,7 @@ The Services page installs and removes optional OpenWrt services (SQM, Cloudflar
 
 ## Why this is out of scope
 
-Each of these packages ships a LuCI app that owns its UCI config. A Travo settings page per service would repeat that UI and need its own config model, transaction rules and device fixtures for every package. The catalog stays one data table (`internal/catalog`), so adding a service costs one entry.
+Each of these packages except speedtestcpp ships a LuCI app that owns its UCI config; speedtestcpp has no LuCI app. A Travo settings page per service would repeat that UI and need its own config model, transaction rules and device fixtures for every package. The catalog stays one data table (`internal/catalog`), so adding a service costs one entry.
 
 A service that travellers use daily and that can cut connectivity gets its own feature instead, as WireGuard, Tailscale and AdGuard Home did.
 
