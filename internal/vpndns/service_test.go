@@ -281,3 +281,53 @@ func TestReconcilePopsWhenTunnelConfigIsDeleted(t *testing.T) {
 		t.Fatalf("base not restored:\n got %+v\nwant %+v", got, base)
 	}
 }
+
+// The settled read can wait out a transaction's apply; a guard read before it would miss
+// a transaction that began meanwhile and push its unconfirmed resolvers (#295 review).
+func TestReconcileChecksTheGuardAfterTheSettledRead(t *testing.T) {
+	e := setup(t)
+	var calls []string
+	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
+		if settled {
+			calls = append(calls, "settled read")
+			e.txnOpen = true // an Enable began and committed while the read waited
+		}
+		return e.profile.dns, nil
+	}
+	e.svc.TxnOpen = func() (bool, error) { calls = append(calls, "guard"); return e.txnOpen, nil }
+	e.reconcile(t, Keep)
+	if !slices.Equal(calls, []string{"settled read", "guard"}) {
+		t.Fatalf("order %v", calls)
+	}
+	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
+		t.Fatal("pushed resolvers of an unconfirmed transaction")
+	}
+}
+
+// Status and Verify only show the resolvers: they must not wait for a transaction.
+func TestStatusUsesTheUnsettledRead(t *testing.T) {
+	e := setup(t)
+	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
+		if settled {
+			t.Error("Status waited for a settled read")
+		}
+		return e.profile.dns, nil
+	}
+	if _, err := e.svc.Status(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Verify(ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A foreign travo_dns that cannot be read must not block the fail-safe pop of a tunnel
+// that is off.
+func TestUnreadableResolversStillPopAnOffTunnel(t *testing.T) {
+	e := setup(t)
+	e.reconcile(t, Push)
+	e.profile.err = errors.New("network.wg0.travo_dns is malformed")
+	e.reconcile(t, Keep) // connected: change nothing
+	e.tunnel.status.State = vpnstatus.Disabled
+	e.reconcile(t, Pop)
+}

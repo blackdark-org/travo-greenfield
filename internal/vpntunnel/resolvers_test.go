@@ -8,10 +8,11 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/blackdark-org/travo-greenfield/internal/device"
+	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
 	"github.com/blackdark-org/travo-greenfield/internal/txn"
-	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 )
 
@@ -40,20 +41,15 @@ func addrs(in ...string) []netip.Addr {
 
 type tunnelEnv struct {
 	s     *Service
-	d     *mockNetwork
+	d     *mock.Device
 	store *vpnprofiles.Service
-}
-
-type mockNetwork = interface {
-	Show(context.Context, string) ([]device.Section, error)
 }
 
 func newTunnelEnv(t *testing.T) tunnelEnv {
 	s, d, _ := splitService(t, "disabled")
 	store := vpnprofiles.New(filepath.Join(t.TempDir(), "profiles.json"))
 	s.profiles = store
-	var n mockNetwork = d
-	return tunnelEnv{s: s, d: &n, store: store}
+	return tunnelEnv{s: s, d: d, store: store}
 }
 
 func (e tunnelEnv) importSelect(t *testing.T, key byte, dns string) {
@@ -69,7 +65,7 @@ func (e tunnelEnv) importSelect(t *testing.T, key byte, dns string) {
 
 func (e tunnelEnv) resolvers(t *testing.T) []netip.Addr {
 	t.Helper()
-	network, err := (*e.d).Show(context.Background(), "network")
+	network, err := e.d.Show(context.Background(), "network")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +95,7 @@ func TestTunnelResolversFollowTheAppliedProfile(t *testing.T) {
 	if _, err := e.s.SetSplit(ctx, prefixes4(t, "10.9.0.0/16")); err != nil {
 		t.Fatal(err)
 	}
-	if !hasSplitRoute(t, *e.d, "198.18.0.1/32") || hasSplitRoute(t, *e.d, "10.8.0.1/32") {
+	if !hasSplitRoute(t, e.d, "198.18.0.1/32") || hasSplitRoute(t, e.d, "10.8.0.1/32") {
 		t.Fatal("split routes must carry the applied resolvers")
 	}
 	if got, _ := e.s.Split(ctx); !slices.Equal(got.Routes, prefixes4(t, "10.9.0.0/16")) {
@@ -148,24 +144,24 @@ func TestTunnelResolversFallBackForUnrecordedTunnel(t *testing.T) {
 	}
 }
 
-func TestAppliedResolversRejectsForeignValues(t *testing.T) {
+func TestRecordedResolversRejectsForeignValues(t *testing.T) {
 	wg0 := func(value string) []device.Section {
 		return []device.Section{{Name: "wg0", Type: "interface", Options: map[string]string{"proto": "wireguard", ResolversOption: value}}}
 	}
 	for _, bad := range []string{"", "not-an-ip", "fe80::1%wg0", "198.18.0.1 x"} {
-		if _, _, err := AppliedResolvers(wg0(bad)); err == nil {
+		if _, _, err := recordedResolvers(wg0(bad)); err == nil {
 			t.Errorf("%q accepted", bad)
 		}
 	}
-	if dns, rec, err := AppliedResolvers(wg0("none")); err != nil || rec != Applied || len(dns) != 0 {
-		t.Fatalf("none: %v %v %v", dns, rec, err)
+	if dns, recorded, err := recordedResolvers(wg0("none")); err != nil || !recorded || len(dns) != 0 {
+		t.Fatalf("none: %v %v %v", dns, recorded, err)
 	}
-	if _, rec, err := AppliedResolvers(nil); err != nil || rec != NoTunnel {
-		t.Fatalf("absent: %v %v", rec, err)
+	if _, recorded, err := recordedResolvers(nil); err != nil || recorded {
+		t.Fatalf("absent: %v %v", recorded, err)
 	}
 }
 
-func hasSplitRoute(t *testing.T, d mockNetwork, target string) bool {
+func hasSplitRoute(t *testing.T, d *mock.Device, target string) bool {
 	t.Helper()
 	secs, err := d.Show(context.Background(), "network")
 	if err != nil {
@@ -257,95 +253,98 @@ func (failingKeys) SetWireGuardKey(context.Context, string, string, string) erro
 	return errors.New("uci batch failed")
 }
 
-// The staged-delta race with a profile without DNS (#295 review): Enable stages
-// travo_dns=none, then aborts at a later write. An unlocked read saw "none" mid-stage; the
-// settled read the reconciler uses runs under the network lock, after the revert.
-func TestSettledReadNeverSeesAnAbortedNone(t *testing.T) {
+// A wg0 applied before #289 (no travo_dns) that already runs as the selected profile:
+// Enable records the resolvers alone, without restarting wg0 or proving a handshake.
+func TestEnableRecordsResolversWithoutRestart(t *testing.T) {
 	ctx := context.Background()
 	e := newTunnelEnv(t)
 	e.importSelect(t, 1, "198.18.0.1")
 	if _, err := e.s.Set(ctx, true); err != nil {
 		t.Fatal(err)
 	}
-	e.importSelect(t, 3, "") // other tunnel, no DNS line
-	locks := &uciwrite.Locks{}
-	e.s.txns = lockedTxns{inner: e.s.txns, locks: locks}
-	settled := func() []netip.Addr {
-		lctx, unlock, err := locks.Lock(ctx, []string{"network"})
-		if err != nil {
-			t.Fatal(err)
+	d := e.d
+	if err := d.DeleteOption(ctx, "network", "wg0", ResolversOption); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Commit(ctx, "network"); err != nil {
+		t.Fatal(err)
+	}
+	txns := e.s.txns.(*stageOnly)
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatalf("recording the resolvers: %v", err)
+	}
+	if err := txns.probe(ctx); err != nil {
+		t.Fatalf("probe for a resolvers-only change: %v", err)
+	}
+	if ups := e.s.control.(*proofDevice).ups; len(ups) != 0 {
+		t.Fatalf("wg0 restarted for a resolvers-only change: %v", ups)
+	}
+	if got := e.resolvers(t); !slices.Equal(got, addrs("198.18.0.1")) {
+		t.Fatalf("%v", got)
+	}
+	if _, err := e.s.Set(ctx, true); !errors.Is(err, txn.ErrNoChanges) {
+		t.Fatalf("second apply: %v", err)
+	}
+}
+
+// #296: with a split selection, re-applying a profile with other DNS keeps the user's
+// prefixes and swaps the resolver /32s; a route change restarts and proves wg0.
+func TestEnableMovesSplitResolverRoutes(t *testing.T) {
+	ctx := context.Background()
+	e := newTunnelEnv(t)
+	e.importSelect(t, 1, "198.18.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.SetSplit(ctx, prefixes4(t, "10.9.0.0/16")); err != nil {
+		t.Fatal(err)
+	}
+	e.importSelect(t, 1, "10.8.0.1") // same tunnel, other DNS
+	control := e.s.control.(*proofDevice)
+	control.ups = nil
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if !hasSplitRoute(t, e.d, "10.8.0.1/32") || hasSplitRoute(t, e.d, "198.18.0.1/32") || !hasSplitRoute(t, e.d, "10.9.0.0/16") {
+		t.Fatal("split routes did not follow the new resolvers")
+	}
+	if got, _ := e.s.Split(ctx); !slices.Equal(got.Routes, prefixes4(t, "10.9.0.0/16")) {
+		t.Fatalf("split view: %v", got.Routes)
+	}
+	if peer(t, e.d).Options["route_allowed_ips"] != "0" {
+		t.Fatal("split mode lost")
+	}
+	// the fake never handshakes: only the restart matters, so bound the proof
+	pctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	_ = e.s.txns.(*stageOnly).probe(pctx)
+	if !slices.Equal(control.ups, []string{"wg0 down", "wg0 up"}) {
+		t.Fatalf("a route change must restart wg0: %v", control.ups)
+	}
+}
+
+// A disabled wg0 never takes the resolvers-only path: enabling it restarts and proves.
+func TestEnableDisabledTunnelStillRestarts(t *testing.T) {
+	ctx := context.Background()
+	e := newTunnelEnv(t)
+	e.importSelect(t, 1, "198.18.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.d.Set(ctx, "network", "wg0", "disabled", "1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.d.Commit(ctx, "network"); err != nil {
+		t.Fatal(err)
+	}
+	e.importSelect(t, 1, "10.8.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	secs, _ := e.d.Show(ctx, "network")
+	for _, sec := range secs {
+		if sec.Name == "wg0" && (sec.Options["disabled"] != "0" || sec.Options[ResolversOption] != "10.8.0.1") {
+			t.Fatalf("wg0 %v", sec.Options)
 		}
-		defer unlock()
-		net, err := (*e.d).Show(lctx, "network")
-		if err != nil {
-			t.Fatal(err)
-		}
-		dns, err := TunnelResolvers(net, e.store)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return dns
 	}
-	sawNone := false
-	read := make(chan []netip.Addr, 1)
-	e.s.uci = abortAfterNone{UCI: e.s.uci, onNone: func() {
-		sawNone = true
-		go func() { read <- settled() }() // blocks on the lock until the stage is reverted
-	}}
-	if _, err := e.s.Set(ctx, true); err == nil {
-		t.Fatal("Set should abort")
-	}
-	if !sawNone {
-		t.Fatal("test setup: travo_dns=none was never staged")
-	}
-	if got := <-read; !slices.Equal(got, addrs("198.18.0.1")) {
-		t.Fatalf("settled read after the abort: %v", got)
-	}
-}
-
-// abortAfterNone fails the first write after travo_dns=none is staged.
-type abortAfterNone struct {
-	device.UCI
-	onNone func()
-}
-
-func (a abortAfterNone) Set(ctx context.Context, c, s, k, v string) error {
-	if err := a.UCI.Set(ctx, c, s, k, v); err != nil {
-		return err
-	}
-	if k == ResolversOption && v == "none" {
-		a.onNone()
-	}
-	return nil
-}
-
-func (a abortAfterNone) SetType(ctx context.Context, c, s, typ string) error {
-	if staged, _ := a.UCI.Show(ctx, "network"); hasNone(staged) {
-		return errors.New("uci: write failed")
-	}
-	return a.UCI.SetType(ctx, c, s, typ)
-}
-
-func hasNone(network []device.Section) bool {
-	dns, rec, err := AppliedResolvers(network)
-	return err == nil && rec == Applied && len(dns) == 0
-}
-
-// lockedTxns runs the stage under the network write lock, as txn.Manager does.
-type lockedTxns struct {
-	inner Transactions
-	locks *uciwrite.Locks
-}
-
-func (l lockedTxns) BeginWireGuard(ctx context.Context, s string, stage func(context.Context) error, p txn.Probe) (txn.Status, error) {
-	return l.BeginWireGuardWith(ctx, s, nil, stage, p)
-}
-
-func (l lockedTxns) BeginWireGuardWith(ctx context.Context, s string, extra []string, stage func(context.Context) error, p txn.Probe) (txn.Status, error) {
-	lctx, unlock, err := l.locks.Lock(ctx, append([]string{"network"}, extra...))
-	if err != nil {
-		return txn.Status{}, err
-	}
-	defer unlock()
-	return l.inner.BeginWireGuardWith(lctx, s, extra, stage, p)
 }

@@ -104,8 +104,8 @@ func matches(current, desired []device.Section, enabled bool) bool {
 		switch {
 		case section.Name == iface:
 			for _, key := range tunnelOptions {
-				if key == "disabled" {
-					continue // configuredEnabled already normalized the option.
+				if key == "disabled" || key == ResolversOption {
+					continue // disabled: normalized by configuredEnabled; resolvers: see resolversOnly
 				}
 				if !sameOption(section, desired[0], key) {
 					return false
@@ -122,6 +122,22 @@ func matches(current, desired []device.Section, enabled bool) bool {
 		}
 	}
 	return found == len(desired)
+}
+
+// resolversOnly stages just the recorded resolvers when wg0 already runs as desired (a
+// tunnel applied before #289, or a profile whose only difference is its DNS line): netifd
+// does not restart wg0 for that option (procd container), so no handshake proof is needed.
+func (s *Service) resolversOnly(ctx context.Context, current, desired []device.Section) (bool, error) {
+	for _, section := range current {
+		if section.Name != iface {
+			continue
+		}
+		if sameOption(section, desired[0], ResolversOption) {
+			return false, nil
+		}
+		return true, s.writeOption(ctx, section, desired[0], ResolversOption)
+	}
+	return false, nil
 }
 
 func sameOption(current, desired device.Section, key string) bool {

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/blackdark-org/travo-greenfield/internal/device"
-	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 )
 
 // ResolversOption is the Travo-owned option on network.wg0 holding the applied profile's
@@ -27,59 +26,45 @@ func resolversValue(dns []netip.Addr) string {
 	return strings.Join(out, " ")
 }
 
-// Recorded is what network.wg0 says about the applied resolvers.
-type Recorded int
-
-const (
-	NoTunnel   Recorded = iota // no wg0 section
-	Unrecorded                 // wg0 applied before #289: no ResolversOption yet
-	Applied                    // Resolvers holds what Enable staged
-)
-
-// AppliedResolvers reads the resolvers the configured wg0 was applied with. A malformed
-// value or a foreign wg0 section is errUnavailable.
-func AppliedResolvers(network []device.Section) ([]netip.Addr, Recorded, error) {
+// recordedResolvers reads ResolversOption from network.wg0. recorded is false when there
+// is no wg0 or it was applied before #289; a malformed value or a foreign wg0 section is
+// errUnavailable.
+func recordedResolvers(network []device.Section) (resolvers []netip.Addr, recorded bool, err error) {
 	for _, s := range network {
 		if s.Name != iface {
 			continue
 		}
 		if s.Type != "interface" || s.Options["proto"] != "wireguard" || len(s.Lists[ResolversOption]) != 0 {
-			return nil, NoTunnel, errUnavailable
+			return nil, false, errUnavailable
 		}
 		raw, ok := s.Options[ResolversOption]
 		switch {
 		case !ok:
-			return nil, Unrecorded, nil
+			return nil, false, nil
 		case raw == noResolvers:
-			return nil, Applied, nil
+			return nil, true, nil
 		}
-		var out []netip.Addr
 		for _, v := range strings.Fields(raw) {
-			a, err := netip.ParseAddr(v)
-			if err != nil || a.Zone() != "" {
-				return nil, NoTunnel, errUnavailable
+			a, perr := netip.ParseAddr(v)
+			if perr != nil || a.Zone() != "" {
+				return nil, false, errUnavailable
 			}
-			out = append(out, a)
+			resolvers = append(resolvers, a)
 		}
-		if len(out) == 0 {
-			return nil, NoTunnel, errUnavailable
+		if len(resolvers) == 0 {
+			return nil, false, errUnavailable
 		}
-		return out, Applied, nil
+		return resolvers, true, nil
 	}
-	return nil, NoTunnel, nil
-}
-
-// ResolverSource reads the selected profile, for tunnels applied before #289.
-type ResolverSource interface {
-	SelectedConfig() (vpnprofiles.Config, error)
+	return nil, false, nil
 }
 
 // TunnelResolvers are the `DNS =` resolvers the configured wg0 runs with: the recorded ones,
 // else the selected profile's for a wg0 applied before #289. vpnprofiles.ErrNotFound means
 // neither exists.
-func TunnelResolvers(network []device.Section, selected ResolverSource) ([]netip.Addr, error) {
-	dns, rec, err := AppliedResolvers(network)
-	if err != nil || rec == Applied {
+func TunnelResolvers(network []device.Section, selected ProfileStore) ([]netip.Addr, error) {
+	dns, recorded, err := recordedResolvers(network)
+	if err != nil || recorded {
 		return dns, err
 	}
 	cfg, err := selected.SelectedConfig()

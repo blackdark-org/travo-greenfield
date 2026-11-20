@@ -74,12 +74,14 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if err != nil {
 		return Keep, nil
 	}
-	open, err := s.TxnOpen()
-	if err != nil {
-		return Keep, err
-	}
+	// Settled read first: it can wait for a transaction's whole apply phase, and the guard
+	// check after it then sees any transaction that began meanwhile (#295 review).
 	resolvers, err := s.resolvers(ctx, true)
-	if err != nil {
+	open, openErr := s.TxnOpen()
+	if openErr != nil {
+		return Keep, openErr
+	}
+	if err != nil && !offState(st) {
 		return Keep, nil // unreadable network config or profile store: change nothing
 	}
 	rec, err := s.Layers.Load()
@@ -253,4 +255,9 @@ func LocalLookup(addr string) Lookup {
 		}
 		return err
 	}
+}
+
+// offState: the tunnel is terminally off, so Decide's fail-safe pop needs no resolvers.
+func offState(st vpnstatus.TunnelStatus) bool {
+	return !st.Stale && (st.State == vpnstatus.Disabled || st.State == vpnstatus.Configured)
 }

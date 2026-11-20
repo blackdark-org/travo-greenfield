@@ -4,6 +4,7 @@ package vpntunnel
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/blackdark-org/travo-greenfield/internal/device"
@@ -90,8 +91,20 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 		if len(split) > 0 { // the split selection survives a profile (re)apply
 			desired = withRouteAll(desired, "0")
 		}
-		networkChanged = !matches(current, desired, wasEnabled)
-		if !networkChanged && !zoneMissing {
+		// the split keeps the user's prefixes; its resolver /32s follow the new profile (#296)
+		oldDNS, err := TunnelResolvers(current, s.profiles)
+		if err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
+			return err
+		}
+		routes := splitRoutes(userSplit(split, oldDNS), profile.DNS)
+		networkChanged = !matches(current, desired, wasEnabled) || !slices.Equal(split, routes)
+		resolversChanged := false
+		if !networkChanged {
+			if resolversChanged, err = s.resolversOnly(ctx, current, desired); err != nil {
+				return errUnavailable
+			}
+		}
+		if !networkChanged && !zoneMissing && !resolversChanged {
 			return txn.ErrNoChanges
 		}
 		if zoneMissing {
@@ -100,7 +113,7 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 			}
 		}
 		if !networkChanged {
-			return nil // tunnel already as wanted: only the zone was missing
+			return nil // tunnel already as wanted: only the zone or the recorded resolvers changed
 		}
 
 		proof.started = s.now().Unix()
@@ -117,10 +130,16 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 		for _, peer := range profile.Peers {
 			proof.configured[peer.PublicKey] = struct{}{}
 		}
-		return s.stageEnable(ctx, current, desired)
+		if err := s.stageEnable(ctx, current, desired); err != nil {
+			return err
+		}
+		if slices.Equal(split, routes) {
+			return nil
+		}
+		return s.stageSplit(ctx, withoutPeers(current), routes)
 	}), func(ctx context.Context) error {
 		if !networkChanged {
-			return nil // a firewall-only change leaves wg0 untouched
+			return nil // a zone or resolvers-only change leaves wg0 running
 		}
 		return s.proveEnabled(ctx, proof)
 	})

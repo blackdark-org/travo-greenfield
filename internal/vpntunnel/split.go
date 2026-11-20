@@ -16,7 +16,7 @@ import (
 
 // Split tunnel (invariants §11): the transaction owns `network.travo_split_<n>` route
 // sections. With any present, peers get route_allowed_ips=0, so only those prefixes and the
-// profile's DNS resolvers (/32) go through wg0; everything else keeps the uplink default.
+// applied resolvers (/32, network.wg0.travo_dns) go through wg0; the rest keeps the uplink default.
 // Without them the tunnel is full (route_allowed_ips=1, kernel default via wg0).
 const (
 	splitPrefix = "travo_split_"
@@ -121,7 +121,9 @@ func (s *Service) Split(ctx context.Context) (Split, error) {
 	}
 	var dns []netip.Addr
 	if s.profiles != nil {
-		dns, _ = TunnelResolvers(current, s.profiles)
+		if dns, err = TunnelResolvers(current, s.profiles); err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
+			return Split{}, err
+		}
 	}
 	out := userSplit(routes, dns)
 	if out == nil {
@@ -185,6 +187,12 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 		}
 		return s.proveSplit(ctx, proof, len(routes) > 0)
 	})
+}
+
+// withoutPeers drops the peer sections, which stageEnable has already rewritten with the
+// right route_allowed_ips, so stageSplit replaces only the route sections.
+func withoutPeers(sections []device.Section) []device.Section {
+	return slices.DeleteFunc(slices.Clone(sections), func(x device.Section) bool { return x.Type == peerType })
 }
 
 func peersRouteAll(sections []device.Section) bool {
