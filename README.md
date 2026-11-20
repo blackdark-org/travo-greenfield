@@ -28,7 +28,7 @@ The installer checks the signature with the router's `usign` before it changes a
 
 ## First use
 
-Open `http://<router>/` and set the password. LuCI moves to ports 8080 and 8443. `https://<router>/` serves the same UI with a certificate the router generated itself; its fingerprint is in `logread -e travo-greenfield`. Settings live in `/etc/config/travo-greenfield` (`uci set travo-greenfield.main.listen_tls=off` turns HTTPS off).
+Open `http://<router>/` and set the password; LuCI moves to ports 8080 and 8443. After `--port N`, open `http://<router>:N/` instead; LuCI stays on port 80. `https://<router>/` serves the same UI with a certificate the router generated itself; its fingerprint is in `logread -e travo-greenfield`. Settings live in `/etc/config/travo-greenfield` (to turn HTTPS off: `uci set travo-greenfield.main.listen_tls=off && uci commit travo-greenfield && /etc/init.d/travo-greenfield restart`).
 
 Changes that can cut you off (WiFi, VPN, firewall, LAN address, WAN) are applied, verified and then wait for you to confirm. If you don't confirm in time, the router rolls the change back.
 

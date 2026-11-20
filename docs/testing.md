@@ -43,7 +43,7 @@ Run before each release, with a console or Ethernet fallback ready. Record resul
 
 **2.4 GHz joins (#168).** Right after `firstboot`, join a phone to a 2.4 GHz AP on radio1 and read hostapd in `logread`: a pass is an association, not `did not acknowledge authentication response`.
 
-**Scan fixtures (#97).** Capture `ubus call iwinfo scan` with a genuinely open network and a WPA3-only (SAE-only) network in range, verbatim with provenance, under `testdata/device/axt1800-25.12.6/wifi-scan/`.
+**Scan fixtures (#97).** Capture `ubus call iwinfo scan '{"device":"<radio>"}'` on each radio whose band carries a test network (see `wifi-scan/PROVENANCE.md` for the selectors), with a genuinely open network and a WPA3-only (SAE-only) network in range, verbatim with provenance, under `testdata/device/axt1800-25.12.6/wifi-scan/`.
 
 **Offline AdGuard Home bundle (#184).** From Ethernet with a fresh backup and the uplink down (`ifdown wwan`). `apk del adguardhome`, remove `/etc/adguardhome/adguardhome.yaml` and `/etc/travo-greenfield/adguard-install-attempted`. Copy the release tarball and its `adguardhome-*.apk` to `/tmp`; `sh install.sh --adguard-bundle /tmp/adguardhome-*.apk` prints "bundle staged". Within one minute (no uplink, `GET /api/v1/connectivity` not online) `GET /api/v1/adguard` reports `installed:true, loopback:true`; `logread -e travo-greenfield` shows "installing from the offline bundle"; AGH never listens on `0.0.0.0:3000`; no `adguard-install-in-progress` guard remains; `apk list -I adguardhome` shows the bundled version. A tampered copy (`echo x >> file`) is refused by install.sh. Restore the uplink and the previous AGH state. Record sizes, versions and pass/fail in SPIKES.md.
 

@@ -1,6 +1,6 @@
 # Settings pages for optional catalog services
 
-The Services page installs, removes, starts and stops optional OpenWrt services (SQM, Cloudflare Tunnel, vnStat, Watchcat, speedtestcpp) and sets whether they start at boot. It does not configure them. Each card links the service's LuCI app (`:8080`), which the catalog installs next to the package.
+The Services page installs and removes optional OpenWrt services (SQM, Cloudflare Tunnel, vnStat, Watchcat, speedtestcpp). For the ones with an init script (all but speedtestcpp) it also starts and stops them and sets whether they start at boot. It does not configure them. Each card with a LuCI app links it (`:8080`); the catalog installs the app next to the package. speedtestcpp is a command-line client with neither.
 
 ## Why this is out of scope
 

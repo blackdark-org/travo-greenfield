@@ -50,7 +50,7 @@ Reference hardware: GL-AXT1800 (IPQ6018, ath11k; radio0 = 5 GHz, usually the upl
 ## 4. Rollback
 
 - [HW, 25.12.3] rpcd `uci apply` with `rollback:true` snapshots at APPLY time. If the change was already committed, rollback restores the CHANGED config (when the 30 s expired, the broken profile stayed enabled and the working uplink disabled). `uci revert` after commit is a no-op. rpcd `uci apply/confirm` also need an rpcd session id that bare ubus cannot supply (anonymous login works only with no root password). Travo does not use them ([ADR 0005](adr/0005-transactions-and-watchdog.md)).
-- [HW, 25.12.6] `reload_config` returns before netifd and hostapd act: after a wireless restore the STA route came back in 4 to 6 s and hostapd's restored config ~2 s after it returned. The watchdog reports `restored` only after the default route via the pre-change uplink and every previously up radio are back (up to ~20 s, cycling the uplink once if still without a route); a missing route or radio does not turn a restore into `failed`.
+- [HW, 25.12.6] `reload_config` returns before netifd and hostapd act: after a wireless restore the STA route came back in 4 to 6 s and hostapd's restored config ~2 s after it returned. After restoring the configs, the watchdog waits up to ~20 s for the default route via the pre-change uplink and every previously up radio, cycling the uplink once if it is still without a route. It then reports `restored` whether or not they came back (best effort, `internal/txn/watchdog.sh` `settle_live`).
 
 ## 5. Caller classification (lockout)
 
