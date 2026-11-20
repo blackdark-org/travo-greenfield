@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -66,7 +67,8 @@ func TestVPNDNSReconcileWaitsForStagedNetwork(t *testing.T) {
 	}()
 	<-staged
 	waiting := make(chan struct{})
-	deps.Txn.Locks.OnContended = func(string) { close(waiting) }
+	var once sync.Once
+	deps.Txn.Locks.OnContended(func(string) { once.Do(func() { close(waiting) }) })
 	done := make(chan vpndns.Action, 1)
 	go func() {
 		action, err := svc.Reconcile(ctx)

@@ -81,7 +81,12 @@ func TestSameConfigIsExclusive(t *testing.T) {
 func TestOnContendedFiresBeforeBlocking(t *testing.T) {
 	l := &Locks{}
 	contended := make(chan string, 2)
-	l.OnContended = func(c string) { contended <- c }
+	l.OnContended(func(c string) {
+		select {
+		case contended <- c:
+		default: // a later contention needs no report
+		}
+	})
 	_, unlock, err := l.Lock(context.Background(), []string{"network"})
 	if err != nil || len(contended) != 0 {
 		t.Fatalf("free lock reported contention: %v", err)

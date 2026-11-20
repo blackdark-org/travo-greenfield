@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -513,7 +514,8 @@ func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 	}()
 	<-staged
 	waiting := make(chan struct{})
-	m.Locks.OnContended = func(string) { close(waiting) }
+	var once sync.Once
+	m.Locks.OnContended(func(string) { once.Do(func() { close(waiting) }) })
 	read := make(chan Settled, 1)
 	go func() {
 		got, err := m.ShowSettled(ctx, "network")

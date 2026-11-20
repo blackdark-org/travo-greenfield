@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"sync"
+	"sync/atomic"
 )
 
 var (
@@ -23,11 +24,19 @@ type ctxKey struct{}
 
 // Locks holds one mutex per config name (not per service: firewall/network are shared).
 type Locks struct {
-	mu sync.Mutex
-	m  map[string]*sync.Mutex
-	// OnContended, when set, runs before a caller blocks on a held config lock. Tests use it
-	// to know a reader is waiting instead of sleeping.
-	OnContended func(config string)
+	mu          sync.Mutex
+	m           map[string]*sync.Mutex
+	onContended atomic.Pointer[func(config string)]
+}
+
+// OnContended sets f to run before a caller blocks on a held config lock (nil clears it).
+// Tests use it to know a reader is waiting instead of sleeping.
+func (l *Locks) OnContended(f func(config string)) {
+	if f == nil {
+		l.onContended.Store(nil)
+		return
+	}
+	l.onContended.Store(&f)
 }
 
 // Normalize validates, sorts and de-duplicates config names.
@@ -69,8 +78,8 @@ func (l *Locks) Lock(ctx context.Context, configs []string) (context.Context, fu
 	l.mu.Unlock()
 	for i, m := range ms {
 		if !m.TryLock() {
-			if l.OnContended != nil {
-				l.OnContended(cs[i])
+			if f := l.onContended.Load(); f != nil {
+				(*f)(cs[i])
 			}
 			m.Lock()
 		}
