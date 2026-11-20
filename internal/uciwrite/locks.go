@@ -25,6 +25,9 @@ type ctxKey struct{}
 type Locks struct {
 	mu sync.Mutex
 	m  map[string]*sync.Mutex
+	// OnContended, when set, runs before a caller blocks on a held config lock. Tests use it
+	// to know a reader is waiting instead of sleeping.
+	OnContended func(config string)
 }
 
 // Normalize validates, sorts and de-duplicates config names.
@@ -64,8 +67,13 @@ func (l *Locks) Lock(ctx context.Context, configs []string) (context.Context, fu
 		ms[i] = l.m[c]
 	}
 	l.mu.Unlock()
-	for _, m := range ms {
-		m.Lock()
+	for i, m := range ms {
+		if !m.TryLock() {
+			if l.OnContended != nil {
+				l.OnContended(cs[i])
+			}
+			m.Lock()
+		}
 	}
 	unlock := func() {
 		for i := len(ms) - 1; i >= 0; i-- {

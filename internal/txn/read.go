@@ -13,6 +13,9 @@ type Settled struct {
 	// the start and the end of the read: the sections may belong to a change that is not
 	// confirmed or was rolled back meanwhile.
 	Quiet bool
+	// StillQuiet reports whether a quiet read is still current: no transaction began and none
+	// holds its guard since the read. Call it right before acting on the read.
+	StillQuiet func() (bool, error)
 }
 
 // ShowSettled reads config under its write lock, so it never sees another writer's staged
@@ -41,7 +44,11 @@ func (m *Manager) ShowSettled(ctx context.Context, config string) (Settled, erro
 		return Settled{}, err
 	}
 	quiet := !heldBefore && !heldAfter && m.begun.Load() == before
-	return Settled{Sections: sections, Quiet: quiet}, nil
+	still := func() (bool, error) {
+		held, err := m.guardHeld()
+		return quiet && !held && m.begun.Load() == before, err
+	}
+	return Settled{Sections: sections, Quiet: quiet, StillQuiet: still}, nil
 }
 
 func (m *Manager) guardHeld() (bool, error) {

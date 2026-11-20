@@ -65,6 +65,8 @@ func TestVPNDNSReconcileWaitsForStagedNetwork(t *testing.T) {
 		aborted <- errors.Join(err, deps.Device.Revert(lctx, "network"))
 	}()
 	<-staged
+	waiting := make(chan struct{})
+	deps.Txn.Locks.OnContended = func(string) { close(waiting) }
 	done := make(chan vpndns.Action, 1)
 	go func() {
 		action, err := svc.Reconcile(ctx)
@@ -74,9 +76,11 @@ func TestVPNDNSReconcileWaitsForStagedNetwork(t *testing.T) {
 		done <- action
 	}()
 	select {
+	case <-waiting: // Reconcile is blocked on the lock the staging writer holds
 	case <-done:
 		t.Fatal("reconcile read network while a transaction was staging it")
-	case <-time.After(50 * time.Millisecond):
+	case <-time.After(10 * time.Second):
+		t.Fatal("reconcile never reached the network lock")
 	}
 	close(release)
 	if err := <-aborted; err != nil {

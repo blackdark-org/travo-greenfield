@@ -512,6 +512,8 @@ func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 		done <- err
 	}()
 	<-staged
+	waiting := make(chan struct{})
+	m.Locks.OnContended = func(string) { close(waiting) }
 	read := make(chan Settled, 1)
 	go func() {
 		got, err := m.ShowSettled(ctx, "network")
@@ -521,9 +523,11 @@ func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 		read <- got
 	}()
 	select {
+	case <-waiting: // the reader is blocked on the lock the stage holds
 	case <-read:
 		t.Fatal("read returned while the transaction was staging")
-	case <-time.After(50 * time.Millisecond):
+	case <-time.After(10 * time.Second):
+		t.Fatal("reader never reached the network lock")
 	}
 	if secs, _ := d.Show(ctx, "network"); secs[0].Options["k"] != "v" {
 		t.Fatal("test setup: unlocked read should see the staged delta")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"net/netip"
 
 	"github.com/blackdark-org/travo-greenfield/internal/app"
 	"github.com/blackdark-org/travo-greenfield/internal/dnslayer"
@@ -22,14 +21,13 @@ func newVPNDNS(deps app.Deps, layers vpndns.Layers, tunnel vpndns.Tunnel, profil
 	}
 	return &vpndns.Service{
 		Tunnel: tunnel, Layers: layers, Lookup: lookup,
-		Resolvers: func(ctx context.Context, settled bool) ([]netip.Addr, bool, error) {
-			read := settledRead(deps, settled)
-			got, err := read(ctx)
+		Resolvers: func(ctx context.Context, settled bool) (vpndns.Read, error) {
+			got, err := settledRead(deps, settled)(ctx)
 			if err != nil {
-				return nil, false, err
+				return vpndns.Read{}, err
 			}
 			dns, err := vpntunnel.TunnelResolvers(got.Sections, profiles)
-			return dns, got.Quiet, err
+			return vpndns.Read{DNS: dns, Quiet: got.Quiet, StillQuiet: got.StillQuiet}, err
 		},
 		ReadDNS: func(ctx context.Context) (dnslayer.State, error) {
 			_, st, err := dnslayer.ReadState(ctx, deps.Device)
@@ -65,6 +63,10 @@ func settledRead(deps app.Deps, settled bool) func(context.Context) (txn.Settled
 			return txn.Settled{}, err
 		}
 		held, err := guardHeld(deps, txn.GuardName)
-		return txn.Settled{Sections: sections, Quiet: !held}, err
+		still := func() (bool, error) {
+			held, err := guardHeld(deps, txn.GuardName)
+			return !held, err
+		}
+		return txn.Settled{Sections: sections, Quiet: !held, StillQuiet: still}, err
 	}
 }

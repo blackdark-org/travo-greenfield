@@ -23,9 +23,17 @@ type Tunnel interface {
 // (vpntunnel.TunnelResolvers over the network config); vpnprofiles.ErrNotFound when there
 // are none to know of. Selecting another profile does not change them (#289). settled
 // asks for a read that never sees a transaction's staged delta (txn.Manager.ShowSettled);
-// quiet then reports that no transaction began or was pending during the read. Reconcile
-// acts on the answer; Status and Verify only show it and must not wait (quiet unused).
-type Resolvers func(ctx context.Context, settled bool) (dns []netip.Addr, quiet bool, err error)
+// quiet then reports that no transaction began or was pending during the read, and
+// stillQuiet that this still holds right before a push. Reconcile acts on the answer;
+// Status and Verify only show it and must not wait (quiet unused).
+type Resolvers func(ctx context.Context, settled bool) (Read, error)
+
+// Read is one resolver read.
+type Read struct {
+	DNS        []netip.Addr
+	Quiet      bool
+	StillQuiet func() (bool, error)
+}
 
 // Layers is the shared DNS layer stack (dnslayer.Service).
 type Layers interface {
@@ -72,8 +80,8 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	// The settled read can wait out a transaction's apply phase. A transaction that began,
 	// was pending or rolled back meanwhile makes the read not quiet: Decide then may pop but
 	// not push. The tunnel state is read last so Decide sees it after the wait (#295 review).
-	resolvers, quiet, readErr := s.resolvers(ctx, true)
-	open := !quiet
+	read, readErr := s.resolvers(ctx, true)
+	resolvers, open := read.DNS, !read.Quiet
 	st, err := s.Tunnel.Status(ctx)
 	if err != nil {
 		return Keep, nil
@@ -88,6 +96,10 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	action := Decide(st, resolvers, vpnLayer(rec), open)
 	switch action {
 	case Push:
+		// a transaction that began after the read may be applying other resolvers (#295 review)
+		if still, err := read.stillQuiet(); err != nil || !still {
+			return Keep, err
+		}
 		err = s.Layers.Push(ctx, Layer(resolvers))
 	case Pop:
 		err = s.Layers.Pop(ctx, dnslayer.VPN)
@@ -95,12 +107,19 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	return action, err
 }
 
-func (s *Service) resolvers(ctx context.Context, settled bool) ([]netip.Addr, bool, error) {
-	dns, quiet, err := s.Resolvers(ctx, settled)
+func (s *Service) resolvers(ctx context.Context, settled bool) (Read, error) {
+	read, err := s.Resolvers(ctx, settled)
 	if errors.Is(err, vpnprofiles.ErrNotFound) {
-		return nil, quiet, nil
+		return Read{Quiet: read.Quiet, StillQuiet: read.StillQuiet}, nil
 	}
-	return dns, quiet, err
+	return read, err
+}
+
+func (r Read) stillQuiet() (bool, error) {
+	if r.StillQuiet == nil {
+		return r.Quiet, nil
+	}
+	return r.StillQuiet()
 }
 
 func vpnLayer(rec *dnslayer.Record) *dnslayer.Layer {
@@ -147,8 +166,8 @@ func (s *Service) status(ctx context.Context) (DNSStatus, *dnslayer.State, error
 		return DNSStatus{}, nil, ErrUnavailable
 	}
 	out := DNSStatus{Layer: Inactive, Resolvers: []string{}}
-	if resolvers, _, err := s.resolvers(ctx, false); err == nil {
-		out.Resolvers = servers(resolvers)
+	if read, err := s.resolvers(ctx, false); err == nil {
+		out.Resolvers = servers(read.DNS)
 	}
 	var rec *dnslayer.Record
 	if layers.Corrupt == "" {
