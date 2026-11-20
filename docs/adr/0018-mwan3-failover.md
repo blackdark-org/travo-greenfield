@@ -1,6 +1,6 @@
 # 0018 Multi-WAN failover with mwan3
 
-Status: accepted
+Status: accepted; amended by #277 (tracking, routing probe, Tailscale, stale mangle chains)
 
 ## Context
 
