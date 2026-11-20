@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/blackdark-org/travo-greenfield/compare/v0.2.1...v0.3.0) (2026-11-20)
+
+
+### Features
+
+* **dashboard:** stream uplinks and clients for the topology diagram ([b0be739](https://github.com/blackdark-org/travo-greenfield/commit/b0be73914b2413f20f6a196960966903a0d59c71)), closes [#300](https://github.com/blackdark-org/travo-greenfield/issues/300)
+
+
+### Refactoring
+
+* **web:** build per-source dashboard state from SOURCE_NAMES ([432f0c0](https://github.com/blackdark-org/travo-greenfield/commit/432f0c05939c776acc94ae46825714f077ef64dd))
+
 ## [0.2.1](https://github.com/blackdark-org/travo-greenfield/compare/v0.2.0...v0.2.1) (2026-11-20)
 
 
