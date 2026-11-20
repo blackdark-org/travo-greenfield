@@ -12,7 +12,7 @@ Follows https://github.com/BlackDark/agent-presets/blob/main/stack/core.md and `
 Deviations:
 - Backend Go with Huma-generated OpenAPI + hey-api client: no hand-written spec (docs/adr/0003).
 - Paraglide with `en` only (docs/adr/0004).
-- No Zod in the daemon path; Zod Mini/Valibot only if a UI boundary outside the generated client needs runtime validation (none so far).
+- No Zod in the daemon path; Zod Mini/Valibot only if a UI boundary outside the generated client needs runtime validation (none so far, docs/adr/0031).
 - Distribution is a release tarball + install script, not a package (docs/adr/0007).
 
 ## Map

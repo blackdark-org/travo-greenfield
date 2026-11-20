@@ -6,7 +6,7 @@ ADRs record decisions and stay as written. A later decision that changes one is 
 |---|---|
 | [0001](0001-clean-room-greenfield.md) | Clean-room rewrite beside old Travo: reuse lessons, not code |
 | [0002](0002-single-go-daemon-with-ports.md) | One Go daemon; all OpenWrt access behind `Device` / `PackageManager` ports |
-| [0003](0003-api-and-client-generation.md) | Huma generates OpenAPI 3.1, hey-api generates the TypeScript client |
+| [0003](0003-api-and-client-generation.md) | Huma generates OpenAPI 3.1, hey-api generates the TypeScript client (validation narrowed by 0031) |
 | [0004](0004-frontend-stack.md) | Svelte 5 SPA with hash routing, Paraglide `en` only |
 | [0005](0005-transactions-and-watchdog.md) | Own transaction layer with an out-of-process rollback watchdog |
 | [0006](0006-adguard-package-and-topology.md) | AdGuard Home package on 127.0.0.1:5353 behind dnsmasq, fail-open, memory caps |
@@ -34,3 +34,4 @@ ADRs record decisions and stay as written. A later decision that changes one is 
 | [0028](0028-lan-address-change.md) | LAN address change confirmed from the new address |
 | [0029](0029-slide-switch-self-confirm.md) | Slide switch actions confirm themselves |
 | [0030](0030-firmware-guard-completion.md) | A finished firmware upgrade releases its guard |
+| [0031](0031-runtime-validation-only-where-needed.md) | Zod Mini or Valibot only when a UI boundary outside the generated client needs runtime validation |
