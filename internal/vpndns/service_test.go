@@ -305,3 +305,17 @@ func TestReconcileAmbiguousProfileChangesNothing(t *testing.T) {
 		t.Fatalf("%v", got)
 	}
 }
+
+// The guard is written before staging, so a transaction that began between the first guard
+// check and the network read is seen by a second check: no pop to the uplink resolvers.
+func TestReconcileRechecksTransactionAfterReadingWG0(t *testing.T) {
+	e := setup(t)
+	e.reconcile(t, Push)
+	e.profile.err = vpnprofiles.ErrNotFound
+	checks := 0
+	e.svc.TxnOpen = func() (bool, error) { checks++; return checks > 1, nil }
+	e.reconcile(t, Keep)
+	if checks != 2 {
+		t.Fatalf("guard checked %d times", checks)
+	}
+}
