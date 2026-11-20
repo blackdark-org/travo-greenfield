@@ -22,9 +22,10 @@ type Tunnel interface {
 // Resolvers reads the `DNS =` resolvers the configured tunnel was applied with
 // (vpntunnel.TunnelResolvers over the network config); vpnprofiles.ErrNotFound when there
 // are none to know of. Selecting another profile does not change them (#289). settled
-// asks for a read that never sees a transaction's staged delta (txn.Manager.ShowSettled):
-// Reconcile acts on the answer, Status and Verify only show it and must not wait.
-type Resolvers func(ctx context.Context, settled bool) ([]netip.Addr, error)
+// asks for a read that never sees a transaction's staged delta (txn.Manager.ShowSettled);
+// quiet then reports that no transaction began or was pending during the read. Reconcile
+// acts on the answer; Status and Verify only show it and must not wait (quiet unused).
+type Resolvers func(ctx context.Context, settled bool) (dns []netip.Addr, quiet bool, err error)
 
 // Layers is the shared DNS layer stack (dnslayer.Service).
 type Layers interface {
@@ -44,8 +45,6 @@ type Service struct {
 	Layers    Layers
 	// ReadDNS reads the live dnsmasq options the layer stack owns.
 	ReadDNS func(ctx context.Context) (dnslayer.State, error)
-	// TxnOpen reports a pending transaction (guard present).
-	TxnOpen func() (bool, error)
 	Lookup  Lookup
 	// Nonce returns a fresh DNS label so the verify lookup cannot be answered from cache.
 	Nonce func() string
@@ -70,19 +69,11 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if layers.Pending || layers.Corrupt != "" {
 		return Keep, nil // a failed stack change waits for its explicit retry
 	}
-	// The settled read can wait out a transaction's apply phase. Guard checks on both sides
-	// catch a transaction that began or rolled back meanwhile, and the tunnel state is read
-	// last so Decide sees it after the wait (#295 review).
-	openBefore, err := s.TxnOpen()
-	if err != nil {
-		return Keep, err
-	}
-	resolvers, readErr := s.resolvers(ctx, true)
-	openAfter, err := s.TxnOpen()
-	if err != nil {
-		return Keep, err
-	}
-	open := openBefore || openAfter
+	// The settled read can wait out a transaction's apply phase. A transaction that began,
+	// was pending or rolled back meanwhile makes the read not quiet: Decide then may pop but
+	// not push. The tunnel state is read last so Decide sees it after the wait (#295 review).
+	resolvers, quiet, readErr := s.resolvers(ctx, true)
+	open := !quiet
 	st, err := s.Tunnel.Status(ctx)
 	if err != nil {
 		return Keep, nil
@@ -104,12 +95,12 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	return action, err
 }
 
-func (s *Service) resolvers(ctx context.Context, settled bool) ([]netip.Addr, error) {
-	dns, err := s.Resolvers(ctx, settled)
+func (s *Service) resolvers(ctx context.Context, settled bool) ([]netip.Addr, bool, error) {
+	dns, quiet, err := s.Resolvers(ctx, settled)
 	if errors.Is(err, vpnprofiles.ErrNotFound) {
-		return nil, nil
+		return nil, quiet, nil
 	}
-	return dns, err
+	return dns, quiet, err
 }
 
 func vpnLayer(rec *dnslayer.Record) *dnslayer.Layer {
@@ -156,7 +147,7 @@ func (s *Service) status(ctx context.Context) (DNSStatus, *dnslayer.State, error
 		return DNSStatus{}, nil, ErrUnavailable
 	}
 	out := DNSStatus{Layer: Inactive, Resolvers: []string{}}
-	if resolvers, err := s.resolvers(ctx, false); err == nil {
+	if resolvers, _, err := s.resolvers(ctx, false); err == nil {
 		out.Resolvers = servers(resolvers)
 	}
 	var rec *dnslayer.Record

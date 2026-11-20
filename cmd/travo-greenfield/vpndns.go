@@ -22,22 +22,19 @@ func newVPNDNS(deps app.Deps, layers vpndns.Layers, tunnel vpndns.Tunnel, profil
 	}
 	return &vpndns.Service{
 		Tunnel: tunnel, Layers: layers, Lookup: lookup,
-		Resolvers: func(ctx context.Context, settled bool) ([]netip.Addr, error) {
-			show := deps.Device.Show
-			if settled && deps.Txn != nil {
-				show = deps.Txn.ShowSettled
-			}
-			network, err := show(ctx, "network")
+		Resolvers: func(ctx context.Context, settled bool) ([]netip.Addr, bool, error) {
+			read := settledRead(deps, settled)
+			got, err := read(ctx)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
-			return vpntunnel.TunnelResolvers(network, profiles)
+			dns, err := vpntunnel.TunnelResolvers(got.Sections, profiles)
+			return dns, got.Quiet, err
 		},
 		ReadDNS: func(ctx context.Context) (dnslayer.State, error) {
 			_, st, err := dnslayer.ReadState(ctx, deps.Device)
 			return st, err
 		},
-		TxnOpen: func() (bool, error) { return guardHeld(deps, txn.GuardName) },
 		Nonce: func() string {
 			b := make([]byte, 8)
 			_, _ = rand.Read(b) // crypto/rand does not fail on supported platforms
@@ -54,4 +51,20 @@ func guardHeld(deps app.Deps, name string) (bool, error) {
 		}
 	}
 	return false, err
+}
+
+// settledRead is txn.Manager.ShowSettled for Reconcile; Status, Verify and a daemon without
+// a transaction manager read plainly and report quiet only when no guard is held.
+func settledRead(deps app.Deps, settled bool) func(context.Context) (txn.Settled, error) {
+	if settled && deps.Txn != nil {
+		return func(ctx context.Context) (txn.Settled, error) { return deps.Txn.ShowSettled(ctx, "network") }
+	}
+	return func(ctx context.Context) (txn.Settled, error) {
+		sections, err := deps.Device.Show(ctx, "network")
+		if err != nil {
+			return txn.Settled{}, err
+		}
+		held, err := guardHeld(deps, txn.GuardName)
+		return txn.Settled{Sections: sections, Quiet: !held}, err
+	}
 }

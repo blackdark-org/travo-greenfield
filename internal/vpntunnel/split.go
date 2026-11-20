@@ -55,34 +55,55 @@ func ValidateSplit(in []netip.Prefix) ([]netip.Prefix, error) {
 	return out, nil
 }
 
+// resolverOption tells, on every split route Travo writes, whether Travo added it for a
+// resolver ("1") or the user selected it ("0"), so a user /32 equal to a resolver is never
+// mistaken for one (#295 review). netifd ignores it (procd container).
+const resolverOption = "travo_resolver"
+
+// splitRoute is one owned route section: a user prefix, or a resolver /32 Travo added.
+type splitRoute struct {
+	Prefix   netip.Prefix
+	Resolver bool
+}
+
 // splitRoutes is pure: the user's prefixes plus a /32 for each IPv4 resolver they do not cover,
 // so the vpn DNS layer stays reachable through the tunnel.
-func splitRoutes(user []netip.Prefix, dns []netip.Addr) []netip.Prefix {
+func splitRoutes(user []netip.Prefix, dns []netip.Addr) []splitRoute {
 	if len(user) == 0 {
 		return nil
 	}
-	out := slices.Clone(user)
+	out := make([]splitRoute, 0, len(user)+len(dns))
+	for _, p := range user {
+		out = append(out, splitRoute{Prefix: p})
+	}
 	for _, r := range dns {
-		if !r.Is4() || slices.ContainsFunc(out, func(p netip.Prefix) bool { return p.Contains(r) }) {
+		if !r.Is4() || slices.ContainsFunc(user, func(p netip.Prefix) bool { return p.Contains(r) }) ||
+			slices.Contains(out, splitRoute{Prefix: netip.PrefixFrom(r, 32), Resolver: true}) {
 			continue
 		}
-		out = append(out, netip.PrefixFrom(r, 32))
+		out = append(out, splitRoute{Prefix: netip.PrefixFrom(r, 32), Resolver: true})
 	}
 	return out
 }
 
-func splitSections(routes []netip.Prefix) []device.Section {
+func splitSections(routes []splitRoute) []device.Section {
 	out := make([]device.Section, 0, len(routes))
-	for i, p := range routes {
+	for i, r := range routes {
+		opts := map[string]string{"interface": iface, "target": r.Prefix.String(), resolverOption: "0"}
+		if r.Resolver {
+			opts[resolverOption] = "1"
+		}
 		out = append(out, device.Section{Name: splitPrefix + strconv.Itoa(i), Type: "route",
-			Options: map[string]string{"interface": iface, "target": p.String()}, Lists: map[string][]string{}})
+			Options: opts, Lists: map[string][]string{}})
 	}
 	return out
 }
 
 // currentSplit reads the configured routes from the owned sections, in section order.
-func currentSplit(sections []device.Section) ([]netip.Prefix, error) {
-	var out []netip.Prefix
+// A section without resolverOption was written before it existed: a /32 equal to one of
+// legacyDNS is then taken as a resolver route, the only guess left.
+func currentSplit(sections []device.Section, legacyDNS []netip.Addr) ([]splitRoute, error) {
+	var out []splitRoute
 	for _, s := range sections {
 		if !strings.HasPrefix(s.Name, splitPrefix) {
 			continue
@@ -94,16 +115,29 @@ func currentSplit(sections []device.Section) ([]netip.Prefix, error) {
 		if err != nil {
 			return nil, errUnavailable
 		}
-		out = append(out, p)
+		var resolver bool
+		switch marker, marked := s.Options[resolverOption]; {
+		case !marked:
+			resolver = p.Bits() == 32 && slices.Contains(legacyDNS, p.Addr())
+		case marker == "1":
+			resolver = true
+		case marker != "0":
+			return nil, errUnavailable
+		}
+		out = append(out, splitRoute{Prefix: p, Resolver: resolver})
 	}
 	return out, nil
 }
 
-// userSplit removes the resolver /32s Travo added, recovering what the user selected.
-func userSplit(routes []netip.Prefix, dns []netip.Addr) []netip.Prefix {
-	return slices.DeleteFunc(slices.Clone(routes), func(p netip.Prefix) bool {
-		return p.Bits() == 32 && slices.Contains(dns, p.Addr())
-	})
+// userRoutes returns the user's prefixes, without the resolver /32s Travo added.
+func userRoutes(routes []splitRoute) []netip.Prefix {
+	var out []netip.Prefix
+	for _, r := range routes {
+		if !r.Resolver {
+			out = append(out, r.Prefix)
+		}
+	}
+	return out
 }
 
 // Split reads the configured split selection (GET never mutates).
@@ -115,17 +149,17 @@ func (s *Service) Split(ctx context.Context) (Split, error) {
 	if err != nil {
 		return Split{}, errUnavailable
 	}
-	routes, err := currentSplit(current)
-	if err != nil {
-		return Split{}, err
-	}
 	var dns []netip.Addr
 	if s.profiles != nil {
 		if dns, err = TunnelResolvers(current, s.profiles); err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
 			return Split{}, err
 		}
 	}
-	out := userSplit(routes, dns)
+	routes, err := currentSplit(current, dns)
+	if err != nil {
+		return Split{}, err
+	}
+	out := userRoutes(routes)
 	if out == nil {
 		out = []netip.Prefix{}
 	}
@@ -147,7 +181,7 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 	if err != nil {
 		return txn.Status{}, err
 	}
-	var routes []netip.Prefix
+	var routes []splitRoute
 	var proof enableProof
 	return s.txns.BeginWireGuard(ctx, "Configure split tunnel", stageBounded(func(ctx context.Context) error {
 		current, err := s.uci.Show(ctx, "network")
@@ -167,7 +201,7 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 			return err
 		}
 		routes = splitRoutes(user, dns)
-		have, err := currentSplit(current)
+		have, err := currentSplit(current, dns)
 		if err != nil {
 			return err
 		}
@@ -204,7 +238,7 @@ func peersRouteAll(sections []device.Section) bool {
 	return true
 }
 
-func (s *Service) stageSplit(ctx context.Context, current []device.Section, routes []netip.Prefix) error {
+func (s *Service) stageSplit(ctx context.Context, current []device.Section, routes []splitRoute) error {
 	for _, x := range slices.Backward(current) {
 		if strings.HasPrefix(x.Name, splitPrefix) {
 			if err := s.uci.DeleteSection(ctx, "network", x.Name); err != nil {
@@ -227,8 +261,12 @@ func (s *Service) stageSplit(ctx context.Context, current []device.Section, rout
 		if err := s.uci.SetType(ctx, "network", x.Name, x.Type); err != nil {
 			return errUnavailable
 		}
-		for _, k := range []string{"interface", "target"} {
-			if err := s.uci.Set(ctx, "network", x.Name, k, x.Options[k]); err != nil {
+		for _, k := range []string{"interface", "target", resolverOption} {
+			v, ok := x.Options[k]
+			if !ok {
+				continue
+			}
+			if err := s.uci.Set(ctx, "network", x.Name, k, v); err != nil {
 				return errUnavailable
 			}
 		}

@@ -84,19 +84,16 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 		if err := checkPeerNames(current, desired[1:]); err != nil {
 			return err
 		}
-		split, err := currentSplit(current)
-		if err != nil {
-			return err
-		}
 		// the split keeps the user's prefixes; its resolver /32s follow the new profile (#296)
 		oldDNS, err := TunnelResolvers(current, s.profiles)
 		if err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
 			return errUnavailable
 		}
-		routes := split
-		if !slices.Equal(oldDNS, profile.DNS) { // unchanged DNS keeps the split as it is
-			routes = splitRoutes(userSplit(split, oldDNS), profile.DNS)
+		split, err := currentSplit(current, oldDNS)
+		if err != nil {
+			return err
 		}
+		routes := splitRoutes(userRoutes(split), profile.DNS)
 		if len(routes) > 0 { // the split selection survives a profile (re)apply
 			desired = withRouteAll(desired, "0")
 		}

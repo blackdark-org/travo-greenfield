@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/blackdark-org/travo-greenfield/internal/atomicfile"
@@ -100,6 +101,11 @@ type Manager struct {
 	Settle time.Duration
 
 	mu sync.Mutex
+	// begun counts Begin calls past the guard: a reader comparing it before and after a read
+	// knows whether a transaction started (and possibly rolled back) in between.
+	begun atomic.Uint64
+	// afterFirstCheck lets tests run a transaction between ShowSettled's checks.
+	afterFirstCheck func()
 }
 
 // Meta is persisted beside the snapshot so status survives a daemon restart.
@@ -156,6 +162,7 @@ func (m *Manager) begin(ctx context.Context, summary string, configs []string, r
 		return Status{}, ErrStopped
 	}
 	m.reapFinished()
+	m.begun.Add(1) // before the guard: a reader that misses the guard still sees the count
 	if err := m.Guards.AcquireExclusive(GuardName, Conflicts(ctx)); err != nil {
 		switch {
 		case errors.Is(err, ErrGuarded), errors.Is(err, ErrGuardHeld):

@@ -404,3 +404,54 @@ func TestEnableKeepsUserRouteEqualToResolver(t *testing.T) {
 		t.Fatal("re-apply dropped the user's route and switched to full tunnel")
 	}
 }
+
+// A user /32 equal to a resolver is the only selected route; a DNS change must keep it and
+// add the new resolver /32, not switch to full tunnel (#295 review).
+func TestEnableKeepsUserRouteEqualToResolverWhenDNSChanges(t *testing.T) {
+	ctx := context.Background()
+	e := newTunnelEnv(t)
+	e.importSelect(t, 1, "198.18.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.s.SetSplit(ctx, prefixes4(t, "198.18.0.1/32")); err != nil {
+		t.Fatal(err)
+	}
+	e.importSelect(t, 1, "10.8.0.1")
+	if _, err := e.s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if !hasSplitRoute(t, e.d, "198.18.0.1/32") || !hasSplitRoute(t, e.d, "10.8.0.1/32") {
+		t.Fatal("user route dropped or new resolver route missing")
+	}
+	if got, _ := e.s.Split(ctx); !slices.Equal(got.Routes, prefixes4(t, "198.18.0.1/32")) {
+		t.Fatalf("split view: %v", got.Routes)
+	}
+}
+
+// A split written before the marker (#295) has unmarked resolver /32s: they still count as
+// resolver routes when they equal the recorded resolvers.
+func TestUnmarkedLegacyResolverRoutes(t *testing.T) {
+	dns := []netip.Addr{netip.MustParseAddr("198.18.0.1")}
+	route := func(name, target, marker string) device.Section {
+		o := map[string]string{"interface": "wg0", "target": target}
+		if marker != "" {
+			o[resolverOption] = marker
+		}
+		return device.Section{Name: name, Type: "route", Options: o}
+	}
+	legacy := []device.Section{route("travo_split_0", "10.9.0.0/16", ""), route("travo_split_1", "198.18.0.1/32", "")}
+	got, err := currentSplit(legacy, dns)
+	if err != nil || !slices.Equal(userRoutes(got), prefixes4(t, "10.9.0.0/16")) {
+		t.Fatalf("legacy: %v %v", got, err)
+	}
+	marked := []device.Section{route("travo_split_0", "198.18.0.1/32", "0")}
+	got, err = currentSplit(marked, dns)
+	if err != nil || !slices.Equal(userRoutes(got), prefixes4(t, "198.18.0.1/32")) {
+		t.Fatalf("a user-marked /32 must stay a user route: %v %v", got, err)
+	}
+	bad := []device.Section{route("travo_split_0", "10.9.0.0/16", "yes")}
+	if _, err := currentSplit(bad, dns); err == nil {
+		t.Fatal("foreign marker value accepted")
+	}
+}

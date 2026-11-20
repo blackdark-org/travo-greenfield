@@ -54,11 +54,14 @@ type tunnel struct {
 func (t *tunnel) Status(context.Context) (vpnstatus.TunnelStatus, error) { return t.status, t.err }
 
 type profiles struct {
-	dns []netip.Addr
-	err error
+	dns   []netip.Addr
+	quiet bool // no transaction began or was pending during the read
+	err   error
 }
 
-func (p *profiles) resolvers(context.Context, bool) ([]netip.Addr, error) { return p.dns, p.err }
+func (p *profiles) resolvers(context.Context, bool) ([]netip.Addr, bool, error) {
+	return p.dns, p.quiet, p.err
+}
 
 type env struct {
 	svc     *Service
@@ -67,7 +70,6 @@ type env struct {
 	apply   *commitApplier
 	tunnel  *tunnel
 	profile *profiles
-	txnOpen bool
 	lookups []string
 	lookErr error
 }
@@ -89,7 +91,7 @@ func setup(t *testing.T) *env {
 	dir := t.TempDir()
 	e := &env{dev: d, apply: &commitApplier{d: d},
 		tunnel:  &tunnel{status: vpnstatus.TunnelStatus{State: vpnstatus.Connected}},
-		profile: &profiles{dns: []netip.Addr{netip.MustParseAddr("10.64.0.1")}}}
+		profile: &profiles{dns: []netip.Addr{netip.MustParseAddr("10.64.0.1")}, quiet: true}}
 	e.layers = &dnslayer.Service{Device: d, Guards: guard.Dir{Path: filepath.Join(dir, "guards"), Now: time.Now},
 		RecordPath: filepath.Join(dir, "dns-layers.json"), Apply: e.apply}
 	e.svc = &Service{Tunnel: e.tunnel, Resolvers: e.profile.resolvers, Layers: e.layers,
@@ -97,7 +99,6 @@ func setup(t *testing.T) *env {
 			_, st, err := dnslayer.ReadState(ctx, d)
 			return st, err
 		},
-		TxnOpen: func() (bool, error) { return e.txnOpen, nil },
 		Lookup: func(_ context.Context, host string) error {
 			e.lookups = append(e.lookups, host)
 			return e.lookErr
@@ -282,36 +283,27 @@ func TestReconcilePopsWhenTunnelConfigIsDeleted(t *testing.T) {
 	}
 }
 
-// The settled read can wait out a transaction's apply; a guard read before it would miss
-// a transaction that began meanwhile and push its unconfirmed resolvers (#295 review).
-func TestReconcileChecksTheGuardAfterTheSettledRead(t *testing.T) {
+// A transaction that began during the settled read (the read is not quiet) blocks the push
+// of what the read returned (#295 review).
+func TestReconcileDoesNotPushANotQuietRead(t *testing.T) {
 	e := setup(t)
-	var calls []string
-	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
-		if settled {
-			calls = append(calls, "settled read")
-			e.txnOpen = true // an Enable began and committed while the read waited
-		}
-		return e.profile.dns, nil
-	}
-	e.svc.TxnOpen = func() (bool, error) { calls = append(calls, "guard"); return e.txnOpen, nil }
+	e.profile.quiet = false
 	e.reconcile(t, Keep)
-	if !slices.Equal(calls, []string{"guard", "settled read", "guard"}) {
-		t.Fatalf("order %v", calls)
-	}
 	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
-		t.Fatal("pushed resolvers of an unconfirmed transaction")
+		t.Fatal("pushed resolvers of a read a transaction overlapped")
 	}
+	e.profile.quiet = true // next tick
+	e.reconcile(t, Push)
 }
 
 // Status and Verify only show the resolvers: they must not wait for a transaction.
 func TestStatusUsesTheUnsettledRead(t *testing.T) {
 	e := setup(t)
-	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
+	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, bool, error) {
 		if settled {
 			t.Error("Status waited for a settled read")
 		}
-		return e.profile.dns, nil
+		return e.profile.dns, false, nil
 	}
 	if _, err := e.svc.Status(ctx); err != nil {
 		t.Fatal(err)
@@ -332,33 +324,16 @@ func TestUnreadableResolversStillPopAnOffTunnel(t *testing.T) {
 	e.reconcile(t, Pop)
 }
 
-// A pending transaction rolled back while the settled read waited: the read may hold the
-// rolled-back resolvers, so the guard seen before the read still blocks the push.
-func TestReconcileKeepsWhenTheTransactionEndsDuringTheRead(t *testing.T) {
-	e := setup(t)
-	e.txnOpen = true
-	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
-		if settled {
-			e.txnOpen = false // the watchdog restored and the guard was released
-		}
-		return e.profile.dns, nil
-	}
-	e.reconcile(t, Keep)
-	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
-		t.Fatal("pushed resolvers read while a transaction was pending")
-	}
-}
-
 // The tunnel went off while the settled read waited: Decide must see that, not the state
 // from before the wait.
 func TestReconcileReadsTunnelStateAfterTheWait(t *testing.T) {
 	e := setup(t)
 	e.reconcile(t, Push)
-	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, error) {
+	e.svc.Resolvers = func(_ context.Context, settled bool) ([]netip.Addr, bool, error) {
 		if settled {
 			e.tunnel.status.State = vpnstatus.Disabled // a Disable applied during the wait
 		}
-		return e.profile.dns, nil
+		return e.profile.dns, true, nil
 	}
 	e.reconcile(t, Pop)
 }

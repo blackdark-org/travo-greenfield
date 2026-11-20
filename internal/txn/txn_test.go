@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/device/mock"
 	"github.com/blackdark-org/travo-greenfield/internal/guard"
 	"github.com/blackdark-org/travo-greenfield/internal/uciwrite"
@@ -513,13 +512,13 @@ func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 		done <- err
 	}()
 	<-staged
-	read := make(chan []device.Section, 1)
+	read := make(chan Settled, 1)
 	go func() {
-		secs, err := m.ShowSettled(ctx, "network")
+		got, err := m.ShowSettled(ctx, "network")
 		if err != nil {
 			t.Error(err)
 		}
-		read <- secs
+		read <- got
 	}()
 	select {
 	case <-read:
@@ -533,8 +532,40 @@ func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 	if err := <-done; err == nil {
 		t.Fatal("Begin should fail")
 	}
-	secs := <-read
-	if len(secs) != 1 || secs[0].Options["k"] != "" {
-		t.Fatalf("settled read saw the aborted delta: %+v", secs)
+	got := <-read
+	if len(got.Sections) != 1 || got.Sections[0].Options["k"] != "" {
+		t.Fatalf("settled read saw the aborted delta: %+v", got.Sections)
+	}
+	if got.Quiet {
+		t.Fatal("a read that overlapped a transaction must not be quiet")
+	}
+}
+
+// A transaction that begins and rolls back entirely between the reader's first guard check
+// and its read leaves no guard behind, yet the read is not quiet (#295 review).
+func TestShowSettledNotQuietAfterAWholeTransaction(t *testing.T) {
+	t.Parallel()
+	m, d := setup(t, 60*time.Second)
+	if got, err := m.ShowSettled(ctx, "network"); err != nil || !got.Quiet {
+		t.Fatalf("idle read: %+v %v", got, err)
+	}
+	m.afterFirstCheck = func() {
+		_, err := m.Begin(ctx, "t", []string{"network"}, func(ctx context.Context) error {
+			_ = stageSet(d, "network")(ctx)
+			return errors.New("abort")
+		}, nil)
+		if err == nil {
+			t.Error("Begin should fail")
+		}
+	}
+	got, err := m.ShowSettled(ctx, "network")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if guarded(t, m) {
+		t.Fatal("guard left after the abort")
+	}
+	if got.Quiet {
+		t.Fatal("a read with a whole transaction inside it must not be quiet")
 	}
 }

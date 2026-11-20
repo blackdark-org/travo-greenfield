@@ -9,10 +9,10 @@ The `vpn` layer pushed the SELECTED profile's `DNS =` resolvers. Selecting anoth
 ## Decision
 
 - Enable stages the applied profile's resolvers as `network.wg0.travo_dns` (space-separated, or `none`) in the WireGuard transaction, so rollback restores them with `wg0`. If `wg0` already runs as the profile, only that option is staged, without a restart or handshake proof.
-- The reconciler reads them under the `network` write lock (`txn.Manager.ShowSettled`), checks the transaction guard before and after that read, and reads the tunnel state last, so it never acts on a staged delta or an unconfirmed apply. An unreadable value changes nothing, except that a tunnel that is off still pops.
+- The reconciler reads them under the `network` write lock (`txn.Manager.ShowSettled`), and pushes only when that read was quiet: no transaction began (a begin counter), and none held its guard, between the start and the end of the read. The tunnel state is read last. So it never acts on a staged delta or on an apply that is unconfirmed or was rolled back. An unreadable value changes nothing, except that a tunnel that is off still pops.
 - A `wg0` without the option (applied before #289) uses the selected profile until the next Enable records it.
-- Split routes use the same resolvers; when Enable changes them, the resolver `/32`s move with them and `wg0` restarts (#296). With unchanged DNS the split stays as it is. A user route equal to an old resolver address cannot be told apart from the automatic `/32`, so it moves too when the DNS changes.
+- Split routes use the same resolvers; when Enable changes them, the resolver `/32`s move with them and `wg0` restarts (#296). Every split route Travo writes carries `travo_resolver` (`1` for a resolver `/32`, `0` for a user prefix), so a user `/32` equal to a resolver stays put. Route sections written before the marker treat an unmarked `/32` equal to a recorded resolver as automatic.
 
 ## Consequences
 
-The tunnel transaction writes DNS metadata but still never touches dnsmasq. netifd ignores the option: in a booted `aarch64_generic-25.12.6` container `wg0` came up with it and kept its uptime and ifindex when only the option changed (`reload_config`). The hardware check is in the "VPN DNS layer" playbook step.
+The tunnel transaction writes DNS metadata but still never touches dnsmasq. netifd ignores both options: in a booted `aarch64_generic-25.12.6` container `wg0` came up with it and kept its uptime and ifindex when only the option changed (`reload_config`); a route section with `travo_resolver` is installed as usual. The hardware check is in the "VPN DNS layer" playbook step.
