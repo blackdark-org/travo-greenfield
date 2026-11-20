@@ -283,3 +283,25 @@ func TestReconcilePopsWhenTunnelConfigIsDeleted(t *testing.T) {
 		t.Fatalf("base not restored:\n got %+v\nwant %+v", got, base)
 	}
 }
+
+// A wg0 that is only partly staged matches no profile; a pending transaction keeps the
+// layer instead of popping DNS to the uplink while the tunnel still carries traffic.
+func TestReconcileKeepsLayerWhileTransactionStagesWG0(t *testing.T) {
+	e := setup(t)
+	e.reconcile(t, Push)
+	e.profile.err = vpnprofiles.ErrNotFound
+	e.txnOpen = true
+	e.reconcile(t, Keep)
+	e.tunnel.status.State = vpnstatus.Configured
+	e.reconcile(t, Pop) // the fail-safe pop still runs for a tunnel that is off
+}
+
+func TestReconcileAmbiguousProfileChangesNothing(t *testing.T) {
+	e := setup(t)
+	e.reconcile(t, Push)
+	e.profile.err = errors.New("several VPN profiles match the configured tunnel")
+	e.reconcile(t, Keep)
+	if got := e.live(t).Server.Values; !slices.Equal(got, []string{"10.64.0.1"}) {
+		t.Fatalf("%v", got)
+	}
+}

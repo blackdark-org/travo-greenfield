@@ -121,7 +121,7 @@ func (s *Service) Split(ctx context.Context) (Split, error) {
 	}
 	var dns []netip.Addr
 	if s.profiles != nil {
-		if cfg, err := s.profiles.SelectedConfig(); err == nil {
+		if cfg, err := s.tunnelProfile(current); err == nil {
 			dns = cfg.DNS
 		}
 	}
@@ -147,7 +147,7 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 	if err != nil {
 		return txn.Status{}, err
 	}
-	routes := splitRoutes(user, profile.DNS)
+	var routes []netip.Prefix
 	var proof enableProof
 	return s.txns.BeginWireGuard(ctx, "Configure split tunnel", stageBounded(func(ctx context.Context) error {
 		current, err := s.uci.Show(ctx, "network")
@@ -161,6 +161,11 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 		if !slices.ContainsFunc(current, func(x device.Section) bool { return x.Name == iface }) {
 			return vpnprofiles.ErrNotFound // nothing to split before a profile was applied
 		}
+		// the running tunnel's resolvers need their /32s, not a later selection's (#289)
+		if profile, err = s.tunnelProfile(current); err != nil {
+			return err
+		}
+		routes = splitRoutes(user, profile.DNS)
 		have, err := currentSplit(current)
 		if err != nil {
 			return err

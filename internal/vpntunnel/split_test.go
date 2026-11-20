@@ -134,6 +134,13 @@ type selected struct{ cfg vpnprofiles.Config }
 
 func (s selected) SelectedConfig() (vpnprofiles.Config, error) { return s.cfg, nil }
 
+func (s selected) MatchingConfigs(match func(vpnprofiles.Config) bool) ([]vpnprofiles.Config, error) {
+	if match(s.cfg) {
+		return []vpnprofiles.Config{s.cfg}, nil
+	}
+	return nil, nil
+}
+
 // uciKeys stages keys as plain options, like the real writer's end state.
 type uciKeys struct{ d *mock.Device }
 

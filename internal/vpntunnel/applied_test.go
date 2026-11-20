@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/blackdark-org/travo-greenfield/internal/device"
 	"github.com/blackdark-org/travo-greenfield/internal/vpnprofiles"
 )
 
@@ -61,6 +62,13 @@ func TestAppliedConfigFollowsTheAppliedProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 	check("with a split selection")
+	// the split routes carry the applied resolver, not the selected profile's
+	if got, _ := s.Split(ctx); len(got.Routes) != 1 || got.Routes[0].String() != "10.9.0.0/16" {
+		t.Fatalf("split view: %v", got.Routes)
+	}
+	if !hasSplitRoute(t, d, "198.18.0.1/32") || hasSplitRoute(t, d, "10.8.0.1/32") {
+		t.Fatal("split routes follow the selected profile's resolver")
+	}
 	if _, err := s.Set(ctx, true); err != nil { // re-apply: the selection now wins
 		t.Fatal(err)
 	}
@@ -79,5 +87,52 @@ func TestAppliedConfigWithoutMatchingProfile(t *testing.T) {
 		if _, err := applied.AppliedConfig(context.Background()); !errors.Is(err, vpnprofiles.ErrNotFound) {
 			t.Fatalf("%s: %v", state, err)
 		}
+	}
+}
+
+func hasSplitRoute(t *testing.T, d interface {
+	Show(context.Context, string) ([]device.Section, error)
+}, target string) bool {
+	t.Helper()
+	secs, err := d.Show(context.Background(), "network")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sec := range secs {
+		if sec.Type == "route" && sec.Options["target"] == target {
+			return true
+		}
+	}
+	return false
+}
+
+// Two profiles with the same tunnel but different DNS both match wg0: unknown resolvers.
+func TestAppliedConfigAmbiguousDNS(t *testing.T) {
+	ctx := context.Background()
+	store := vpnprofiles.New(filepath.Join(t.TempDir(), "profiles.json"))
+	first, err := store.Import("first", profileText(1, "198.18.0.1"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Import("same tunnel", profileText(1, "10.8.0.1")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Select(first.ID); err != nil {
+		t.Fatal(err)
+	}
+	s, d, _ := splitService(t, "disabled")
+	s.profiles = store
+	if _, err := s.Set(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (Applied{UCI: d, Profiles: store}).AppliedConfig(ctx); !errors.Is(err, ErrAmbiguous) {
+		t.Fatalf("%v", err)
+	}
+	if _, err := store.Import("same dns", profileText(1, "198.18.0.1")); err != nil {
+		t.Fatal(err)
+	}
+	// still ambiguous: the 10.8.0.1 duplicate is stored too
+	if _, err := (Applied{UCI: d, Profiles: store}).AppliedConfig(ctx); !errors.Is(err, ErrAmbiguous) {
+		t.Fatalf("%v", err)
 	}
 }

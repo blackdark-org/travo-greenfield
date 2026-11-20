@@ -78,8 +78,13 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 		return Keep, err
 	}
 	resolvers, err := s.resolvers(ctx)
-	if err != nil {
-		return Keep, nil // unreadable profile store: change nothing
+	switch {
+	case errors.Is(err, vpnprofiles.ErrNotFound) && open && st.State == vpnstatus.Connected:
+		return Keep, nil // a partly staged wg0 matches nothing until the transaction settles
+	case errors.Is(err, vpnprofiles.ErrNotFound):
+		resolvers = nil
+	case err != nil:
+		return Keep, nil // unreadable or ambiguous profile store: change nothing
 	}
 	rec, err := s.Layers.Load()
 	if err != nil {
@@ -97,9 +102,6 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 
 func (s *Service) resolvers(ctx context.Context) ([]netip.Addr, error) {
 	cfg, err := s.Profiles.AppliedConfig(ctx)
-	if errors.Is(err, vpnprofiles.ErrNotFound) {
-		return nil, nil
-	}
 	return cfg.DNS, err
 }
 

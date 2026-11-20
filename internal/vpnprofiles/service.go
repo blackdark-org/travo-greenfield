@@ -177,24 +177,19 @@ func (s *Service) SelectedConfig() (Config, error) {
 	return data.Profiles[data.index(*data.SelectedID)].Config, nil
 }
 
-// FindConfig returns the first profile config that match accepts, the selected one first;
-// ErrNotFound when none does.
-func (s *Service) FindConfig(match func(Config) bool) (Config, error) {
+// MatchingConfigs returns every stored profile config that match accepts, in store order.
+func (s *Service) MatchingConfigs(match func(Config) bool) ([]Config, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	data, err := s.load()
 	if err != nil {
-		return Config{}, err
+		return nil, err
 	}
-	if data.SelectedID != nil {
-		if cfg := data.Profiles[data.index(*data.SelectedID)].Config; match(cfg) {
-			return cfg, nil
-		}
-	}
+	var out []Config
 	for _, p := range data.Profiles {
 		if match(p.Config) {
-			return p.Config, nil
+			out = append(out, p.Config)
 		}
 	}
-	return Config{}, ErrNotFound
+	return out, nil
 }
