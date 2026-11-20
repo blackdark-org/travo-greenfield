@@ -101,8 +101,8 @@ type Manager struct {
 	Settle time.Duration
 
 	mu sync.Mutex
-	// begun counts Begin calls past the guard: a reader comparing it before and after a read
-	// knows whether a transaction started (and possibly rolled back) in between.
+	// begun counts transactions that acquired the guard: a reader comparing it before and
+	// after a read knows whether one started (and possibly rolled back) in between.
 	begun atomic.Uint64
 	// afterFirstCheck lets tests run a transaction between ShowSettled's checks.
 	afterFirstCheck func()
@@ -162,7 +162,6 @@ func (m *Manager) begin(ctx context.Context, summary string, configs []string, r
 		return Status{}, ErrStopped
 	}
 	m.reapFinished()
-	m.begun.Add(1) // before the guard: a reader that misses the guard still sees the count
 	if err := m.Guards.AcquireExclusive(GuardName, Conflicts(ctx)); err != nil {
 		switch {
 		case errors.Is(err, ErrGuarded), errors.Is(err, ErrGuardHeld):
@@ -172,6 +171,9 @@ func (m *Manager) begin(ctx context.Context, summary string, configs []string, r
 		}
 		return Status{}, fmt.Errorf("txn guard: %w", err) // never degrade to unguarded
 	}
+	// After the guard, before its release: a reader whose first guard check missed this
+	// transaction sees either the guard or the new count at its second check.
+	m.begun.Add(1)
 	lctx, unlock, err := m.Locks.Lock(ctx, cs)
 	if err != nil {
 		return Status{}, m.release(err)
