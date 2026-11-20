@@ -27,7 +27,7 @@ func newVPNDNS(deps app.Deps, layers vpndns.Layers, tunnel vpndns.Tunnel, profil
 				return vpndns.Read{}, err
 			}
 			dns, err := vpntunnel.TunnelResolvers(got.Sections, profiles)
-			return vpndns.Read{DNS: dns, Quiet: got.Quiet, StillQuiet: got.StillQuiet}, err
+			return vpndns.Read{DNS: dns, NoTransactionDuringRead: got.NoTransactionDuringRead, NoTransactionSince: got.NoTransactionSince}, err
 		},
 		ReadDNS: func(ctx context.Context) (dnslayer.State, error) {
 			_, st, err := dnslayer.ReadState(ctx, deps.Device)
@@ -52,7 +52,7 @@ func guardHeld(deps app.Deps, name string) (bool, error) {
 }
 
 // settledRead is txn.Manager.ShowSettled for Reconcile; Status, Verify and a daemon without
-// a transaction manager read plainly and report quiet only when no guard is held.
+// a transaction manager read plainly and trust only an absent guard.
 func settledRead(deps app.Deps, settled bool) func(context.Context) (txn.Settled, error) {
 	if settled && deps.Txn != nil {
 		return func(ctx context.Context) (txn.Settled, error) { return deps.Txn.ShowSettled(ctx, "network") }
@@ -63,10 +63,10 @@ func settledRead(deps app.Deps, settled bool) func(context.Context) (txn.Settled
 			return txn.Settled{}, err
 		}
 		held, err := guardHeld(deps, txn.GuardName)
-		still := func() (bool, error) {
+		since := func() (bool, error) {
 			held, err := guardHeld(deps, txn.GuardName)
 			return !held, err
 		}
-		return txn.Settled{Sections: sections, Quiet: !held, StillQuiet: still}, err
+		return txn.Settled{Sections: sections, NoTransactionDuringRead: !held, NoTransactionSince: since}, err
 	}
 }

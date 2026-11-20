@@ -176,7 +176,7 @@ func hasSplitRoute(t *testing.T, d *mock.Device, target string) bool {
 }
 
 // observingUCI reads network after every staged write, as a reconciler tick between two
-// writes of an unlocked read would (#295 review).
+// writes of an unlocked read would.
 type observingUCI struct {
 	device.UCI
 	seen func([]device.Section)
@@ -384,7 +384,7 @@ func TestEnableWithOnlyResolverRoutesReturnsToFullTunnel(t *testing.T) {
 	}
 }
 
-// A user /32 that equals a resolver must survive a re-apply with the same DNS (#295 review):
+// A user /32 that equals a resolver must survive a re-apply with the same DNS:
 // only a resolver change recomputes the split.
 func TestEnableKeepsUserRouteEqualToResolver(t *testing.T) {
 	ctx := context.Background()
@@ -406,7 +406,7 @@ func TestEnableKeepsUserRouteEqualToResolver(t *testing.T) {
 }
 
 // A user /32 equal to a resolver is the only selected route; a DNS change must keep it and
-// add the new resolver /32, not switch to full tunnel (#295 review).
+// add the new resolver /32, not switch to full tunnel.
 func TestEnableKeepsUserRouteEqualToResolverWhenDNSChanges(t *testing.T) {
 	ctx := context.Background()
 	e := newTunnelEnv(t)
@@ -429,7 +429,7 @@ func TestEnableKeepsUserRouteEqualToResolverWhenDNSChanges(t *testing.T) {
 	}
 }
 
-// A split written before the marker (#295) has unmarked resolver /32s: they still count as
+// A split written before the marker has unmarked resolver /32s: they still count as
 // resolver routes when they equal the recorded resolvers.
 func TestUnmarkedLegacyResolverRoutes(t *testing.T) {
 	dns := []netip.Addr{netip.MustParseAddr("198.18.0.1")}

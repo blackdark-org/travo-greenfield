@@ -4,7 +4,6 @@ package vpntunnel
 import (
 	"context"
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/blackdark-org/travo-greenfield/internal/device"
@@ -84,20 +83,14 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 		if err := checkPeerNames(current, desired[1:]); err != nil {
 			return err
 		}
-		// the split keeps the user's prefixes; its resolver /32s follow the new profile (#296)
-		oldDNS, err := TunnelResolvers(current, s.profiles)
-		if err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
-			return errUnavailable
-		}
-		split, err := currentSplit(current, oldDNS)
+		split, err := s.splitForProfile(current, profile)
 		if err != nil {
 			return err
 		}
-		routes := splitRoutes(userRoutes(split), profile.DNS)
-		if len(routes) > 0 { // the split selection survives a profile (re)apply
+		if split.isSplit() {
 			desired = withRouteAll(desired, "0")
 		}
-		networkChanged = !matches(current, desired, wasEnabled) || !slices.Equal(split, routes)
+		networkChanged = !matches(current, desired, wasEnabled) || split.changed()
 		resolversChanged := false
 		if !networkChanged {
 			if resolversChanged, err = s.resolversOnly(ctx, current, desired); err != nil {
@@ -113,30 +106,20 @@ func (s *Service) Set(ctx context.Context, enabled bool) (txn.Status, error) {
 			}
 		}
 		if !networkChanged {
-			return nil // tunnel already as wanted: only the zone or the recorded resolvers changed
+			return nil // only the zone or the recorded resolvers changed
 		}
 
-		proof.started = s.now().Unix()
 		proof.wasEnabled = wasEnabled
-		previous, err := s.handshakes.LatestHandshakes(ctx, iface)
-		if err != nil && !errors.Is(err, device.ErrNotFound) {
-			return errUnavailable
-		}
-		proof.previous = make(map[string]time.Time, len(previous))
-		for _, peer := range previous {
-			proof.previous[peer.PublicKey] = peer.At
-		}
-		proof.configured = make(map[string]struct{}, len(profile.Peers))
-		for _, peer := range profile.Peers {
-			proof.configured[peer.PublicKey] = struct{}{}
+		if err := s.recordHandshakes(ctx, &proof, profile); err != nil {
+			return err
 		}
 		if err := s.stageEnable(ctx, current, desired); err != nil {
 			return err
 		}
-		if slices.Equal(split, routes) {
+		if !split.changed() {
 			return nil
 		}
-		return s.stageSplit(ctx, withoutPeers(current), routes)
+		return s.stageSplit(ctx, withoutPeers(current), split.next)
 	}), func(ctx context.Context) error {
 		if !networkChanged {
 			return nil // a zone or resolvers-only change leaves wg0 running

@@ -29,7 +29,7 @@ func (*layerSpy) Status() (dnslayer.Status, error)           { return dnslayer.S
 func (*layerSpy) Push(context.Context, dnslayer.Layer) error { return nil }
 func (l *layerSpy) Pop(context.Context, dnslayer.Name) error { l.pops++; return nil }
 
-// #295: the reconciler reads network through the transaction locks, so a staged
+// The reconciler reads network through the transaction locks, so a staged
 // travo_dns=none that the transaction then reverts never pops the layer.
 func TestVPNDNSReconcileWaitsForStagedNetwork(t *testing.T) {
 	ctx := context.Background()

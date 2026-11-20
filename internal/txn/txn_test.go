@@ -494,7 +494,7 @@ func TestReapDoesNotReleaseGuardHeldByFailedRestore(t *testing.T) {
 	}
 }
 
-// A reader must not see a delta staged by a transaction that then aborts (#295 review):
+// A reader must not see a delta staged by a transaction that then aborts:
 // ShowSettled waits for the stage and reads the reverted config.
 func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 	t.Parallel()
@@ -542,20 +542,20 @@ func TestShowSettledWaitsForStagingAndSeesRevert(t *testing.T) {
 	if len(got.Sections) != 1 || got.Sections[0].Options["k"] != "" {
 		t.Fatalf("settled read saw the aborted delta: %+v", got.Sections)
 	}
-	if got.Quiet {
-		t.Fatal("a read that overlapped a transaction must not be quiet")
+	if got.NoTransactionDuringRead {
+		t.Fatal("a read that overlapped a transaction must report it")
 	}
 }
 
 // A transaction that begins and rolls back entirely between the reader's first guard check
-// and its read leaves no guard behind, yet the read is not quiet (#295 review).
-func TestShowSettledNotQuietAfterAWholeTransaction(t *testing.T) {
+// and its read leaves no guard behind, yet the read reports it.
+func TestShowSettledSeesAWholeTransactionDuringTheRead(t *testing.T) {
 	t.Parallel()
 	m, d := setup(t, 60*time.Second)
-	if got, err := m.ShowSettled(ctx, "network"); err != nil || !got.Quiet {
+	if got, err := m.ShowSettled(ctx, "network"); err != nil || !got.NoTransactionDuringRead {
 		t.Fatalf("idle read: %+v %v", got, err)
 	}
-	m.afterFirstCheck = func() {
+	m.testHookAfterFirstCheck = func() {
 		_, err := m.Begin(ctx, "t", []string{"network"}, func(ctx context.Context) error {
 			_ = stageSet(d, "network")(ctx)
 			return errors.New("abort")
@@ -571,7 +571,7 @@ func TestShowSettledNotQuietAfterAWholeTransaction(t *testing.T) {
 	if guarded(t, m) {
 		t.Fatal("guard left after the abort")
 	}
-	if got.Quiet {
-		t.Fatal("a read with a whole transaction inside it must not be quiet")
+	if got.NoTransactionDuringRead {
+		t.Fatal("a read with a whole transaction inside it must report it")
 	}
 }

@@ -19,20 +19,18 @@ type Tunnel interface {
 	Status(ctx context.Context) (vpnstatus.TunnelStatus, error)
 }
 
-// Resolvers reads the `DNS =` resolvers the configured tunnel was applied with
-// (vpntunnel.TunnelResolvers over the network config); vpnprofiles.ErrNotFound when there
-// are none to know of. Selecting another profile does not change them (#289). settled
-// asks for a read that never sees a transaction's staged delta (txn.Manager.ShowSettled);
-// quiet then reports that no transaction began or was pending during the read, and
-// stillQuiet that this still holds right before a push. Reconcile acts on the answer;
-// Status and Verify only show it and must not wait (quiet unused).
+// Resolvers reads the resolvers wg0 was applied with (vpntunnel.TunnelResolvers), not the
+// selected profile's (#289); vpnprofiles.ErrNotFound when there are none. settled waits
+// for any staged transaction (txn.Manager.ShowSettled); Status and Verify must not wait.
 type Resolvers func(ctx context.Context, settled bool) (Read, error)
 
-// Read is one resolver read.
+// Read is one resolver read and whether any transaction overlapped it.
 type Read struct {
-	DNS        []netip.Addr
-	Quiet      bool
-	StillQuiet func() (bool, error)
+	DNS []netip.Addr
+	// NoTransactionDuringRead: none began or held its guard while the read ran.
+	NoTransactionDuringRead bool
+	// NoTransactionSince: the same still holds now; nil means NoTransactionDuringRead.
+	NoTransactionSince func() (bool, error)
 }
 
 // Layers is the shared DNS layer stack (dnslayer.Service).
@@ -77,30 +75,25 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 	if layers.Pending || layers.Corrupt != "" {
 		return Keep, nil // a failed stack change waits for its explicit retry
 	}
-	// The settled read can wait out a transaction's apply phase. A transaction that began,
-	// was pending or rolled back meanwhile makes the read not quiet: Decide then may pop but
-	// not push. The tunnel state is read last so Decide sees it after the wait (#295 review).
 	read, readErr := s.resolvers(ctx, true)
-	resolvers, open := read.DNS, !read.Quiet
-	st, err := s.Tunnel.Status(ctx)
+	st, err := s.Tunnel.Status(ctx) // after the read, which may have waited out a transaction
 	if err != nil {
 		return Keep, nil
 	}
 	if readErr != nil && !offState(st) {
-		return Keep, nil // unreadable network config or profile store: change nothing
+		return Keep, nil
 	}
 	rec, err := s.Layers.Load()
 	if err != nil {
 		return Keep, err
 	}
-	action := Decide(st, resolvers, vpnLayer(rec), open)
+	action := Decide(st, read.DNS, vpnLayer(rec), !read.NoTransactionDuringRead)
 	switch action {
 	case Push:
-		// a transaction that began after the read may be applying other resolvers (#295 review)
-		if still, err := read.stillQuiet(); err != nil || !still {
+		if unchanged, err := read.noTransactionSince(); err != nil || !unchanged {
 			return Keep, err
 		}
-		err = s.Layers.Push(ctx, Layer(resolvers))
+		err = s.Layers.Push(ctx, Layer(read.DNS))
 	case Pop:
 		err = s.Layers.Pop(ctx, dnslayer.VPN)
 	}
@@ -110,16 +103,17 @@ func (s *Service) Reconcile(ctx context.Context) (Action, error) {
 func (s *Service) resolvers(ctx context.Context, settled bool) (Read, error) {
 	read, err := s.Resolvers(ctx, settled)
 	if errors.Is(err, vpnprofiles.ErrNotFound) {
-		return Read{Quiet: read.Quiet, StillQuiet: read.StillQuiet}, nil
+		read.DNS = nil
+		return read, nil
 	}
 	return read, err
 }
 
-func (r Read) stillQuiet() (bool, error) {
-	if r.StillQuiet == nil {
-		return r.Quiet, nil
+func (r Read) noTransactionSince() (bool, error) {
+	if r.NoTransactionSince == nil {
+		return r.NoTransactionDuringRead, nil
 	}
-	return r.StillQuiet()
+	return r.NoTransactionSince()
 }
 
 func vpnLayer(rec *dnslayer.Record) *dnslayer.Layer {
@@ -273,7 +267,7 @@ func LocalLookup(addr string) Lookup {
 	}
 }
 
-// offState: the tunnel is terminally off, so Decide's fail-safe pop needs no resolvers.
+// offState: Decide's fail-safe pop for a tunnel that is off needs no resolvers.
 func offState(st vpnstatus.TunnelStatus) bool {
 	return !st.Stale && (st.State == vpnstatus.Disabled || st.State == vpnstatus.Configured)
 }

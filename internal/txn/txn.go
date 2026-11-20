@@ -100,12 +100,9 @@ type Manager struct {
 	// Settle bounds how long Rollback/Recover wait for an already-claimed restore to report.
 	Settle time.Duration
 
-	mu sync.Mutex
-	// begun counts transactions that acquired the guard: a reader comparing it before and
-	// after a read knows whether one started (and possibly rolled back) in between.
-	begun atomic.Uint64
-	// afterFirstCheck lets tests run a transaction between ShowSettled's checks.
-	afterFirstCheck func()
+	mu                      sync.Mutex
+	begun                   atomic.Uint64 // transactions that acquired the guard; see ShowSettled
+	testHookAfterFirstCheck func()        // runs between ShowSettled's first guard check and its read
 }
 
 // Meta is persisted beside the snapshot so status survives a daemon restart.

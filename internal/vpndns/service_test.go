@@ -54,14 +54,15 @@ type tunnel struct {
 func (t *tunnel) Status(context.Context) (vpnstatus.TunnelStatus, error) { return t.status, t.err }
 
 type profiles struct {
-	dns   []netip.Addr
-	quiet bool // no transaction began or was pending during the read
-	began bool // a transaction began after the read, before the push
-	err   error
+	dns                   []netip.Addr
+	transactionDuringRead bool
+	transactionSinceRead  bool
+	err                   error
 }
 
 func (p *profiles) resolvers(context.Context, bool) (Read, error) {
-	return Read{DNS: p.dns, Quiet: p.quiet, StillQuiet: func() (bool, error) { return p.quiet && !p.began, nil }}, p.err
+	return Read{DNS: p.dns, NoTransactionDuringRead: !p.transactionDuringRead,
+		NoTransactionSince: func() (bool, error) { return !p.transactionDuringRead && !p.transactionSinceRead, nil }}, p.err
 }
 
 type env struct {
@@ -92,7 +93,7 @@ func setup(t *testing.T) *env {
 	dir := t.TempDir()
 	e := &env{dev: d, apply: &commitApplier{d: d},
 		tunnel:  &tunnel{status: vpnstatus.TunnelStatus{State: vpnstatus.Connected}},
-		profile: &profiles{dns: []netip.Addr{netip.MustParseAddr("10.64.0.1")}, quiet: true}}
+		profile: &profiles{dns: []netip.Addr{netip.MustParseAddr("10.64.0.1")}}}
 	e.layers = &dnslayer.Service{Device: d, Guards: guard.Dir{Path: filepath.Join(dir, "guards"), Now: time.Now},
 		RecordPath: filepath.Join(dir, "dns-layers.json"), Apply: e.apply}
 	e.svc = &Service{Tunnel: e.tunnel, Resolvers: e.profile.resolvers, Layers: e.layers,
@@ -284,16 +285,15 @@ func TestReconcilePopsWhenTunnelConfigIsDeleted(t *testing.T) {
 	}
 }
 
-// A transaction that began during the settled read (the read is not quiet) blocks the push
-// of what the read returned (#295 review).
-func TestReconcileDoesNotPushANotQuietRead(t *testing.T) {
+// A transaction that overlapped the settled read blocks the push of what the read returned.
+func TestReconcileDoesNotPushAReadATransactionOverlapped(t *testing.T) {
 	e := setup(t)
-	e.profile.quiet = false
+	e.profile.transactionDuringRead = true
 	e.reconcile(t, Keep)
 	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
 		t.Fatal("pushed resolvers of a read a transaction overlapped")
 	}
-	e.profile.quiet = true // next tick
+	e.profile.transactionDuringRead = false // next tick
 	e.reconcile(t, Push)
 }
 
@@ -334,20 +334,20 @@ func TestReconcileReadsTunnelStateAfterTheWait(t *testing.T) {
 		if settled {
 			e.tunnel.status.State = vpnstatus.Disabled // a Disable applied during the wait
 		}
-		return Read{DNS: e.profile.dns, Quiet: true}, nil
+		return Read{DNS: e.profile.dns, NoTransactionDuringRead: true}, nil
 	}
 	e.reconcile(t, Pop)
 }
 
-// An Enable that begins after a quiet read, before the push, may be applying other
-// resolvers: the push is skipped this tick (#295 review).
-func TestReconcileRechecksQuietBeforePush(t *testing.T) {
+// An Enable that begins after the read, before the push, may be applying other resolvers:
+// the push is skipped this tick.
+func TestReconcileRechecksTransactionsBeforePush(t *testing.T) {
 	e := setup(t)
-	e.profile.began = true
+	e.profile.transactionSinceRead = true
 	e.reconcile(t, Keep)
 	if _, err := os.Stat(e.layers.RecordPath); !os.IsNotExist(err) {
 		t.Fatal("pushed resolvers while a transaction had begun")
 	}
-	e.profile.began = false
+	e.profile.transactionSinceRead = false
 	e.reconcile(t, Push)
 }

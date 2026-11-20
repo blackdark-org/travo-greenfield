@@ -57,7 +57,7 @@ func ValidateSplit(in []netip.Prefix) ([]netip.Prefix, error) {
 
 // resolverOption tells, on every split route Travo writes, whether Travo added it for a
 // resolver ("1") or the user selected it ("0"), so a user /32 equal to a resolver is never
-// mistaken for one (#295 review). netifd ignores it (procd container).
+// mistaken for one. netifd ignores it (procd container).
 const resolverOption = "travo_resolver"
 
 // splitRoute is one owned route section: a user prefix, or a resolver /32 Travo added.
@@ -221,6 +221,25 @@ func (s *Service) SetSplit(ctx context.Context, user []netip.Prefix) (txn.Status
 		}
 		return s.proveSplit(ctx, proof, len(routes) > 0)
 	})
+}
+
+// profileSplit is the split selection before and after applying a profile: the user's
+// prefixes stay, the resolver /32s follow the profile's resolvers (#296).
+type profileSplit struct{ current, next []splitRoute }
+
+func (p profileSplit) isSplit() bool { return len(p.next) > 0 }
+func (p profileSplit) changed() bool { return !slices.Equal(p.current, p.next) }
+
+func (s *Service) splitForProfile(network []device.Section, profile vpnprofiles.Config) (profileSplit, error) {
+	appliedDNS, err := TunnelResolvers(network, s.profiles)
+	if err != nil && !errors.Is(err, vpnprofiles.ErrNotFound) {
+		return profileSplit{}, errUnavailable
+	}
+	current, err := currentSplit(network, appliedDNS)
+	if err != nil {
+		return profileSplit{}, err
+	}
+	return profileSplit{current: current, next: splitRoutes(userRoutes(current), profile.DNS)}, nil
 }
 
 // withoutPeers drops the peer sections, which stageEnable has already rewritten with the

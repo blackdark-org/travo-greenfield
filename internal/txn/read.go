@@ -6,16 +6,14 @@ import (
 	"github.com/blackdark-org/travo-greenfield/internal/device"
 )
 
-// Settled is a config read that no transaction touched while it ran.
+// Settled is a config read and whether a transaction overlapped it. Sections of an
+// overlapped read may belong to a change that is unconfirmed or was rolled back.
 type Settled struct {
-	Sections []device.Section
-	// Quiet is false when a transaction began, or its guard was held, at any point between
-	// the start and the end of the read: the sections may belong to a change that is not
-	// confirmed or was rolled back meanwhile.
-	Quiet bool
-	// StillQuiet reports whether a quiet read is still current: no transaction began and none
-	// holds its guard since the read. Call it right before acting on the read.
-	StillQuiet func() (bool, error)
+	Sections                []device.Section
+	NoTransactionDuringRead bool
+	// NoTransactionSince reports that no transaction began or holds its guard since the read
+	// started; call it right before acting on the read.
+	NoTransactionSince func() (bool, error)
 }
 
 // ShowSettled reads config under its write lock, so it never sees another writer's staged
@@ -27,8 +25,8 @@ func (m *Manager) ShowSettled(ctx context.Context, config string) (Settled, erro
 	if err != nil {
 		return Settled{}, err
 	}
-	if m.afterFirstCheck != nil {
-		m.afterFirstCheck()
+	if m.testHookAfterFirstCheck != nil {
+		m.testHookAfterFirstCheck()
 	}
 	lctx, unlock, err := m.Locks.Lock(ctx, []string{config})
 	if err != nil {
@@ -43,12 +41,12 @@ func (m *Manager) ShowSettled(ctx context.Context, config string) (Settled, erro
 	if err != nil {
 		return Settled{}, err
 	}
-	quiet := !heldBefore && !heldAfter && m.begun.Load() == before
-	still := func() (bool, error) {
+	untouched := !heldBefore && !heldAfter && m.begun.Load() == before
+	since := func() (bool, error) {
 		held, err := m.guardHeld()
-		return quiet && !held && m.begun.Load() == before, err
+		return untouched && !held && m.begun.Load() == before, err
 	}
-	return Settled{Sections: sections, Quiet: quiet, StillQuiet: still}, nil
+	return Settled{Sections: sections, NoTransactionDuringRead: untouched, NoTransactionSince: since}, nil
 }
 
 func (m *Manager) guardHeld() (bool, error) {
