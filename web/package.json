@@ -20,7 +20,7 @@
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@tailwindcss/vite": "4.3.5",
     "bits-ui": "2.21.0",
-    "cn": "0.3.3",
+    "cn": "0.5.2",
     "shadcn-svelte": "1.8.1",
     "svelte": "5.57.3",
     "svelte-check": "4.7.8",
