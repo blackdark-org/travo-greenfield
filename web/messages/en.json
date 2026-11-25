@@ -197,7 +197,7 @@
   "usbtether_install_blocked": "Driver install unfinished",
   "usbtether_bound_missing": "The phone on {device} is not connected. Plug it in, or use the phone that is connected now.",
   "usbtether_phones": "Phones",
-  "usbtether_no_phone": "No tethered phone detected. Install the drivers, connect a phone by USB and turn on USB tethering (Android) or Personal Hotspot (iPhone).",
+  "usbtether_no_phone": "Install the drivers, connect a phone by USB, then turn on USB tethering (Android) or Personal Hotspot (iPhone).",
   "usbtether_kind_android": "Android",
   "usbtether_kind_ecm": "USB Ethernet (CDC)",
   "usbtether_kind_iphone": "iPhone",
@@ -1324,5 +1324,7 @@
   "vpn_no_profile": "No profile yet",
   "tailscale_vpn_row": "Your tailnet, exit nodes and LAN sharing.",
   "logs_search": "Search the log",
-  "clients_unknown": "Unknown device"
+  "clients_unknown": "Unknown device",
+  "osupdate_never_short": "Not since the service started",
+  "usbtether_no_phone_title": "No phone connected"
 }

@@ -112,7 +112,7 @@ async function change(enable: boolean, device = '', kind = '') {
 
       <GroupHeading label={m.usbtether_phones()} />
       {#if st.links.length === 0}
-        <EmptyState icon={Smartphone} title={m.usbtether_no_phone()} />
+        <EmptyState icon={Smartphone} title={m.usbtether_no_phone_title()} text={m.usbtether_no_phone()} />
       {:else}
         <div>
           {#each st.links as link (link.name)}

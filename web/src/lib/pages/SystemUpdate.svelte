@@ -160,7 +160,16 @@ onMount(() => {
 });
 </script>
 
-<Section title={m.update_title()}>
+<Section
+  title={m.update_title()}
+  description={pending
+    ? m.update_checking()
+    : result?.status === 'available'
+      ? m.update_available({ version: result.latest_version ?? '' })
+      : result?.status === 'disabled'
+        ? disabledMessage(result)
+        : labels[result?.status ?? 'unavailable']()}
+>
   {#snippet actions()}
     {#if result?.status === 'disabled'}
       <Status kind="neutral">{m.update_off()}</Status>
@@ -176,17 +185,6 @@ onMount(() => {
         onclick={() => { if (controller) void check('manual', controller); }}><RefreshCw aria-hidden="true" />{m.update_check()}</Button>
     {/if}
   {/snippet}
-  <p aria-live="polite" class="text-sm text-muted-foreground">
-    {#if pending}
-      {m.update_checking()}
-    {:else if result?.status === 'available'}
-      {m.update_available({ version: result.latest_version ?? '' })}
-    {:else if result?.status === 'disabled'}
-      {disabledMessage(result)}
-    {:else}
-      {labels[result?.status ?? 'unavailable']()}
-    {/if}
-  </p>
   <div aria-live="polite">
     {#if verifying || stage?.status === 'verifying'}
       <p class="text-muted-foreground">{m.update_verifying()}</p>

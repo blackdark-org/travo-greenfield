@@ -94,11 +94,11 @@ async function flash(event: SubmitEvent) {
           <input id="firmware-file" type="file" accept=".bin,.img,.itb" class="sr-only" bind:this={fileInput} bind:files disabled={busy} />
           <div class="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" type="button" disabled={busy} onclick={() => fileInput?.click()}><FileUp aria-hidden="true" />{m.firmware_choose()}</Button>
-            <span class="text-sm break-all text-muted-foreground">{files?.[0]?.name ?? m.firmware_no_file()}</span>
+            <span class="text-sm break-all text-muted-foreground">{files?.[0] ? `${files[0].name} · ${formatBytes(files[0].size)}` : m.firmware_no_file()}</span>
           </div>
         </div>
         <div class="flex justify-end">
-          <Button type="submit" disabled={busy || !files?.length}>
+          <Button variant={files?.length ? 'default' : 'outline'} type="submit" disabled={busy || !files?.length}>
             {busy && !image ? m.firmware_uploading() : m.firmware_upload()}
           </Button>
         </div>

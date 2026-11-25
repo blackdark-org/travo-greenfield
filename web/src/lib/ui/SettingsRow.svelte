@@ -9,12 +9,15 @@ let {
   description,
   for: forId,
   control,
+  below,
   top = false,
 }: {
   label: string;
   description?: string;
   for?: string;
   control: Snippet;
+  /** Under the description, full width of the text column: a load error with its Retry. */
+  below?: Snippet;
   /** Top-align label and control, for a control taller than one line (textarea). */
   top?: boolean;
 } = $props();
@@ -32,6 +35,7 @@ let {
       <span class="text-sm leading-none font-medium break-words">{label}</span>
     {/if}
     {#if description}<p class="text-sm text-muted-foreground">{description}</p>{/if}
+    {#if below}{@render below()}{/if}
   </div>
   <div class="flex flex-wrap items-center gap-2">{@render control()}</div>
 </div>

@@ -46,14 +46,15 @@ onDestroy(() => {
 
 <!-- One row in the VPN page's traffic rules; the routes are edited in a dialog. -->
 <SettingsRow label={m.vpn_split()} description={m.vpn_split_help()}>
+  {#snippet below()}
+    {#if split.status.state !== 'ready'}
+      <LoadState status={split.status} retry={split.retry} stale={split.data !== undefined}><span></span></LoadState>
+    {/if}
+  {/snippet}
   {#snippet control()}
-    <LoadState status={split.status} retry={split.retry} stale={split.data !== undefined}>
-      {#if split.data}
-        <span class="text-sm text-muted-foreground">{split.data.routes.length ? m.vpn_split_on({ count: split.data.routes.length }) : m.vpn_split_full()}</span>
-      {/if}
-    </LoadState>
     {#if split.data}
-    <Button variant="outline" size="sm" type="button" disabled={txn.busy} onclick={() => { draft = undefined; open = true; }}>{m.vpn_split_edit()}</Button>
+      <span class="text-sm text-muted-foreground {split.status.state !== 'ready' ? 'opacity-60' : ''}">{split.data.routes.length ? m.vpn_split_on({ count: split.data.routes.length }) : m.vpn_split_full()}</span>
+      <Button variant="outline" size="sm" type="button" disabled={txn.busy} onclick={() => { draft = undefined; open = true; }}>{m.vpn_split_edit()}</Button>
     {/if}
   {/snippet}
 </SettingsRow>

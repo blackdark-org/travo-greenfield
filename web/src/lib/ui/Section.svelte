@@ -34,5 +34,5 @@ const headingId = $props.id();
   </Header>
   <!-- Empty blocks (closed aria-live regions) take no gap; content that renders nothing hides. -->
   {#if children}<Content class="gap-4 [&:not(:has(>:not(:empty)))]:hidden [&>:empty]:hidden">{@render children()}</Content>{/if}
-  {#if footer}<Footer class="justify-end gap-2">{@render footer()}</Footer>{/if}
+  {#if footer}<Footer class="justify-end gap-2 [&:not(:has(>*))]:hidden">{@render footer()}</Footer>{/if}
 </Root>

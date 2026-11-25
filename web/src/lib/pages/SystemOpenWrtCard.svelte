@@ -40,7 +40,7 @@ async function check(refreshLists: boolean) {
   <SettingsRow {label}>{#snippet control()}<span class="text-sm">{value}</span>{/snippet}</SettingsRow>
 {/snippet}
 
-<Section title={m.osupdate_title()} description={m.osupdate_intro()}>
+<Section title={m.osupdate_title()} description={`${m.osupdate_intro()} ${m.osupdate_luci_hint()}`}>
   {#snippet actions()}
     <Button variant="ghost" size="sm" href={luci} target="_blank" rel="noopener noreferrer">{m.osupdate_open_luci()}<ExternalLink aria-hidden="true" /></Button>
   {/snippet}
@@ -73,10 +73,9 @@ async function check(refreshLists: boolean) {
         {@render fact(m.osupdate_checked(), new Date(result.checked_at).toLocaleString())}
       </div>
     {:else}
-      <p class="text-sm text-muted-foreground">{m.osupdate_never()}</p>
+      {@render fact(m.osupdate_checked(), m.osupdate_never_short())}
     {/if}
   </LoadState>
-  <p class="text-sm text-muted-foreground">{m.osupdate_luci_hint()}</p>
   {#snippet footer()}
     <Button variant="outline" type="button" disabled={busy} onclick={() => check(true)}>{m.osupdate_check_refresh()}</Button>
     <Button variant="default" type="button" disabled={busy} onclick={() => check(false)}>{m.osupdate_check()}</Button>

@@ -17,7 +17,7 @@ let {
 
 <div data-slot="empty-state" class="flex flex-col items-center gap-2 py-6 text-center">
   <Icon aria-hidden="true" size={24} class="text-muted-foreground" />
-  <p class="text-sm font-medium">{title}</p>
+  <p class="max-w-prose text-sm font-medium">{title}</p>
   {#if text}<p class="max-w-prose text-sm text-muted-foreground">{text}</p>{/if}
   {#if action}<div class="mt-2">{@render action()}</div>{/if}
 </div>
