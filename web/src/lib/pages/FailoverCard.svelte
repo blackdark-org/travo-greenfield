@@ -1,5 +1,8 @@
 <script lang="ts">
+import ArrowDown from '@lucide/svelte/icons/arrow-down';
+import ArrowUp from '@lucide/svelte/icons/arrow-up';
 import Plus from '@lucide/svelte/icons/plus';
+import X from '@lucide/svelte/icons/x';
 import { onDestroy } from 'svelte';
 import Button from '$lib/components/ui/button/button.svelte';
 import { enableFailover } from '../api/gen';
@@ -92,6 +95,17 @@ async function stop() {
 
 <Section title={m.failover_title()} description={m.failover_help()}>
   {#snippet actions()}
+    {#if fo.data}
+      {@const st = fo.data}
+      {#if st.blocked}<Status kind="warn">{m.failover_blocked()}</Status>{/if}
+      {#if st.enabled && st.active && st.running}
+        <Status kind="ok">{m.failover_state_on()}</Status>
+      {:else if st.enabled}
+        <Status kind="warn">{m.failover_state_not_running()}</Status>
+      {:else}
+        <Status kind="neutral">{m.failover_state_off()}</Status>
+      {/if}
+    {/if}
     {#if fo.data && !txn.busy}
       {#if fo.data.enabled || fo.data.running}
         <Button variant="destructive" size="sm" type="button" disabled={stopping} onclick={stop}>{m.failover_disable()}</Button>
@@ -102,16 +116,6 @@ async function stop() {
   <LoadState status={fo.status} retry={fo.retry} stale={fo.data !== undefined}>
     {#if fo.data}
       {@const st = fo.data}
-      <div class="flex flex-wrap items-center gap-2">
-        {#if st.enabled && st.active && st.running}
-          <Status kind="ok">{m.failover_state_on()}</Status>
-        {:else if st.enabled}
-          <Status kind="warn">{m.failover_state_not_running()}</Status>
-        {:else}
-          <Status kind="neutral">{m.failover_state_off()}</Status>
-        {/if}
-        {#if st.blocked}<Status kind="warn">{m.failover_blocked()}</Status>{/if}
-      </div>
       <ol>
         {#each order as uplink, i (uplink)}
           {@const live = st.states.find((s) => s.name === uplink)}
@@ -119,9 +123,9 @@ async function stop() {
           <SettingsRow label={`${i + 1}. ${labels[uplink]()}`}>
             {#snippet control()}
             <Status kind={live?.up ? 'ok' : 'neutral'}>{live?.up ? m.failover_up() : m.failover_down()}</Status>
-            <Button variant="outline" size="sm" type="button" disabled={i === 0 || txn.busy} aria-label={m.failover_move_up({ uplink: labels[uplink]() })} onclick={() => (draft = moveUplink(order, i, -1))}>↑</Button>
-            <Button variant="outline" size="sm" type="button" disabled={i === order.length - 1 || txn.busy} aria-label={m.failover_move_down({ uplink: labels[uplink]() })} onclick={() => (draft = moveUplink(order, i, 1))}>↓</Button>
-            <Button variant="ghost" size="sm" type="button" disabled={txn.busy} onclick={() => (draft = toggleUplink(order, uplink))}>{m.failover_remove()}</Button>
+            <Button variant="ghost" size="icon" type="button" disabled={i === 0 || txn.busy} aria-label={m.failover_move_up({ uplink: labels[uplink]() })} onclick={() => (draft = moveUplink(order, i, -1))}><ArrowUp aria-hidden="true" size={16} /></Button>
+            <Button variant="ghost" size="icon" type="button" disabled={i === order.length - 1 || txn.busy} aria-label={m.failover_move_down({ uplink: labels[uplink]() })} onclick={() => (draft = moveUplink(order, i, 1))}><ArrowDown aria-hidden="true" size={16} /></Button>
+            <Button variant="ghost" size="icon" type="button" disabled={txn.busy} aria-label={`${m.failover_remove()} ${labels[uplink]()}`} onclick={() => (draft = toggleUplink(order, uplink))}><X aria-hidden="true" size={16} /></Button>
             {/snippet}
           </SettingsRow>
           </li>

@@ -798,7 +798,7 @@
   "firmware_title": "Firmware upgrade",
   "firmware_intro": "Flash an OpenWrt sysupgrade image you downloaded for this router. The image is checked first; nothing changes until you confirm. Packages you installed after the current image are dropped: to keep them, use LuCI attended sysupgrade instead.",
   "firmware_unavailable": "Firmware upgrade is unavailable.",
-  "firmware_file": "Sysupgrade image (up to {max} fits now)",
+  "firmware_file": "Up to {max} fits now.",
   "firmware_upload": "Upload and check",
   "firmware_uploading": "Uploading and checking…",
   "firmware_validation": "Check",
@@ -1326,5 +1326,5 @@
   "clients_unknown": "Unknown device",
   "osupdate_never_short": "Not since the service started",
   "usbtether_no_phone_title": "No phone connected",
-  "firmware_image": "Image"
+  "firmware_image": "Sysupgrade image"
 }
