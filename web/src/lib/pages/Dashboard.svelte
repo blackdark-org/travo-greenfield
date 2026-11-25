@@ -1,4 +1,5 @@
 <script lang="ts">
+import Wifi from '@lucide/svelte/icons/wifi';
 import { onDestroy } from 'svelte';
 import Button from '$lib/components/ui/button/button.svelte';
 import * as Collapsible from '$lib/components/ui/collapsible';
@@ -15,7 +16,6 @@ import { createTunnelControl } from '../vpn-tunnel.svelte';
 import CaptivePortalCard from './CaptivePortalCard.svelte';
 import InterfaceTraffic from './InterfaceTraffic.svelte';
 import QuickStatus from './QuickStatus.svelte';
-// Own chunk: the history card loads after the live cards (#232).
 import StatsHistoryCard from './StatsHistoryCard.svelte';
 import SystemCard from './SystemCard.svelte';
 import TopologyDiagram from './TopologyDiagram.svelte';
@@ -59,7 +59,7 @@ let trafficOpen = $state(false);
 <div class="flex flex-col gap-6">
   <PageHeader title={m.nav_dashboard()} description={m.dashboard_description()}>
     {#snippet actions()}
-      <Button size="sm" href={href('wifi')}>{m.dashboard_connect_to_wifi()}</Button>
+      <Button variant="outline" size="sm" href={href('wifi')}><Wifi aria-hidden="true" />{m.dashboard_connect_to_wifi()}</Button>
     {/snippet}
   </PageHeader>
 
@@ -72,6 +72,8 @@ let trafficOpen = $state(false);
     <Section title={m.topology_title()}>
       <TopologyDiagram
         model={topology}
+        uplinks={events.uplinks.data}
+        resources={resources.data}
         status={{
           uplinks: events.uplinks.status,
           connectivity: connectivity.status,
@@ -83,11 +85,14 @@ let trafficOpen = $state(false);
     </Section>
   </div>
 
-  <UplinkCards
-    sources={topology.sources}
-    uplinks={events.uplinks}
-    status={{ connectivity: connectivity.status, throughput: throughput.status }}
-  />
+  <!-- From lg the map carries the uplinks (details on hover), so the cards are phone-only. -->
+  <div class="lg:hidden">
+    <UplinkCards
+      sources={topology.sources}
+      uplinks={events.uplinks}
+      status={{ connectivity: connectivity.status, throughput: throughput.status }}
+    />
+  </div>
 
   <div class="grid items-start gap-4 lg:grid-cols-2">
     <QuickStatus

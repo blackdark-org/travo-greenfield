@@ -75,9 +75,9 @@ describe('TopologyDiagram', () => {
     expect(sourceItem(body, 'not_configured')).toContain('href="#/internet"');
     expect(body).toContain('topology-link topology-link-active');
     expect(body).toContain('topology-link topology-link-down');
-    // A source that is not set up gets no connector.
+    // A source that is not set up gets no connector:
     // usbtether is not set up, so it has no link: two source links plus the two client links.
-    expect(body.match(/<path d="M 0 /g)).toHaveLength(4);
+    expect(body.match(/<path d="M /g)).toHaveLength(4);
   });
 
   it('draws standby dashed and unknown with text', () => {
