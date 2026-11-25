@@ -3,11 +3,11 @@ import { m } from './paraglide/messages.js';
 import { disabledMessage } from './update-check';
 
 describe('disabledMessage', () => {
-  it('explains an off release source and how to turn checks on', () => {
+  it('explains an off release source and points to the README', () => {
     expect(disabledMessage({ disabled_reason: 'off', running_version: '1.2.3' })).toBe(
       m.update_disabled_off(),
     );
-    expect(m.update_disabled_off()).toContain('release_source');
+    expect(m.update_disabled_off()).toContain('README');
   });
 
   it('names the development build', () => {

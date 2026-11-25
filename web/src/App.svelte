@@ -233,7 +233,7 @@ $effect(() => {
                     <Button variant="ghost" type="button"
                       aria-expanded={navState[item.group]}
                       onclick={() => setGroup(item.group, !navState[item.group])}
-                      class="min-w-0 flex-1 justify-start gap-3 text-base font-normal {inside ? 'font-semibold' : ''}"
+                      class="min-w-0 flex-1 justify-start gap-3 text-base font-normal aria-expanded:bg-transparent {inside ? 'font-semibold' : ''}"
                       ><Icon aria-hidden="true" size={18} />{item.label()}</Button
                     >
                   {/if}

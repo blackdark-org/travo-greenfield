@@ -104,8 +104,8 @@ describe('TopologyDiagram', () => {
     const body = html(full);
     const part = body.slice(body.indexOf('data-part="clients"'));
     expect(part.match(/<a href="#\/clients"/g)).toHaveLength(2);
-    expect(part).toMatch(/>1<\/span>[\s\S]*?WiFi clients/);
-    expect(part).toMatch(/>1<\/span>[\s\S]*?Wired clients/);
+    expect(part).toContain('1 on WiFi');
+    expect(part).toContain('1 wired');
     expect(body).not.toContain('Incomplete');
     const partial = topologyModel({ clients: { ...clients, partial: true } });
     expect(html(partial)).toContain('Incomplete');
@@ -145,7 +145,7 @@ describe('TopologyDiagram', () => {
     const part = body.slice(body.indexOf('data-part="clients"'));
     expect(part).toContain('opacity-60');
     expect(part).toContain('status-stale');
-    expect(part).toContain('WiFi clients');
+    expect(part).toContain('1 on WiFi');
     expect(body.slice(0, body.indexOf('data-part="router"'))).not.toContain('status-stale');
   });
 

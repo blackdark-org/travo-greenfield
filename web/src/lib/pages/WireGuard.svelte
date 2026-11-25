@@ -1,5 +1,6 @@
 <script lang="ts">
 import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
+import FileUp from '@lucide/svelte/icons/file-up';
 import KeyRound from '@lucide/svelte/icons/key-round';
 import Plus from '@lucide/svelte/icons/plus';
 import { onDestroy } from 'svelte';
@@ -23,7 +24,6 @@ import { createLoader } from '../ui/loader.svelte';
 import { notify } from '../ui/notify';
 import PageHeader from '../ui/PageHeader.svelte';
 import Section from '../ui/Section.svelte';
-import SettingsRow from '../ui/SettingsRow.svelte';
 import Status from '../ui/Status.svelte';
 import { createTunnelControl, tunnelStates } from '../vpn-tunnel.svelte';
 import VPNTunnelSwitch from './VPNTunnelSwitch.svelte';
@@ -124,28 +124,28 @@ async function change(action: 'import' | 'select' | 'delete', id = '', label = n
 <div class="flex flex-col gap-6">
   <PageHeader title={m.nav_vpn_wireguard()} description={m.wireguard_page_description()} />
 
-  <Section title={m.vpn_tunnel()}>
-    <LoadState status={status.status} retry={status.retry} stale={status.data !== undefined}>
-      {#if status.data}
-        {@const snapshot = status.data}
-        {@const badge = tunnelStates[snapshot.state]}
-        <SettingsRow
-          label={m.vpn_tunnel()}
-          for="wireguard-tunnel-switch"
-          description={!profiles.data?.selected_id
+  <Section
+    title={m.vpn_tunnel()}
+    description={status.data
+      ? [
+          tunnelStates[status.data.state].label(),
+          !profiles.data?.selected_id
             ? m.vpn_tunnel_needs_profile()
-            : snapshot.handshake_age_seconds !== null
-              ? m.vpn_handshake_age({ age: formatUptime(snapshot.handshake_age_seconds) })
-              : undefined}
-        >
-          {#snippet control()}
-            <Status kind={badge.kind}>{badge.label()}</Status>
-            {#if snapshot.stale}<Status kind="stale">{m.load_stale()}</Status>{/if}
-            <VPNTunnelSwitch id="wireguard-tunnel-switch" {snapshot} control={tunnel} canEnable={Boolean(profiles.data?.selected_id)} />
-          {/snippet}
-        </SettingsRow>
+            : status.data.handshake_age_seconds !== null
+              ? m.vpn_handshake_age({ age: formatUptime(status.data.handshake_age_seconds) })
+              : '',
+        ].filter(Boolean).join(' · ')
+      : undefined}
+  >
+    {#snippet actions()}
+      {#if status.data}
+        {#if status.data.stale}<Status kind="stale">{m.load_stale()}</Status>{/if}
+        <VPNTunnelSwitch id="wireguard-tunnel-switch" snapshot={status.data} control={tunnel} canEnable={Boolean(profiles.data?.selected_id)} />
       {/if}
-    </LoadState>
+    {/snippet}
+    {#if status.status.state !== 'ready' || !status.data}
+      <LoadState status={status.status} retry={status.retry} stale={status.data !== undefined}><span></span></LoadState>
+    {/if}
   </Section>
 
   <Section title={m.vpn_saved_profiles()}>
@@ -218,9 +218,10 @@ async function change(action: 'import' | 'select' | 'delete', id = '', label = n
         <Label for="{formId}-config">{m.vpn_config()}</Label>
         <Textarea id="{formId}-config" class="w-full font-mono text-xs" rows={8} bind:value={config} required disabled={pending} spellcheck="false" placeholder="[Interface]"></Textarea>
       </div>
-      <div class="grid gap-2">
-        <Label for="{formId}-file">{m.vpn_config_file()}</Label>
-        <Input id="{formId}-file" type="file" accept=".conf,text/plain" disabled={pending} onchange={readFile} />
+      <div>
+        <input id="{formId}-file" type="file" accept=".conf,text/plain" class="sr-only" disabled={pending} onchange={readFile} />
+        <Button variant="outline" size="sm" type="button" disabled={pending}
+          onclick={() => document.getElementById(`${formId}-file`)?.click()}><FileUp aria-hidden="true" />{m.vpn_config_file()}</Button>
       </div>
     </form>
     <Dialog.Footer>

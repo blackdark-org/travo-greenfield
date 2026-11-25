@@ -12,6 +12,7 @@ import LoadState from '../ui/LoadState.svelte';
 import { createLoader } from '../ui/loader.svelte';
 import PageHeader from '../ui/PageHeader.svelte';
 import Section from '../ui/Section.svelte';
+import Status from '../ui/Status.svelte';
 import { createTunnelControl, tunnelStates } from '../vpn-tunnel.svelte';
 import { tailscaleStates } from './tailscale-states';
 import VPNDNSRow from './VPNDNSRow.svelte';
@@ -49,7 +50,7 @@ const wireguardHint = $derived.by(() => {
 });
 </script>
 
-<div class="flex max-w-4xl flex-col gap-6">
+<div class="flex flex-col gap-6">
   <PageHeader title={m.nav_vpn()} description={m.vpn_page_description()} />
 
   <Section title={m.vpn_connections()}>
@@ -66,8 +67,15 @@ const wireguardHint = $derived.by(() => {
       <LinkRow
         href={href('vpn-tailscale')}
         label={m.nav_vpn_tailscale()}
-        description={tailscale.data ? tailscaleStates[tailscalePhase(tailscale.data)].label() : undefined}
-      />
+        description={m.tailscale_vpn_intro()}
+      >
+        {#snippet control()}
+          {#if tailscale.data}
+            {@const state = tailscaleStates[tailscalePhase(tailscale.data)]}
+            <Status kind={state.kind}>{state.label()}</Status>
+          {/if}
+        {/snippet}
+      </LinkRow>
     </div>
   </Section>
 

@@ -77,16 +77,17 @@ a heading or row spacing. Controls are the copied shadcn-svelte components
 
 ### Width
 
-The content column is `max-w-6xl` (1152 px), left edge shared by every page. What fills it
-depends on the content:
+Every page uses the same content column, `max-w-6xl` (1152 px), so the page header and its
+actions sit in the same place on every page. Settings cards fill it like tables and grids do;
+what stays narrow is the control:
 
-- **Wide:** the dashboard, tables (clients, WireGuard profiles, port forwards, tokens),
-  logs and overview grids (Services) use the full column.
-- **Settings:** a page of `SettingsRow`s and edit forms is one column capped at `max-w-4xl`
-  (896 px). Settings are never laid out side by side: two short cards next to each other leave
-  holes and make rows hard to scan.
-- **Fields** have a fixed width in the row's control slot (`w-64`, `w-80` for addresses and
-  keys); they never stretch with the card.
+- **Fields** have a fixed width in the row's control slot (`w-28` for numbers and times, `w-64`
+  for names, addresses and keys); they never stretch with the card.
+- **Settings are never laid out side by side:** two short cards next to each other leave holes
+  and make rows hard to scan. Overview grids (Services, summary tiles) are the exception.
+- A card whose only control is one switch (WireGuard tunnel, AdGuard Home service, all LEDs)
+  puts the switch in its header and the state in its description, instead of a row that repeats
+  the card title.
 
 ### Patterns
 

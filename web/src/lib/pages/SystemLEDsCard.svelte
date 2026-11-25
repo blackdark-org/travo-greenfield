@@ -58,7 +58,13 @@ function save(event: SubmitEvent) {
 const formId = $props.id();
 </script>
 
-<Section title={m.leds_title()}>
+<Section title={m.leds_title()} description={loader.data?.leds.length ? (loader.data.off ? m.leds_held_off() : m.leds_all_hint()) : undefined}>
+  {#snippet actions()}
+    {#if loader.data?.leds.length}
+      {@const view = loader.data}
+      <Switch id="leds-all" aria-label={m.leds_all()} bind:checked={() => !view.off, (on) => toggle(!on)} disabled={busy} />
+    {/if}
+  {/snippet}
   <LoadState status={loader.status} retry={loader.retry} stale={loader.data !== undefined}>
     {#if loader.data}
       {@const view = loader.data}
@@ -66,11 +72,7 @@ const formId = $props.id();
         <EmptyState icon={Lightbulb} title={m.leds_none()} />
       {:else}
         <div aria-label={m.leds_title()} role="group">
-          <SettingsRow label={m.leds_all()} for="leds-all" description={view.off ? m.leds_held_off() : m.leds_all_hint()}>
-            {#snippet control()}
-              <Switch id="leds-all" bind:checked={() => !view.off, (on) => toggle(!on)} disabled={busy} />
-            {/snippet}
-          </SettingsRow>
+
           {#each view.leds as led (led.name)}
             <SettingsRow label={ledLabel(led.name)} description={led.name}>
               {#snippet control()}

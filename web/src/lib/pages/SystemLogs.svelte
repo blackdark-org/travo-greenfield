@@ -73,14 +73,14 @@ function download() {
             {#each log.data.entries as entry, i (i)}
               <li class="border-b border-border last:border-b-0">
                 <details class="group">
-                  <summary class="flex cursor-pointer list-none items-center gap-2 px-3 py-1 hover:bg-muted/50 [&::-webkit-details-marker]:hidden">
+                  <summary class="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-0.5 px-3 py-1 sm:flex-nowrap hover:bg-muted/50 [&::-webkit-details-marker]:hidden">
                     <span class="shrink-0 text-muted-foreground tabular-nums">{shortTime(entry.time)}</span>
-                    {#if entry.level}<Status kind={levelKind(entry.level)}>{entry.level}</Status>{/if}
-                    {#if entry.program}<span class="w-28 shrink-0 truncate font-semibold max-sm:hidden">{entry.program}</span>{/if}
-                    <span class="min-w-0 flex-1 truncate group-open:hidden">{entry.message}</span>
+                    <span class="w-16 shrink-0">{#if entry.level}<Status kind={levelKind(entry.level)}>{entry.level}</Status>{/if}</span>
+                    {#if entry.program}<span class="w-28 shrink-0 truncate font-semibold">{entry.program}</span>{/if}
+                    <span class="min-w-0 truncate group-open:hidden max-sm:basis-full sm:flex-1">{entry.message}</span>
                   </summary>
                   <div class="px-3 pb-2 break-all whitespace-pre-wrap">
-                    {#if entry.program}<span class="font-semibold sm:hidden">{entry.program}: </span>{/if}{entry.message}
+                    {entry.message}
                   </div>
                 </details>
               </li>

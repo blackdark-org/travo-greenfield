@@ -52,7 +52,9 @@ onDestroy(() => {
         <span class="text-sm text-muted-foreground">{split.data.routes.length ? m.vpn_split_on({ count: split.data.routes.length }) : m.vpn_split_full()}</span>
       {/if}
     </LoadState>
-    <Button variant="outline" size="sm" type="button" disabled={txn.busy || !split.data} onclick={() => { draft = undefined; open = true; }}>{m.vpn_split_edit()}</Button>
+    {#if split.data}
+    <Button variant="outline" size="sm" type="button" disabled={txn.busy} onclick={() => { draft = undefined; open = true; }}>{m.vpn_split_edit()}</Button>
+    {/if}
   {/snippet}
 </SettingsRow>
 

@@ -1307,7 +1307,7 @@
   "uplink_card_setup": "Set up",
   "dashboard_quick_status": "Quick status",
   "dashboard_system_open": "Details",
-  "update_disabled_off": "Update checks are turned off on this router. Set travo-greenfield.main.release_source to OWNER/REPO and restart the service to turn them on.",
+  "update_disabled_off": "Update checks are off on this router: no release source is set (see the README).",
   "update_disabled_unstable": "This build ({version}) is not a release, so it does not check for updates.",
   "uplink_card_protocol": "Protocol",
   "uplink_card_gateway": "Gateway",
@@ -1323,7 +1323,7 @@
   "vpn_traffic_rules": "Traffic rules",
   "wireguard_page_description": "Your WireGuard profiles and the tunnel that uses one of them.",
   "vpn_add_profile": "Add profile",
-  "vpn_config_file": "Or choose a .conf file",
+  "vpn_config_file": "Choose .conf file",
   "table_actions": "Actions",
   "table_row_menu": "Actions for {name}",
   "adguard_page_description": "Blocks ads and trackers for every device on the LAN.",
@@ -1359,5 +1359,12 @@
   "wifi_ap_switch": "Access point {ssid}",
   "clients_device": "Device",
   "clients_connection": "Connection",
-  "clients_address": "Address"
+  "clients_address": "Address",
+  "netview_col_interface": "Interface",
+  "netview_col_status": "Status",
+  "netview_col_protocol": "Protocol",
+  "netview_col_addresses": "Addresses",
+  "netview_col_zone": "Zone",
+  "netview_col_policy": "Input · output · forward",
+  "netview_col_networks": "Networks"
 }

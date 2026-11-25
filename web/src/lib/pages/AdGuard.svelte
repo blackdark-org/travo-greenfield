@@ -42,7 +42,7 @@ async function change(action: AdGuardAction, enabled: boolean) {
 const proxy = adguardUrl(window.location);
 </script>
 
-<div class="flex max-w-4xl flex-col gap-6">
+<div class="flex flex-col gap-6">
   <PageHeader title={m.adguard_title()} description={m.adguard_page_description()}>
     {#snippet actions()}
       {#if adguard.data?.running && adguard.data.loopback}
@@ -50,7 +50,24 @@ const proxy = adguardUrl(window.location);
       {/if}
     {/snippet}
   </PageHeader>
-  <Section title={m.adguard_service_title()}>
+  <Section
+    title={m.adguard_service_title()}
+    description={adguard.data?.installed
+      ? [adguard.data.running ? m.adguard_state_running() : m.adguard_state_stopped(), m.adguard_version({ version: adguard.data.version }), adguard.data.config_error ? m.adguard_err_config() : '', adguard.data.migration_failed ? m.adguard_migration_failed() : ''].filter(Boolean).join(' · ')
+      : undefined}
+  >
+    {#snippet actions()}
+      {#if adguard.data?.installed}
+        {@const st = adguard.data}
+        {#if st.busy}<Status kind="info">{m.adguard_busy()}</Status>{/if}
+        <Switch
+          id="adguard-running"
+          aria-label={m.adguard_running_label()}
+          bind:checked={() => st.running, (on) => void change('service', on)}
+          disabled={pending !== undefined || st.busy || (st.topology === 'expert' && st.running)}
+        />
+      {/if}
+    {/snippet}
     <LoadState status={adguard.status} retry={adguard.retry} stale={adguard.data !== undefined}>
       {#if adguard.data}
         {@const st = adguard.data}
@@ -66,21 +83,7 @@ const proxy = adguardUrl(window.location);
           <Button variant="outline" size="sm" type="button" class="self-start" disabled={pending !== undefined || st.busy} onclick={() => change('install', true)}>{m.adguard_install()}</Button>
         {:else}
           <div>
-            <SettingsRow
-              label={m.adguard_running_label()}
-              for="adguard-running"
-              description={[m.adguard_version({ version: st.version }), st.config_error ? m.adguard_err_config() : '', st.migration_failed ? m.adguard_migration_failed() : ''].filter(Boolean).join(' ')}
-            >
-              {#snippet control()}
-                {#if st.busy}<Status kind="info">{m.adguard_busy()}</Status>{/if}
-                {#if st.installed && !st.running}<Status kind="warn">{m.adguard_state_stopped()}</Status>{/if}
-                <Switch
-                  id="adguard-running"
-                  bind:checked={() => st.running, (on) => void change('service', on)}
-                  disabled={pending !== undefined || st.busy || (st.topology === 'expert' && st.running)}
-                />
-              {/snippet}
-            </SettingsRow>
+
             {#if st.topology !== 'expert'}
               <SettingsRow
                 label={m.adguard_default_dns_label()}

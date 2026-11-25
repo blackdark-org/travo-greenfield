@@ -7,7 +7,7 @@ import DHCPServerCard from './DHCPServerCard.svelte';
 import DNSNamesCard from './DNSNamesCard.svelte';
 </script>
 
-<div class="flex max-w-4xl flex-col gap-6">
+<div class="flex flex-col gap-6">
   <PageHeader title={m.nav_network_dhcp()} description={m.network_dhcp_description()} />
   <DHCPServerCard />
   <DNSNamesCard />

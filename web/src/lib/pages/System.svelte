@@ -45,7 +45,7 @@ const used = (total: number, available: number) =>
   <span class="text-sm {mono ? 'font-mono' : ''}">{value}</span>
 {/snippet}
 
-<div class="flex max-w-4xl flex-col gap-6">
+<div class="flex flex-col gap-6">
   <PageHeader title={m.nav_group_system()} description={m.system_device_description()}>
     {#snippet actions()}
       <Button variant="outline" size="sm" type="button" disabled={backupPending} onclick={downloadBackup}>

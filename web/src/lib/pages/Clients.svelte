@@ -162,7 +162,7 @@ async function removeReservation(r: Reservation) {
           <Table.Header>
             <Table.Row>
               <Table.Head>{m.clients_device()}</Table.Head>
-              <Table.Head>{m.clients_connection()}</Table.Head>
+              <Table.Head class="max-sm:hidden">{m.clients_connection()}</Table.Head>
               <Table.Head class="max-md:hidden">{m.clients_address()}</Table.Head>
               <Table.Head class="w-28"><span class="sr-only">{m.table_actions()}</span></Table.Head>
             </Table.Row>
@@ -173,13 +173,14 @@ async function removeReservation(r: Reservation) {
               <Table.Row>
                 <Table.Cell class="whitespace-normal">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-medium break-all">{clientName(c)}</span>
+                    <span class="font-medium break-words">{clientName(c)}</span>
                     {#if c.reserved}<Status kind="info">{m.clients_reserved()}</Status>{/if}
                     {#if c.blocked}<Status kind="danger">{m.clients_blocked()}</Status>{/if}
                   </div>
                   <div class="font-mono text-xs text-muted-foreground md:hidden">{c.ip ?? c.mac}</div>
+                  <div class="mt-1 sm:hidden"><Status kind={conn.kind}>{conn.label}</Status></div>
                 </Table.Cell>
-                <Table.Cell class="whitespace-normal">
+                <Table.Cell class="whitespace-normal max-sm:hidden">
                   <Status kind={conn.kind}>{conn.label}</Status>
                   {#if c.ssid}<span class="block text-xs text-muted-foreground">{m.clients_on_ssid({ ssid: c.ssid })}</span>{/if}
                 </Table.Cell>

@@ -90,8 +90,18 @@ const sourceKind: Record<SourceState, StatusKind> = {
   unknown: 'neutral',
 };
 const clientRows = $derived([
-  { key: 'wifi', icon: Wifi, count: model.clients?.wifi, label: m.topology_clients_wifi_label() },
-  { key: 'lan', icon: Monitor, count: model.clients?.lan, label: m.topology_clients_lan_label() },
+  {
+    key: 'wifi',
+    icon: Wifi,
+    count: model.clients?.wifi,
+    text: (count: number) => m.topology_clients_wifi({ count }),
+  },
+  {
+    key: 'lan',
+    icon: Monitor,
+    count: model.clients?.lan,
+    text: (count: number) => m.topology_clients_lan({ count }),
+  },
 ]);
 const clientLink = (count: number | undefined): SourceState =>
   count === undefined ? 'unknown' : count > 0 ? 'active' : 'down';
@@ -236,7 +246,7 @@ const routerDot = $derived(
           >
             <span class="flex size-10 items-center justify-center rounded-lg border bg-card {row.count ? 'topology-node-active' : 'border-border text-muted-foreground'}"><Icon aria-hidden="true" size={18} /></span>
             <span>
-              <span class="block text-sm font-medium"><span class="tabular-nums">{row.count ?? '–'}</span> {row.count === undefined ? '' : row.label}</span>
+              <span class="block text-sm font-medium tabular-nums">{row.count === undefined ? '–' : row.text(row.count)}</span>
               {#if row.count === undefined}<span class="block text-xs text-muted-foreground">{m.topology_state_unknown()}</span>{/if}
             </span>
           </a>

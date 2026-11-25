@@ -62,7 +62,7 @@ async function logout() {
 const phaseStatus = tailscaleStates;
 </script>
 
-<div class="flex max-w-4xl flex-col gap-6">
+<div class="flex flex-col gap-6">
   <PageHeader title={m.tailscale_title()} description={m.tailscale_page_description()} />
   <Section title={m.tailscale_status_title()}>
     <LoadState status={ts.status} retry={ts.retry} stale={ts.data !== undefined}>

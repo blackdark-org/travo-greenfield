@@ -50,6 +50,8 @@ async function save(name: string, action: ButtonAction) {
   notify.success(m.buttons_saved());
   void loader.retry();
 }
+// Device-tree labels are lowercase kernel names (`reset`, `switch`); show them as words.
+const buttonName = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 </script>
 
 <Section title={m.buttons_title()}>
@@ -62,7 +64,7 @@ async function save(name: string, action: ButtonAction) {
           {#each loader.data.buttons as button (button.name)}
             {@const last = button.last ? m.buttons_last({ time: runTime(button.last.at, undefined), position: positionLabel(button.last.position), outcome: outcomeLabel(button.last.outcome) }) : ''}
             <SettingsRow
-              label={button.label || button.name}
+              label={buttonName(button.label || button.name)}
               description={button.configurable ? [m.buttons_switch_hint(), last].filter(Boolean).join(' ') : m.buttons_stock_hint()}
             >
               {#snippet control()}
