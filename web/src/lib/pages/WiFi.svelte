@@ -1,5 +1,6 @@
 <script lang="ts">
 import Radar from '@lucide/svelte/icons/radar';
+import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 import { onDestroy, onMount } from 'svelte';
 import Button from '$lib/components/ui/button/button.svelte';
 import {
@@ -280,7 +281,7 @@ async function scan() {
     {#snippet actions()}
       {#if summary.status.state === 'ready'}
         <Button variant="outline" size="sm" type="button" onclick={summary.retry}>
-          {m.wifi_refresh()}
+          <RefreshCw aria-hidden="true" />{m.wifi_refresh()}
         </Button>
       {/if}
     {/snippet}

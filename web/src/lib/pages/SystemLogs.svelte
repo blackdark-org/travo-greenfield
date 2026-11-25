@@ -2,6 +2,7 @@
 import Download from '@lucide/svelte/icons/download';
 import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 import ScrollText from '@lucide/svelte/icons/scroll-text';
+import Search from '@lucide/svelte/icons/search';
 import { onDestroy } from 'svelte';
 import Button from '$lib/components/ui/button/button.svelte';
 import Input from '$lib/components/ui/input/input.svelte';
@@ -59,8 +60,11 @@ function download() {
     <div class="flex flex-wrap items-center gap-2">
       <SelectField bind:value={level} class="w-48" onchange={apply}
         options={[{ value: '', label: m.logs_level_all() }, ...LOG_LEVELS.map((option) => ({ value: option, label: m.logs_level_at_least({ level: option }) }))]} />
-      <Input class="min-w-40 flex-1" bind:value={filter} oninput={onFilterInput} maxlength={128} autocomplete="off" spellcheck={false}
-        aria-label={m.logs_filter()} placeholder={m.logs_filter_hint()} />
+      <div class="relative min-w-40 flex-1">
+        <Search aria-hidden="true" size={16} class="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground" />
+        <Input class="pl-8" type="search" bind:value={filter} oninput={onFilterInput} maxlength={128} autocomplete="off" spellcheck={false}
+          aria-label={m.logs_search()} placeholder={m.logs_filter_hint()} />
+      </div>
       <Button variant="ghost" size="icon" type="button" aria-label={m.logs_refresh()} onclick={apply}><RefreshCw aria-hidden="true" size={16} /></Button>
     </div>
 
@@ -75,7 +79,7 @@ function download() {
                 <details class="group">
                   <summary class="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-0.5 px-3 py-1 sm:flex-nowrap hover:bg-muted/50 [&::-webkit-details-marker]:hidden">
                     <span class="shrink-0 text-muted-foreground tabular-nums">{shortTime(entry.time)}</span>
-                    <span class="w-16 shrink-0">{#if entry.level}<Status kind={levelKind(entry.level)}>{entry.level}</Status>{/if}</span>
+                    <span class="w-[4.5rem] shrink-0">{#if entry.level}<Status kind={levelKind(entry.level)}>{entry.level}</Status>{/if}</span>
                     {#if entry.program}<span class="w-28 shrink-0 truncate font-semibold">{entry.program}</span>{/if}
                     <span class="min-w-0 truncate group-open:hidden max-sm:basis-full sm:flex-1">{entry.message}</span>
                   </summary>

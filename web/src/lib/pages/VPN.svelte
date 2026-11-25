@@ -41,7 +41,7 @@ const wireguardHint = $derived.by(() => {
   if (!snapshot) return undefined;
   const state = tunnelStates[snapshot.state].label();
   const profile = profiles.data?.profiles.find((p) => p.id === profiles.data?.selected_id);
-  if (!profile) return `${state} · ${m.vpn_tunnel_needs_profile()}`;
+  if (!profile) return `${state} · ${m.vpn_no_profile()}`;
   const age =
     snapshot.handshake_age_seconds !== null
       ? ` · ${m.vpn_handshake_age({ age: formatUptime(snapshot.handshake_age_seconds) })}`
@@ -67,7 +67,7 @@ const wireguardHint = $derived.by(() => {
       <LinkRow
         href={href('vpn-tailscale')}
         label={m.nav_vpn_tailscale()}
-        description={m.tailscale_vpn_intro()}
+        description={m.tailscale_vpn_row()}
       >
         {#snippet control()}
           {#if tailscale.data}

@@ -71,7 +71,7 @@ const formId = $props.id();
       {#if view.leds.length === 0}
         <EmptyState icon={Lightbulb} title={m.leds_none()} />
       {:else}
-        <div aria-label={m.leds_title()} role="group">
+        <div aria-label={m.leds_title()} role="group" class="border-t border-border">
 
           {#each view.leds as led (led.name)}
             <SettingsRow label={ledLabel(led.name)} description={led.name}>
@@ -82,26 +82,34 @@ const formId = $props.id();
           {/each}
         </div>
       {/if}
-      <form id={formId} onsubmit={save}>
-        <SettingsRow label={m.leds_schedule()} for="leds-night" description={m.leds_schedule_hint()}>
-          {#snippet control()}
-            <Switch id="leds-night" bind:checked={form.enabled} disabled={busy} />
-          {/snippet}
-        </SettingsRow>
-        {#if form.enabled}
-          <SettingsRow label={m.leds_schedule_window()} for="leds-off-at">
-            {#snippet control()}
-              <Input id="leds-off-at" type="time" class="w-28" aria-label={m.leds_schedule_off()} bind:value={form.off_at} required disabled={busy} />
-              <span class="text-muted-foreground">–</span>
-              <Input type="time" class="w-28" aria-label={m.leds_schedule_on()} bind:value={form.on_at} required disabled={busy} />
-            {/snippet}
-          </SettingsRow>
-        {/if}
-        {#if problem}<Status kind="warn">{problem}</Status>{/if}
-      </form>
+
     {/if}
   </LoadState>
+</Section>
+
+<Section title={m.leds_schedule()} description={m.leds_schedule_hint()}>
+  {#snippet actions()}
+    {#if loader.data}
+      <Switch id="leds-night" form={formId} aria-label={m.leds_schedule()} bind:checked={form.enabled} disabled={busy} />
+    {/if}
+  {/snippet}
+  {#if loader.data && form.enabled}
+    <form id={formId} class="border-t border-border" onsubmit={save}>
+      <SettingsRow label={m.leds_schedule_window()} for="leds-off-at">
+        {#snippet control()}
+          <Input id="leds-off-at" type="time" class="w-28" aria-label={m.leds_schedule_off()} bind:value={form.off_at} required disabled={busy} />
+          <span class="text-muted-foreground">–</span>
+          <Input type="time" class="w-28" aria-label={m.leds_schedule_on()} bind:value={form.on_at} required disabled={busy} />
+        {/snippet}
+      </SettingsRow>
+      {#if problem}<Status kind="warn">{problem}</Status>{/if}
+    </form>
+  {:else if loader.data}
+    <form id={formId} onsubmit={save}></form>
+  {/if}
   {#snippet footer()}
-    <Button variant="default" type="submit" form={formId} disabled={busy || problem !== undefined || !loader.data}>{m.leds_schedule_save()}</Button>
+    {#if loader.data && (form.enabled || loader.data.schedule.enabled)}
+      <Button variant="default" type="submit" form={formId} disabled={busy || problem !== undefined}>{m.leds_schedule_save()}</Button>
+    {/if}
   {/snippet}
 </Section>

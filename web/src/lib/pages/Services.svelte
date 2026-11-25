@@ -140,7 +140,7 @@ async function run(it: CatalogItem, action: CatalogAction) {
           {#snippet status()}{@render catalogStatus(it)}{/snippet}
           {#snippet actions()}
             {#if it.luci_path}
-              <Button variant="ghost" size="sm" href={luciUrl(window.location, it.luci_path)} target="_blank" rel="noopener">{m.catalog_luci()}<ExternalLink aria-hidden="true" /></Button>
+              <Button variant="outline" size="sm" href={luciUrl(window.location, it.luci_path)} target="_blank" rel="noopener">{m.catalog_luci()}<ExternalLink aria-hidden="true" /></Button>
             {/if}
             {#if it.autostart_supported || !it.built_in}
               <DropdownMenu.Root>

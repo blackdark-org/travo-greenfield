@@ -75,7 +75,7 @@ describe('Dashboard VPN quick action', () => {
   it('cannot switch on without a selected profile, says why and links to VPN', () => {
     const body = dashboard('disabled');
     expect(switchState(body, 'dashboard-vpn-switch')).toEqual({ checked: false, disabled: true });
-    expect(body).toContain('Import and select a profile');
+    expect(body).toContain('No profile yet');
     expect(body).toContain('href="#/vpn"');
   });
 

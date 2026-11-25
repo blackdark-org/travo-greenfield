@@ -67,7 +67,6 @@ const used = (total: number, available: number) =>
       {#if info.data}
         {@const d = info.data}
         <div>
-          <SettingsRow label={m.system_hostname()}>{#snippet control()}{@render text(d.hostname)}{/snippet}</SettingsRow>
           <SettingsRow label={m.system_openwrt()}>{#snippet control()}{@render text(`${d.openwrt} ${d.revision}`)}{/snippet}</SettingsRow>
           <SettingsRow label={m.system_kernel()}>{#snippet control()}{@render text(d.kernel)}{/snippet}</SettingsRow>
           <SettingsRow label={m.system_load()}>{#snippet control()}{@render text(formatLoad(d.load))}{/snippet}</SettingsRow>

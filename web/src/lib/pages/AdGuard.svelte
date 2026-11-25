@@ -46,7 +46,7 @@ const proxy = adguardUrl(window.location);
   <PageHeader title={m.adguard_title()} description={m.adguard_page_description()}>
     {#snippet actions()}
       {#if adguard.data?.running && adguard.data.loopback}
-        <Button variant="ghost" size="sm" href={proxy} target="_blank" rel="noopener">{m.adguard_open()}<ExternalLink aria-hidden="true" /></Button>
+        <Button variant="outline" size="sm" href={proxy} target="_blank" rel="noopener">{m.adguard_open()}<ExternalLink aria-hidden="true" /></Button>
       {/if}
     {/snippet}
   </PageHeader>
@@ -82,7 +82,7 @@ const proxy = adguardUrl(window.location);
           <p class="text-sm text-muted-foreground">{m.adguard_absent_body()}</p>
           <Button variant="outline" size="sm" type="button" class="self-start" disabled={pending !== undefined || st.busy} onclick={() => change('install', true)}>{m.adguard_install()}</Button>
         {:else}
-          <div>
+          <div class="border-t border-border">
 
             {#if st.topology !== 'expert'}
               <SettingsRow

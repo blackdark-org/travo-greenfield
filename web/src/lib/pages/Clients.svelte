@@ -159,7 +159,7 @@ async function removeReservation(r: Reservation) {
         <EmptyState icon={Laptop} title={m.clients_empty()} />
       {:else if list.data}
         <Table.Root aria-label={m.clients_title()}>
-          <Table.Header>
+          <Table.Header class="max-sm:hidden">
             <Table.Row>
               <Table.Head>{m.clients_device()}</Table.Head>
               <Table.Head class="max-sm:hidden">{m.clients_connection()}</Table.Head>
@@ -178,7 +178,10 @@ async function removeReservation(r: Reservation) {
                     {#if c.blocked}<Status kind="danger">{m.clients_blocked()}</Status>{/if}
                   </div>
                   <div class="font-mono text-xs text-muted-foreground md:hidden">{c.ip ?? c.mac}</div>
-                  <div class="mt-1 sm:hidden"><Status kind={conn.kind}>{conn.label}</Status></div>
+                  <div class="mt-1 flex flex-wrap items-center gap-1 sm:hidden">
+                    <Status kind={conn.kind}>{conn.label}</Status>
+                    {#if c.ssid}<span class="text-xs text-muted-foreground">{m.clients_on_ssid({ ssid: c.ssid })}</span>{/if}
+                  </div>
                 </Table.Cell>
                 <Table.Cell class="whitespace-normal max-sm:hidden">
                   <Status kind={conn.kind}>{conn.label}</Status>

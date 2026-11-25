@@ -15,7 +15,7 @@ let {
 
 <div
   data-slot="settings-row"
-  class="relative -mx-2 flex items-center gap-4 rounded-md px-2 py-3 hover:bg-muted/50 [[data-slot=settings-row]+&]:border-t [[data-slot=settings-row]+&]:border-border"
+  class="relative flex items-center gap-4 py-3 hover:bg-muted/40 [[data-slot=settings-row]+&]:border-t [[data-slot=settings-row]+&]:border-border"
 >
   <div class="grid min-w-0 flex-1 gap-1">
     <a {href} class="text-sm leading-none font-medium break-words after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring">{label}</a>

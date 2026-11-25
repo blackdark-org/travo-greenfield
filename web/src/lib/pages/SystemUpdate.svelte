@@ -1,4 +1,5 @@
 <script lang="ts">
+import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 import { onMount } from 'svelte';
 import Button from '$lib/components/ui/button/button.svelte';
 import {
@@ -14,6 +15,7 @@ import { m } from '../paraglide/messages.js';
 import ConfirmDialog from '../ui/ConfirmDialog.svelte';
 import { createConfirm } from '../ui/confirm.svelte';
 import Section from '../ui/Section.svelte';
+import Status from '../ui/Status.svelte';
 import { disabledMessage } from '../update-check';
 
 type Update = NonNullable<Awaited<ReturnType<typeof postSystemUpdateCheck>>['data']>;
@@ -159,39 +161,32 @@ onMount(() => {
 </script>
 
 <Section title={m.update_title()}>
-  <div class="flex flex-wrap items-center gap-3">
-    <p aria-live="polite" class="text-muted-foreground">
-      {#if pending}
-        {m.update_checking()}
-      {:else if result?.status === 'available'}
-        {m.update_available({ version: result.latest_version ?? '' })}
-      {:else if result?.status === 'disabled'}
-        {disabledMessage(result)}
-      {:else}
-        {labels[result?.status ?? 'unavailable']()}
+  {#snippet actions()}
+    {#if result?.status === 'disabled'}
+      <Status kind="neutral">{m.update_off()}</Status>
+    {:else}
+      {#if result?.status === 'available' && result.latest_version}
+        <Button variant="outline" size="sm" type="button"
+          disabled={pending || verifying || stage?.status === 'verifying'}
+          onclick={() => {
+            if (controller && result?.latest_version) void verify(result.latest_version, controller);
+          }}>{m.update_verify()}</Button>
       {/if}
-    </p>
-    <Button variant="outline"
-      type="button"
-
-      disabled={pending || verifying || result?.status === 'disabled'}
-      onclick={() => { if (controller) void check('manual', controller); }}
-    >
-      {m.update_check()}
-    </Button>
-    {#if result?.status === 'available' && result.latest_version}
-      <Button variant="outline"
-        type="button"
-
-        disabled={pending || verifying || stage?.status === 'verifying'}
-        onclick={() => {
-          if (controller && result?.latest_version) void verify(result.latest_version, controller);
-        }}
-      >
-        {m.update_verify()}
-      </Button>
+      <Button variant="outline" size="sm" type="button" disabled={pending || verifying}
+        onclick={() => { if (controller) void check('manual', controller); }}><RefreshCw aria-hidden="true" />{m.update_check()}</Button>
     {/if}
-  </div>
+  {/snippet}
+  <p aria-live="polite" class="text-sm text-muted-foreground">
+    {#if pending}
+      {m.update_checking()}
+    {:else if result?.status === 'available'}
+      {m.update_available({ version: result.latest_version ?? '' })}
+    {:else if result?.status === 'disabled'}
+      {disabledMessage(result)}
+    {:else}
+      {labels[result?.status ?? 'unavailable']()}
+    {/if}
+  </p>
   <div aria-live="polite">
     {#if verifying || stage?.status === 'verifying'}
       <p class="text-muted-foreground">{m.update_verifying()}</p>

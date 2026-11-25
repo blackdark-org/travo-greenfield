@@ -81,7 +81,7 @@ const formId = $props.id();
           {/snippet}
         </SettingsRow>
         {#if ntpEnabled}
-          <SettingsRow label={m.settings_ntp_servers()} for="{formId}-servers" description={m.settings_ntp_servers_hint()}>
+          <SettingsRow top label={m.settings_ntp_servers()} for="{formId}-servers" description={m.settings_ntp_servers_hint()}>
             {#snippet control()}
               <Textarea id="{formId}-servers" bind:value={servers} rows={3} spellcheck={false} disabled={busy} class="w-64 font-mono text-sm" />
             {/snippet}

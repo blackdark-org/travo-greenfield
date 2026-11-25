@@ -85,7 +85,7 @@ const stale = (part: Part, known: boolean) => known && status[part].state !== 'r
     <LinkRow
       href={href('vpn')}
       label={m.dashboard_vpn()}
-      description={vpn.data ? (vpn.data.state === 'disabled' ? `${tunnelStates.disabled.label()} · ${m.vpn_tunnel_needs_profile()}` : tunnelStates[vpn.data.state].label()) : undefined}
+      description={vpn.data ? (vpn.data.state === 'disabled' ? `${tunnelStates.disabled.label()} · ${m.vpn_no_profile()}` : tunnelStates[vpn.data.state].label()) : undefined}
     >
       {#snippet control()}
         <LoadState status={vpn.status} retry={vpn.retry} stale={vpn.data !== undefined}>

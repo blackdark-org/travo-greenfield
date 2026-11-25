@@ -34,7 +34,7 @@ describe('VPN overview', () => {
     const body = page({ profiles: [], selected_id: null }, 'disabled', { installed: false });
     expect(body).toContain('href="#/vpn/wireguard"');
     expect(body).toContain('href="#/vpn/tailscale"');
-    expect(body).toContain('Import and select a profile');
+    expect(body).toContain('No profile yet');
     expect(switchState(body, 'vpn-tunnel-switch')).toEqual({ checked: false, disabled: true });
     expect(body).toContain('Not installed');
   });

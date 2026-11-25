@@ -4,9 +4,10 @@ import { adguardError, topologyRefusal } from '../api/adguard';
 import AdGuardTopologyCard from './AdGuardTopologyCard.svelte';
 
 describe('AdGuard topology card', () => {
-  it('offers the expert switch behind the disclosure', () => {
+  it('shows the default setup and offers the expert setup', () => {
     const body = render(AdGuardTopologyCard, { props: { expert: false, refresh: () => {} } }).body;
-    expect(body).toContain('Expert: AdGuard Home on port 53');
+    expect(body).toContain('Default: router DNS in front');
+    expect(body).toContain('Move AdGuard Home to port 53');
   });
 
   it('shows the expert state with the addresses AdGuard answers on', () => {
