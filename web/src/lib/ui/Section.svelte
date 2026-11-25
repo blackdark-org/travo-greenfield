@@ -32,6 +32,7 @@ const headingId = $props.id();
     {#if description}<Description>{description}</Description>{/if}
     {#if actions}<Action class="flex flex-wrap gap-2">{@render actions()}</Action>{/if}
   </Header>
-  {#if children}<Content class="gap-4">{@render children()}</Content>{/if}
+  <!-- Empty blocks (closed aria-live regions) take no gap; content that renders nothing hides. -->
+  {#if children}<Content class="gap-4 [&:not(:has(>:not(:empty)))]:hidden [&>:empty]:hidden">{@render children()}</Content>{/if}
   {#if footer}<Footer class="justify-end gap-2">{@render footer()}</Footer>{/if}
 </Root>

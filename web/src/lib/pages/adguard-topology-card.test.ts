@@ -6,7 +6,7 @@ import AdGuardTopologyCard from './AdGuardTopologyCard.svelte';
 describe('AdGuard topology card', () => {
   it('shows the default setup and offers the expert setup', () => {
     const body = render(AdGuardTopologyCard, { props: { expert: false, refresh: () => {} } }).body;
-    expect(body).toContain('Default: router DNS in front');
+    expect(body).toContain('Router DNS first');
     expect(body).toContain('Move AdGuard Home to port 53');
   });
 

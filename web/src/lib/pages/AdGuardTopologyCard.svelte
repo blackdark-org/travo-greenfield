@@ -50,7 +50,9 @@ async function toggle(on: boolean) {
 <Section title={m.adguard_topology_title()} description={m.adguard_topology_intro()}>
   {#snippet actions()}
     <Status kind={expert ? 'warn' : 'neutral'}>{expert ? m.adguard_topology_state_expert() : m.adguard_topology_state_default()}</Status>
-    <Button variant="outline" size="sm" type="button" disabled={txn.busy || busy} onclick={() => toggle(!expert)}>
+  {/snippet}
+  {#snippet footer()}
+    <Button variant="outline" type="button" disabled={txn.busy || busy} onclick={() => toggle(!expert)}>
       {txn.applying ? m.adguard_topology_applying() : expert ? m.adguard_topology_turn_off() : m.adguard_topology_turn_on()}
     </Button>
   {/snippet}

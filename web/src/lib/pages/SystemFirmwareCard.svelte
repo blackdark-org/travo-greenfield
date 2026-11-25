@@ -1,4 +1,5 @@
 <script lang="ts">
+import FileUp from '@lucide/svelte/icons/file-up';
 import Alert from '$lib/components/ui/alert/alert.svelte';
 import Button from '$lib/components/ui/button/button.svelte';
 import Input from '$lib/components/ui/input/input.svelte';
@@ -92,12 +93,12 @@ async function flash(event: SubmitEvent) {
           <Label for="firmware-file">{m.firmware_file({ max: formatBytes(maxBytes) })}</Label>
           <input id="firmware-file" type="file" accept=".bin,.img,.itb" class="sr-only" bind:this={fileInput} bind:files disabled={busy} />
           <div class="flex flex-wrap items-center gap-2">
-            <Button variant="outline" type="button" disabled={busy} onclick={() => fileInput?.click()}>{m.firmware_choose()}</Button>
+            <Button variant="outline" size="sm" type="button" disabled={busy} onclick={() => fileInput?.click()}><FileUp aria-hidden="true" />{m.firmware_choose()}</Button>
             <span class="text-sm break-all text-muted-foreground">{files?.[0]?.name ?? m.firmware_no_file()}</span>
           </div>
         </div>
-        <div>
-          <Button variant="outline" type="submit" disabled={busy || !files?.length}>
+        <div class="flex justify-end">
+          <Button type="submit" disabled={busy || !files?.length}>
             {busy && !image ? m.firmware_uploading() : m.firmware_upload()}
           </Button>
         </div>

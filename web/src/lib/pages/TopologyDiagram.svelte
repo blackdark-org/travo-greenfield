@@ -53,7 +53,7 @@ const configure: Record<UplinkName, string> = {
 
 // Geometry: x in percent of the width, y in px; the svg viewBox is 1000 × HEIGHT, stretched.
 const HEIGHT = 240;
-const X = { source: 30, router: 50, client: 70 };
+const X = { source: 27, router: 48, client: 69 };
 const rowY = (i: number, count: number) => ((i + 0.5) / count) * HEIGHT;
 const MID = HEIGHT / 2;
 const curve = (x1: number, y1: number, x2: number, y2: number) => {

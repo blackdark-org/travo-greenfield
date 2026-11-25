@@ -42,11 +42,11 @@ async function reset(event: SubmitEvent) {
     <Alert class="status status-danger" role="status" aria-live="polite">{m.reset_started()}</Alert>
   {:else}
     <form class="flex flex-col gap-3" onsubmit={reset}>
-      <Label class="grid gap-1">
+      <Label class="grid max-w-sm gap-1">
         {m.reset_type_phrase({ phrase: RESET_PHRASE })}
         <Input bind:value={typed} autocomplete="off" spellcheck={false} disabled={busy} />
       </Label>
-      <div>
+      <div class="flex justify-end">
         <Button variant="destructive" type="submit" disabled={busy || !phraseMatches(typed)}>{m.reset_action()}</Button>
       </div>
     </form>

@@ -173,7 +173,11 @@ async function removeReservation(r: Reservation) {
               <Table.Row>
                 <Table.Cell class="whitespace-normal">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-medium break-words">{clientName(c)}</span>
+                    {#if c.alias || c.hostname}
+                      <span class="font-medium break-words">{clientName(c)}</span>
+                    {:else}
+                      <span class="text-muted-foreground">{m.clients_unknown()}</span>
+                    {/if}
                     {#if c.reserved}<Status kind="info">{m.clients_reserved()}</Status>{/if}
                     {#if c.blocked}<Status kind="danger">{m.clients_blocked()}</Status>{/if}
                   </div>

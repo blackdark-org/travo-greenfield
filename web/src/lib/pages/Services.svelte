@@ -116,7 +116,7 @@ async function run(it: CatalogItem, action: CatalogAction) {
 
   <section class="flex flex-col gap-3" aria-labelledby="services-installed">
     <h2 id="services-installed" class="text-base font-semibold">{m.services_installed()}</h2>
-    <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <ul class="grid gap-4 sm:grid-cols-2">
       <ServiceTile title={m.adguard_title()} description={m.adguard_about()}>
         {#snippet status()}
           <LoadState status={adguard.status} retry={adguard.retry} stale={adguard.data !== undefined}>
@@ -178,7 +178,7 @@ async function run(it: CatalogItem, action: CatalogAction) {
       {#if catalog.data && available.length === 0}
         <p class="text-sm text-muted-foreground">{m.services_all_installed()}</p>
       {/if}
-      <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <ul class="grid gap-4 sm:grid-cols-2">
         {#each available as it (it.id)}
           <ServiceTile title={name(it)} description={about[it.id]?.()}>
             {#snippet actions()}
