@@ -71,7 +71,15 @@ async function rebootDialog(chrome, base, vp, shoot) {
 
 async function apDisableFlow(chrome, base, vp, shoot) {
   await chrome.open(`${base}/#/wifi`, vp);
-  await clickWhenReady(chrome, 'main', 'Disable');
+  // Each access point row has a switch; turning one off asks first.
+  await waitFor(
+    chrome,
+    `!!document.querySelector('main [id^="ap-"][aria-checked="true"]:not([disabled])')`,
+    'AP switch',
+  );
+  await chrome.evaluate(
+    `document.querySelector('main [id^="ap-"][aria-checked="true"]:not([disabled])').click()`,
+  );
   await waitFor(chrome, `!!document.querySelector('${DIALOG}')`, 'AP dialog');
   await sleep(300);
   await shoot('wifi-ap-disable-dialog');

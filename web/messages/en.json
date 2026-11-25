@@ -1355,5 +1355,9 @@
   "ssh_key": "Key",
   "ssh_fingerprint": "Fingerprint",
   "logs_download": "Download",
-  "topology_open_settings": "Open settings →"
+  "topology_open_settings": "Open settings →",
+  "wifi_ap_switch": "Access point {ssid}",
+  "clients_device": "Device",
+  "clients_connection": "Connection",
+  "clients_address": "Address"
 }
