@@ -1,7 +1,9 @@
 <script lang="ts">
+import ExternalLink from '@lucide/svelte/icons/external-link';
 import { onDestroy } from 'svelte';
 import Alert from '$lib/components/ui/alert/alert.svelte';
 import Button from '$lib/components/ui/button/button.svelte';
+import Switch from '$lib/components/ui/switch/switch.svelte';
 import { type AdGuardAction, adguardUrl, changeAdGuard, fetchAdGuard } from '../api/adguard';
 import { m } from '../paraglide/messages.js';
 import LoadState from '../ui/LoadState.svelte';
@@ -9,12 +11,9 @@ import { createLoader } from '../ui/loader.svelte';
 import { notify } from '../ui/notify';
 import PageHeader from '../ui/PageHeader.svelte';
 import Section from '../ui/Section.svelte';
+import SettingsRow from '../ui/SettingsRow.svelte';
 import Status from '../ui/Status.svelte';
-// The expert DNS setup (ADR 0021) too.
 import AdGuardTopologyCard from './AdGuardTopologyCard.svelte';
-// The optional services catalog is its own chunk too.
-import CatalogCard from './CatalogCard.svelte';
-// The DoH card is its own chunk, shown once AdGuard Home runs.
 import DoHCard from './DoHCard.svelte';
 
 const request = new AbortController();
@@ -43,55 +42,60 @@ async function change(action: AdGuardAction, enabled: boolean) {
 const proxy = adguardUrl(window.location);
 </script>
 
-<div class="flex flex-col gap-6">
-  <PageHeader title={m.nav_services()} description={m.services_description()} />
-  <Section title={m.adguard_title()}>
+<div class="flex max-w-4xl flex-col gap-6">
+  <PageHeader title={m.adguard_title()} description={m.adguard_page_description()}>
+    {#snippet actions()}
+      {#if adguard.data?.running && adguard.data.loopback}
+        <Button variant="ghost" size="sm" href={proxy} target="_blank" rel="noopener">{m.adguard_open()}<ExternalLink aria-hidden="true" /></Button>
+      {/if}
+    {/snippet}
+  </PageHeader>
+  <Section title={m.adguard_service_title()}>
     <LoadState status={adguard.status} retry={adguard.retry} stale={adguard.data !== undefined}>
       {#if adguard.data}
         {@const st = adguard.data}
         {#if st.fail_open_since}
-          <Alert class="mb-3 text-danger" role="alert">
+          <Alert class="text-danger" role="alert">
             <p class="font-semibold">{m.adguard_fail_open_title()}</p>
             <p>{m.adguard_fail_open_body()}</p>
             <Button variant="outline" size="sm" type="button" class="mt-2" disabled={pending !== undefined} onclick={() => change('dns', true)}>{m.adguard_reenable()}</Button>
           </Alert>
         {/if}
-        <div class="flex flex-wrap items-center gap-2">
-          {#if !st.installed}
-            <Status kind="neutral">{m.adguard_state_absent()}</Status>
-          {:else if st.running}
-            <Status kind="ok">{m.adguard_state_running()}</Status>
-          {:else}
-            <Status kind="warn">{m.adguard_state_stopped()}</Status>
-          {/if}
-          {#if st.installed}
-            <Status kind={st.default_dns ? 'ok' : 'neutral'}>{st.default_dns ? m.adguard_dns_on() : m.adguard_dns_off()}</Status>
-          {/if}
-          {#if st.busy}<Status kind="info">{m.adguard_busy()}</Status>{/if}
-        </div>
-        {#if st.installed}
-          <p class="text-sm text-muted-foreground">{m.adguard_version({ version: st.version })}</p>
-          {#if st.config_error}<p class="text-sm text-muted-foreground">{m.adguard_err_config()}</p>{/if}
-          {#if st.migration_failed}<p class="text-sm text-muted-foreground">{m.adguard_migration_failed()}</p>{/if}
-          <div class="flex flex-wrap gap-2">
-            {#if st.topology !== 'expert' || !st.running}
-              <Button variant="outline" size="sm" type="button" disabled={pending !== undefined || st.busy} onclick={() => change('service', !st.running)}>{st.running ? m.adguard_stop() : m.adguard_start()}</Button>
-            {/if}
-            {#if st.running && st.topology === 'expert'}
-              {#if st.loopback}
-                <Button variant="outline" size="sm" href={proxy} target="_blank" rel="noopener">{m.adguard_open()}</Button>
-              {/if}
-            {:else if st.running}
-              <Button variant="outline" size="sm" type="button" disabled={pending !== undefined || st.busy} onclick={() => change('dns', !st.default_dns)}>{st.default_dns ? m.adguard_dns_disable() : m.adguard_dns_enable()}</Button>
-              {#if st.loopback}
-                <Button variant="outline" size="sm" href={proxy} target="_blank" rel="noopener">{m.adguard_open()}</Button>
-              {/if}
-            {/if}
-          </div>
-        {:else}
+        {#if !st.installed}
           <p class="text-sm text-muted-foreground">{m.adguard_absent_body()}</p>
-          <div class="mt-3">
-            <Button variant="outline" size="sm" type="button" disabled={pending !== undefined || st.busy} onclick={() => change('install', true)}>{m.adguard_install()}</Button>
+          <Button variant="outline" size="sm" type="button" class="self-start" disabled={pending !== undefined || st.busy} onclick={() => change('install', true)}>{m.adguard_install()}</Button>
+        {:else}
+          <div>
+            <SettingsRow
+              label={m.adguard_running_label()}
+              for="adguard-running"
+              description={[m.adguard_version({ version: st.version }), st.config_error ? m.adguard_err_config() : '', st.migration_failed ? m.adguard_migration_failed() : ''].filter(Boolean).join(' ')}
+            >
+              {#snippet control()}
+                {#if st.busy}<Status kind="info">{m.adguard_busy()}</Status>{/if}
+                {#if st.installed && !st.running}<Status kind="warn">{m.adguard_state_stopped()}</Status>{/if}
+                <Switch
+                  id="adguard-running"
+                  bind:checked={() => st.running, (on) => void change('service', on)}
+                  disabled={pending !== undefined || st.busy || (st.topology === 'expert' && st.running)}
+                />
+              {/snippet}
+            </SettingsRow>
+            {#if st.topology !== 'expert'}
+              <SettingsRow
+                label={m.adguard_default_dns_label()}
+                for="adguard-default-dns"
+                description={st.running ? m.adguard_default_dns_help() : m.adguard_default_dns_needs_running()}
+              >
+                {#snippet control()}
+                  <Switch
+                    id="adguard-default-dns"
+                    bind:checked={() => st.default_dns, (on) => void change('dns', on)}
+                    disabled={pending !== undefined || st.busy || !st.running}
+                  />
+                {/snippet}
+              </SettingsRow>
+            {/if}
           </div>
         {/if}
       {/if}
@@ -103,5 +107,4 @@ const proxy = adguardUrl(window.location);
   {#if adguard.data && (adguard.data.running || adguard.data.topology === 'expert')}
     <AdGuardTopologyCard {...{ expert: adguard.data.topology === 'expert', hosts: adguard.data.topology_hosts ?? [], busy: adguard.data.busy, refresh: adguard.retry }} />
   {/if}
-  <CatalogCard />
 </div>

@@ -92,13 +92,15 @@ depends on the content:
 
 - **Lists** are a shadcn `Table` inside a `Section`. The add action sits in the section's
   `actions` and opens a `Dialog`. Row actions (edit, activate, remove) are a `⋯`
-  `DropdownMenu` at the row end. A list with no rows shows `EmptyState` with the same add
-  action. No separate "import" or "add" card.
+  `DropdownMenu` at the row end; a row whose only action is remove shows it as a ghost icon
+  button with a screen-reader label. A list with no rows shows `EmptyState`. No separate
+  "import" or "add" card.
 - **Settings that apply on their own** are a `SettingsRow` with a `Switch`, `Select` or short
   field; the change applies at once and reports through `notify` or `transactionToast`. A
   switch already says on or off: no status chip next to it.
 - **Edit forms** (several fields saved together: WAN, DHCP server, device settings, LED
-  schedule) are `SettingsRow`s with the one Save in the section `footer`.
+  schedule) are `SettingsRow`s with the one Save in the section `footer`. A credential form
+  (change password) keeps its fields stacked at `max-w-sm`, as password managers expect.
 - **Dialogs** are for adding, editing a list item and confirming (`ConfirmDialog`); never for a
   single toggle or field.
 - **Buttons:** the page and section actions are `outline` (with a leading icon for add);
@@ -134,7 +136,7 @@ A single-section page gives its section a title that does not repeat the page ti
 
 ## Navigation
 
-Sidebar only, every entry with an icon. Everyday pages first:
+Sidebar only, every top-level entry with an icon. Everyday pages first:
 
 - Dashboard · Internet · WiFi
 - **VPN** ▸ WireGuard · Tailscale
@@ -149,11 +151,12 @@ The chevron is its own 32 px button and only expands or collapses. A child route
 parent. The tree lives in `router.ts` (`NAV_GROUPS`, `GROUP_OVERVIEW`); open groups are stored
 under `nav:v2`.
 
-- **VPN overview:** a `LinkRow` per VPN (WireGuard, Tailscale) with its switch and the current
-  state as hint, then the traffic rules (kill switch, split tunnel, VPN DNS).
+- **VPN overview:** a `LinkRow` per VPN with the current state as hint (WireGuard also carries
+  the tunnel switch), then the traffic rules as rows: kill switch (switch), split tunnel (value
+  and an Edit dialog), VPN DNS (state and a check).
 - **WireGuard:** the profile table with Add profile (dialog: paste or file) and row menus.
-- **Tailscale:** off until the user switches it on here; the package's own post-install start
-  is undone by the install flow.
+- **Tailscale:** status, login and options. Target: off until the user switches it on here (the
+  package's post-install start undone by the install flow); needs a daemon on/off action first.
 - **Services overview:** installed services first (status and one action pinned to the card
   bottom: Configure, or Open in LuCI for services without a page here), then Available with
   Install. A service page leaves the nav when its package is absent (a failed check is not
@@ -161,7 +164,9 @@ under `nav:v2`.
 - **System overview:** a fact strip (model, OpenWrt, uptime, memory), the device settings form
   and details. Restart and the app version are only in the header menu.
 - **Hardware:** the LEDs and buttons the router really has (read from sysfs and the device
-  tree; storage-activity LEDs stay with the kernel), night mode, the side switch action.
+  tree; storage-activity LEDs stay with the kernel), each LED by a readable name with the kernel
+  name as hint, one switch for all LEDs, night mode with its dark window, the side switch
+  action (applies on change). Per-LED switches need a daemon change first.
 - **Access:** API tokens and SSH keys, both as lists.
 - **Logs:** one line per entry (time, level chip, process, message cut off; click expands), a
   fixed-height scroll area inside the card, filters that apply while typing, the privacy note.
@@ -173,7 +178,7 @@ Travo look across the full content width: uplinks (wan, wwan, usbtether) on the 
 label and state before their icon, thin curved links into a square router tile, client counts
 on the right. Icons and links share one coordinate system, so every link ends in an icon
 centre. Under the router tile: hostname, model and one row of status chips (Internet, VPN,
-Tailscale and AdGuard Home when installed). DOM and tab order: sources, router, clients.
+Tailscale when installed). DOM and tab order: sources, router, clients.
 
 - Shown from the `lg` breakpoint only; below it the uplink cards, Quick status and System
   cards carry the same facts.
@@ -187,9 +192,10 @@ Tailscale and AdGuard Home when installed). DOM and tab order: sources, router, 
   only the rates, connectivity or VPN the router, clients the client counts. A failed clients
   read shows Unknown, never 0.
 
-Under the map: the traffic history and the System card (CPU load, memory and storage bars,
-uptime, the daemon's low-memory warning). The page header holds Connect to WiFi as an outline
-action.
+Under the map: Quick status (clients, live traffic, Tailscale, the VPN tunnel with its guarded
+toggle) beside the System card (CPU load, memory and storage bars, uptime, the daemon's
+low-memory warning), then interface traffic and the history. Below `lg` the uplink cards come
+first. The page header holds Connect to WiFi as an outline action.
 
 ## Page rules
 

@@ -7,7 +7,7 @@ import LANAddressCard from './LANAddressCard.svelte';
 import NetworkInterfacesCard from './NetworkInterfacesCard.svelte';
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex max-w-4xl flex-col gap-6">
   <PageHeader title={m.nav_network_lan()} description={m.network_lan_description()} />
   <LANAddressCard />
   <NetworkInterfacesCard />

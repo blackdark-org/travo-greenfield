@@ -6,7 +6,7 @@ import PageHeader from '../ui/PageHeader.svelte';
 import WANCard from './WANCard.svelte';
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex max-w-4xl flex-col gap-6">
   <PageHeader title={m.nav_network_wan()} description={m.network_wan_description()} />
   <WANCard />
 </div>

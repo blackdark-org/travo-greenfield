@@ -6,8 +6,8 @@ import SystemButtonsCard from './SystemButtonsCard.svelte';
 import SystemLEDsCard from './SystemLEDsCard.svelte';
 </script>
 
-<div class="flex flex-col gap-6">
-  <PageHeader title={m.nav_system_leds()} description={m.system_leds_description()} />
+<div class="flex max-w-4xl flex-col gap-6">
+  <PageHeader title={m.nav_system_hardware()} description={m.system_leds_description()} />
   <SystemLEDsCard />
   <SystemButtonsCard />
 </div>

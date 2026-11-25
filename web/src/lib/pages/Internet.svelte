@@ -7,7 +7,7 @@ import FailoverCard from './FailoverCard.svelte';
 import USBTetherCard from './USBTetherCard.svelte';
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex max-w-4xl flex-col gap-6">
   <PageHeader title={m.nav_internet()} description={m.network_intro()} />
   <USBTetherCard />
   <FailoverCard />

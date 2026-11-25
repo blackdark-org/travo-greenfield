@@ -275,7 +275,7 @@ async function scan() {
 }
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex max-w-4xl flex-col gap-6">
   <PageHeader title={m.nav_wifi()} description={m.wifi_page_description()}>
     {#snippet actions()}
       {#if summary.status.state === 'ready'}

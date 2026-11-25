@@ -6,7 +6,7 @@ import PageHeader from '../ui/PageHeader.svelte';
 import SystemFactoryResetCard from './SystemFactoryResetCard.svelte';
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="flex max-w-4xl flex-col gap-6">
   <PageHeader title={m.nav_system_reset()} description={m.system_reset_description()} />
   <SystemFactoryResetCard />
 </div>

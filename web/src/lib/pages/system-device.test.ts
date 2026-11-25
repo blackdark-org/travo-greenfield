@@ -16,7 +16,7 @@ const info = {
   app: { version: 'dev', build_time: '' },
 };
 
-describe('System Device card', () => {
+describe('System overview', () => {
   it('renders the fixture values once the loader is ready', async () => {
     vi.doMock('../theme.svelte', () => ({ theme: { value: 'light', toggle: () => {} } }));
     // A server render never runs effects, so hand the page a loader that is already ready.
@@ -33,8 +33,8 @@ describe('System Device card', () => {
     vi.doUnmock('./SystemSettingsCard.svelte');
     vi.doUnmock('./SystemSSHKeysCard.svelte');
     for (const text of [
-      'Device',
-      'Hardware',
+      'System',
+      'Download backup',
       'GL.iNet GL-AXT1800',
       'OpenWrt',
       '25.12.6',
