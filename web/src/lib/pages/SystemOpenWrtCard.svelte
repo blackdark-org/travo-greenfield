@@ -40,13 +40,13 @@ async function check(refreshLists: boolean) {
   <SettingsRow {label}>{#snippet control()}<span class="text-sm">{value}</span>{/snippet}</SettingsRow>
 {/snippet}
 
-<Section title={m.osupdate_title()} description={`${m.osupdate_intro()} ${m.osupdate_luci_hint()}`}>
+<Section title={m.osupdate_title()} description={m.osupdate_intro()}>
   {#snippet actions()}
     <Button variant="ghost" size="sm" href={luci} target="_blank" rel="noopener noreferrer">{m.osupdate_open_luci()}<ExternalLink aria-hidden="true" /></Button>
   {/snippet}
   <LoadState status={last.status} retry={last.retry} stale={last.data !== undefined}>
     {#if result?.checked_at}
-      <div>
+      <div class="border-t border-border">
         {@render fact(m.osupdate_running(), `${result.current} ${result.target}`)}
         {@render fact(m.osupdate_in_series(), result.in_series || m.osupdate_none())}
         {@render fact(m.osupdate_next_series(), result.next_series || m.osupdate_none())}
@@ -73,7 +73,7 @@ async function check(refreshLists: boolean) {
         {@render fact(m.osupdate_checked(), new Date(result.checked_at).toLocaleString())}
       </div>
     {:else}
-      {@render fact(m.osupdate_checked(), m.osupdate_never_short())}
+      <div class="border-t border-border">{@render fact(m.osupdate_checked(), m.osupdate_never_short())}</div>
     {/if}
   </LoadState>
   {#snippet footer()}

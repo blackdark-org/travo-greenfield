@@ -155,11 +155,7 @@ async function change(action: 'import' | 'select' | 'delete', id = '', label = n
     <LoadState status={profiles.status} retry={profiles.retry} stale={profiles.data !== undefined}>
       {#if profiles.data}
         {#if profiles.data.profiles.length === 0}
-          <EmptyState icon={KeyRound} title={m.vpn_no_profiles()}>
-            {#snippet action()}
-              <Button variant="outline" size="sm" type="button" onclick={openAdd}><Plus aria-hidden="true" />{m.vpn_add_profile()}</Button>
-            {/snippet}
-          </EmptyState>
+          <EmptyState icon={KeyRound} title={m.vpn_no_profiles()} />
         {:else}
           {@const selectedId = profiles.data.selected_id}
           <Table.Root>

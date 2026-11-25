@@ -992,7 +992,7 @@
   "history_reset_done": "History reset.",
   "history_reset_failed": "Could not reset the history.",
   "osupdate_title": "OpenWrt updates",
-  "osupdate_intro": "Checks downloads.openwrt.org for newer OpenWrt releases and lists packages with newer versions. Nothing is installed here.",
+  "osupdate_intro": "Checks downloads.openwrt.org for newer releases. Upgrade with LuCI attended sysupgrade to keep your packages.",
   "osupdate_unavailable": "The OpenWrt update check is unavailable",
   "osupdate_err_offline": "No Internet connection to the OpenWrt release server.",
   "osupdate_err_failed": "The update check failed. See the system log.",
@@ -1011,7 +1011,6 @@
   "osupdate_never": "Not checked since the router service started.",
   "osupdate_check": "Check now",
   "osupdate_check_refresh": "Refresh lists and check",
-  "osupdate_luci_hint": "Upgrade OpenWrt with LuCI attended sysupgrade: it builds an image that keeps your installed packages, Travo included.",
   "osupdate_open_luci": "Open LuCI attended sysupgrade",
   "leds_title": "LEDs",
   "leds_unavailable": "The LEDs could not be read.",
@@ -1326,5 +1325,6 @@
   "logs_search": "Search the log",
   "clients_unknown": "Unknown device",
   "osupdate_never_short": "Not since the service started",
-  "usbtether_no_phone_title": "No phone connected"
+  "usbtether_no_phone_title": "No phone connected",
+  "firmware_image": "Image"
 }

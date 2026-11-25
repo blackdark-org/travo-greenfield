@@ -185,6 +185,7 @@ onMount(() => {
         onclick={() => { if (controller) void check('manual', controller); }}><RefreshCw aria-hidden="true" />{m.update_check()}</Button>
     {/if}
   {/snippet}
+  {#if verifying || stage?.status === 'verifying' || stage?.status === 'verified' || verifyFailed}
   <div aria-live="polite">
     {#if verifying || stage?.status === 'verifying'}
       <p class="text-muted-foreground">{m.update_verifying()}</p>
@@ -195,6 +196,8 @@ onMount(() => {
       <p class="text-danger">{m.update_verify_failed()}</p>
     {/if}
   </div>
+  {/if}
+  {#if operation || applyFailed}
   <div aria-live="polite">
     {#if operation?.state === 'applying'}
       <p class="mt-2">{m.update_applying()}</p>
@@ -211,6 +214,7 @@ onMount(() => {
       <p class="text-danger">{m.update_apply_failed()}</p>
     {/if}
   </div>
+  {/if}
   {#if operation?.state === 'recovery_required'}
     <Button variant="outline" type="button" class="mt-2"
       disabled={updating} onclick={() => { if (controller) void changeOperation(controller); }}>
