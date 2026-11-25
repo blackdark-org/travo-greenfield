@@ -20,11 +20,9 @@ import PageHeader from '../ui/PageHeader.svelte';
 import PasswordField from '../ui/PasswordField.svelte';
 import Section from '../ui/Section.svelte';
 import SettingsRow from '../ui/SettingsRow.svelte';
-import { lazyPage } from './lazy';
-import PageHost from './PageHost.svelte';
 
-const settingsCard = lazyPage(() => import('./SystemSettingsCard.svelte'));
-const sshKeysCard = lazyPage(() => import('./SystemSSHKeysCard.svelte'));
+import SystemSettingsCard from './SystemSettingsCard.svelte';
+import SystemSSHKeysCard from './SystemSSHKeysCard.svelte';
 
 const info = createLoader(fetchSystemInfo);
 let backupPending = $state(false);
@@ -120,7 +118,7 @@ async function logout() {
     </LoadState>
   </Section>
 
-  <PageHost load={settingsCard} />
+  <SystemSettingsCard />
 
   <Section title={m.system_backup()}>
     <div>
@@ -135,7 +133,7 @@ async function logout() {
     </div>
   </Section>
 
-  <PageHost load={sshKeysCard} />
+  <SystemSSHKeysCard />
 
   <Section title={m.reboot_title()} description={m.reboot_confirm()}>
     <div>

@@ -10,15 +10,12 @@ import { notify } from '../ui/notify';
 import PageHeader from '../ui/PageHeader.svelte';
 import Section from '../ui/Section.svelte';
 import Status from '../ui/Status.svelte';
-import { lazyPage } from './lazy';
-import PageHost from './PageHost.svelte';
-
-// The DoH card is its own chunk, shown once AdGuard Home runs.
-const doh = lazyPage(() => import('./DoHCard.svelte'));
-// The optional services catalog is its own chunk too.
-const catalog = lazyPage(() => import('./CatalogCard.svelte'));
 // The expert DNS setup (ADR 0021) too.
-const topology = lazyPage(() => import('./AdGuardTopologyCard.svelte'));
+import AdGuardTopologyCard from './AdGuardTopologyCard.svelte';
+// The optional services catalog is its own chunk too.
+import CatalogCard from './CatalogCard.svelte';
+// The DoH card is its own chunk, shown once AdGuard Home runs.
+import DoHCard from './DoHCard.svelte';
 
 const request = new AbortController();
 const adguard = createLoader(fetchAdGuard, 10000);
@@ -101,10 +98,10 @@ const proxy = adguardUrl(window.location);
     </LoadState>
   </Section>
   {#if adguard.data?.running && adguard.data.topology !== 'expert'}
-    <PageHost load={doh} />
+    <DoHCard />
   {/if}
   {#if adguard.data && (adguard.data.running || adguard.data.topology === 'expert')}
-    <PageHost load={topology} props={{ expert: adguard.data.topology === 'expert', hosts: adguard.data.topology_hosts ?? [], busy: adguard.data.busy, refresh: adguard.retry }} />
+    <AdGuardTopologyCard {...{ expert: adguard.data.topology === 'expert', hosts: adguard.data.topology_hosts ?? [], busy: adguard.data.busy, refresh: adguard.retry }} />
   {/if}
-  <PageHost load={catalog} />
+  <CatalogCard />
 </div>

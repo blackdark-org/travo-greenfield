@@ -14,15 +14,12 @@ import Section from '../ui/Section.svelte';
 import { createTunnelControl } from '../vpn-tunnel.svelte';
 import CaptivePortalCard from './CaptivePortalCard.svelte';
 import InterfaceTraffic from './InterfaceTraffic.svelte';
-import { lazyPage } from './lazy';
-import PageHost from './PageHost.svelte';
 import QuickStatus from './QuickStatus.svelte';
+// Own chunk: the history card loads after the live cards (#232).
+import StatsHistoryCard from './StatsHistoryCard.svelte';
 import SystemCard from './SystemCard.svelte';
 import TopologyDiagram from './TopologyDiagram.svelte';
 import UplinkCards from './UplinkCards.svelte';
-
-// Own chunk: the history card loads after the live cards (#232).
-const historyCard = lazyPage(() => import('./StatsHistoryCard.svelte'));
 
 let {
   events,
@@ -122,5 +119,5 @@ let trafficOpen = $state(false);
     </Collapsible.Root>
   </Section>
 
-  <PageHost load={historyCard} />
+  <StatsHistoryCard />
 </div>

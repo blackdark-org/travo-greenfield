@@ -23,13 +23,15 @@ describe('System Device card', () => {
     vi.doMock('../ui/loader.svelte', () => ({
       createLoader: () => ({ status: { state: 'ready' }, data: info, retry: async () => {} }),
     }));
-    // Lazy cards have their own tests; here the host would get the system info as a component.
-    vi.doMock('./PageHost.svelte', () => ({ default: () => {} }));
+    // The settings and SSH key cards have their own tests.
+    vi.doMock('./SystemSettingsCard.svelte', () => ({ default: () => {} }));
+    vi.doMock('./SystemSSHKeysCard.svelte', () => ({ default: () => {} }));
     const { default: System } = await import('./System.svelte');
     const { body } = render(System);
     vi.unstubAllGlobals();
     vi.doUnmock('../ui/loader.svelte');
-    vi.doUnmock('./PageHost.svelte');
+    vi.doUnmock('./SystemSettingsCard.svelte');
+    vi.doUnmock('./SystemSSHKeysCard.svelte');
     for (const text of [
       'Device',
       'Hardware',
